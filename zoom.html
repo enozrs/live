@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Classroom</title>
+    <style>
+        /* CSS Reset and Variables */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #202124; color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Auth Screen */
+        #auth-screen { position: absolute; inset: 0; background: #202124; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        .auth-box { background: #2b2b2b; padding: 30px; border-radius: 8px; text-align: center; }
+        .auth-box input { padding: 10px; margin: 10px 0; width: 100%; border-radius: 4px; border: none; }
+        .auth-box button { padding: 10px 20px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+        /* Status Screen (Before 8 PM / After Class) */
+        #status-screen { position: absolute; inset: 0; background: #202124; display: none; align-items: center; justify-content: center; z-index: 50; font-size: 24px; font-weight: bold; }
+
+        /* Main Classroom Layout */
+        #classroom { display: none; flex: 1; display: flex; flex-direction: row; height: calc(100vh - 80px); }
+        
+        /* Video Container & Click Shield */
+        .video-container { flex: 1; position: relative; background: #000; }
+        /* THE CLICK SHIELD: This invisible div sits over the video and blocks all clicks */
+        .click-shield { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
+        #yt-player { width: 100%; height: 100%; pointer-events: none; /* Extra precaution */ }
+
+        /* Chat Container */
+        .chat-container { width: 350px; background: #f8f9fa; border-left: 1px solid #ddd; }
+        .chat-container iframe { width: 100%; height: 100%; border: none; }
+
+        /* Bottom Control Bar (Fake UI) */
+        .bottom-bar { height: 80px; background: #202124; border-top: 1px solid #3c4043; display: flex; align-items: center; justify-content: center; gap: 20px; z-index: 20; position: relative; }
+        .fake-btn { width: 50px; height: 50px; border-radius: 50%; background: #ea4335; color: white; display: flex; align-items: center; justify-content: center; cursor: not-allowed; border: none; font-size: 12px; }
+        
+        @media (max-width: 768px) {
+            #classroom { flex-direction: column; }
+            .chat-container { width: 100%; height: 40vh; }
+            .video-container { height: 60vh; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen">
+        <div class="auth-box">
+            <h2>Enter Class Code</h2>
+            <input type="password" id="classCode" placeholder="Enter code here...">
+            <button onclick="checkCode()">Join Class</button>
+            <p id="auth-error" style="color: #ea4335; margin-top: 10px; display: none;">Invalid Code!</p>
+        </div>
+    </div>
+
+    <div id="status-screen"></div>
+
+    <div id="classroom" style="display: none;">
+        <div class="video-container">
+            <div class="click-shield"></div> <div id="yt-player"></div>
+        </div>
+        <div class="chat-container">
+            <iframe src="https://www.youtube.com/live_chat?v=YOUR_LIVE_VIDEO_ID&embed_domain=YOUR_WEBSITE_DOMAIN.pages.dev"></iframe>
+        </div>
+    </div>
+
+    <div class="bottom-bar" id="bottom-bar" style="display: none;">
+        <button class="fake-btn" title="Microphone Disabled">Mic Off</button>
+        <button class="fake-btn" title="Camera Disabled">Cam Off</button>
+    </div>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        const VALID_CODE = "SRZONE2026"; // Change this daily/weekly
+        const VIDEO_ID = "YOUR_UNLISTED_VIDEO_ID"; 
+        const CLASS_START_HOUR = 20; // 8 PM (24-hour format)
+        const CLASS_START_MINUTE = 0;
+        const VIDEO_DURATION_MINUTES = 45; // Length of your recording
+
+        let player;
+
+        // --- Authentication & Local Storage ---
+        window.onload = () => {
+            const savedAuth = JSON.parse(localStorage.getItem('classAuth'));
+            if (savedAuth && (Date.now() - savedAuth.timestamp < 6 * 60 * 60 * 1000)) { // 6 hours
+                // Wait for user to click a 'Resume' button due to autoplay policies, or bypass if safe
+                document.getElementById('auth-screen').innerHTML = `
+                    <div class="auth-box">
+                        <h2>Welcome Back!</h2>
+                        <button onclick="initClassLogic()">Enter Classroom</button>
+                    </div>`;
+            }
+        };
+
+        function checkCode() {
+            const input = document.getElementById('classCode').value;
+            if (input === VALID_CODE) {
+                localStorage.setItem('classAuth', JSON.stringify({ valid: true, timestamp: Date.now() }));
+                initClassLogic();
+            } else {
+                document.getElementById('auth-error').style.display = 'block';
+            }
+        }
+
+        // --- Time Sync Logic ---
+        function initClassLogic() {
+            document.getElementById('auth-screen').style.display = 'none';
+            
+            const now = new Date();
+            const classStartTime = new Date();
+            classStartTime.setHours(CLASS_START_HOUR, CLASS_START_MINUTE, 0, 0);
+            
+            const classEndTime = new Date(classStartTime.getTime() + VIDEO_DURATION_MINUTES * 60000);
+
+            if (now < classStartTime) {
+                showStatus("Class will start today at 8:00 PM.");
+            } else if (now > classEndTime) {
+                showStatus("Class has already ended for today.");
+            } else {
+                // Class is in session! Calculate offset.
+                const offsetSeconds = Math.floor((now - classStartTime) / 1000);
+                startClassUI(offsetSeconds);
+            }
+        }
+
+        function showStatus(message) {
+            const statusScreen = document.getElementById('status-screen');
+            statusScreen.innerText = message;
+            statusScreen.style.display = 'flex';
+        }
+
+        // --- YouTube Player Initialization ---
+        function startClassUI(seekTime) {
+            document.getElementById('classroom').style.display = 'flex';
+            document.getElementById('bottom-bar').style.display = 'flex';
+
+            player = new YT.Player('yt-player', {
+                videoId: VIDEO_ID,
+                playerVars: {
+                    'autoplay': 1,
+                    'controls': 0,          // Hide controls completely
+                    'disablekb': 1,         // Disable keyboard shortcuts (spacebar pause)
+                    'modestbranding': 1,    // Remove YT logo
+                    'rel': 0,               // No related videos
+                    'fs': 0,                // No fullscreen button
+                    'playsinline': 1,       // Prevent iOS from going native fullscreen automatically
+                    'start': seekTime       // Start at the exact calculated offset
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            event.target.playVideo();
+            // Force volume on, bypassing any muted states if possible
+            event.target.unMute();
+            event.target.setVolume(100);
+        }
+
+        function onPlayerStateChange(event) {
+            // If the video ends (State 0), show the ended screen
+            if (event.data === YT.PlayerState.ENDED) {
+                document.getElementById('classroom').style.display = 'none';
+                document.getElementById('bottom-bar').style.display = 'none';
+                showStatus("Class has ended. Great job today!");
+            }
+            // Aggressively prevent pausing. If state is paused (2), force play.
+            if (event.data === YT.PlayerState.PAUSED) {
+                player.playVideo();
+            }
+        }
+    </script>
+</body>
+</html>

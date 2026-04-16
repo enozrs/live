@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SR Zone — Live Class</title>
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -233,50 +234,94 @@ body {
 }
 
 /* ══════════════ BOTTOM BAR ══════════════ */
+/* ══════════════ BOTTOM BAR (POLISHED) ══════════════ */
 #bottom-bar {
-  height: var(--bar-h); flex-shrink: 0;
+  height: 80px;
+  flex-shrink: 0;
   background: var(--bg);
   border-top: 1px solid var(--border);
-  display: none; align-items: center;
-  justify-content: center; gap: 10px;
-  padding: 0 16px; z-index: 20;
+  display: none; /* Controlled by JS */
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 24px;
+  z-index: 20;
   position: relative;
 }
 
+/* Individual Control Wrapper (removes old label gap) */
 .ctrl {
-  display: flex; flex-direction: column;
-  align-items: center; gap: 4px;
-  cursor: pointer; border: none;
-  background: transparent; color: var(--text);
-  font-family: inherit; padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+/* The Button Circle */
 .ctrl-circle {
-  width: 46px; height: 46px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; transition: background 0.15s, transform 0.1s;
-  border: none; cursor: pointer;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  background: #3c4043; /* Google gray */
+  color: white;
 }
 
-.ctrl-circle:active { transform: scale(0.92); }
-
-.ctrl-label {
-  font-size: 10px; color: var(--text2);
-  white-space: nowrap; font-weight: 500;
+.ctrl-circle:hover {
+  background: #4c5054;
 }
 
-/* States */
-.cc-off { background: var(--red); color: #fff; }
-.cc-on  { background: var(--bg3); color: var(--text); }
-.cc-hand-off { background: var(--bg3); color: var(--text); }
-.cc-hand-on  { background: var(--amber); color: #000; }
-.cc-chat-off { background: var(--bg3); color: var(--text); }
-.cc-chat-on  { background: var(--accent); color: #000; }
-.cc-leave    { background: var(--red); color: #fff; }
+.ctrl-circle:active {
+  transform: scale(0.92);
+}
+
+/* ══════════════ STATES ══════════════ */
+
+/* Mic/Cam OFF (Red State) */
+.cc-off {
+  background: #ea4335 !important;
+}
+.cc-off:hover {
+  background: #d93025 !important;
+}
+
+/* Hand Raised (Amber State) */
+.cc-hand-on {
+  background: var(--amber) !important;
+  color: #000 !important;
+}
+
+/* Chat Active (Accent Blue State) */
+.cc-chat-on {
+  background: var(--accent) !important;
+  color: #000 !important;
+}
+
+/* Leave Button (The Red Pill) */
+.cc-leave {
+  background: #ea4335;
+  width: 64px; /* Slightly wider pill shape */
+  border-radius: 32px;
+}
+.cc-leave:hover {
+  background: #d93025;
+}
+
+/* ══════════════ ICONS & SEPARATOR ══════════════ */
+.material-symbols-outlined {
+  font-size: 22px;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
 
 .ctrl-sep {
-  width: 1px; height: 36px;
-  background: var(--border); margin: 0 4px;
+  width: 1px;
+  height: 32px;
+  background: var(--border);
+  margin: 0 8px;
 }
 
 /* ══════════════ CHAT PANEL ══════════════ */
@@ -390,43 +435,29 @@ body {
     </div>
 
     <!-- Bottom bar -->
-    <div id="bottom-bar">
+<div id="bottom-bar">
+  <button class="ctrl-circle cc-off" id="mic-btn" onclick="toggleMic()">
+    <span class="material-symbols-outlined">mic_off</span>
+  </button>
 
-      <!-- Mic -->
-      <div class="ctrl" onclick="toggleMic()">
-        <div class="ctrl-circle cc-off" id="mic-btn">🎤</div>
-        <div class="ctrl-label" id="mic-label">Unmute</div>
-      </div>
+  <button class="ctrl-circle cc-off" id="cam-btn" onclick="toggleCam()">
+    <span class="material-symbols-outlined">videocam_off</span>
+  </button>
 
-      <!-- Camera -->
-      <div class="ctrl" onclick="toggleCam()">
-        <div class="ctrl-circle cc-off" id="cam-btn">📷</div>
-        <div class="ctrl-label" id="cam-label">Start Video</div>
-      </div>
+  <button class="ctrl-circle" id="hand-btn" onclick="toggleHand()">
+    <span class="material-symbols-outlined">pan_tool</span>
+  </button>
 
-      <div class="ctrl-sep"></div>
+  <button class="ctrl-circle" id="chat-btn" onclick="toggleChat()">
+    <span class="material-symbols-outlined">chat</span>
+  </button>
 
-      <!-- Hand raise -->
-      <div class="ctrl" onclick="toggleHand()">
-        <div class="ctrl-circle cc-hand-off" id="hand-btn">✋</div>
-        <div class="ctrl-label" id="hand-label">Raise Hand</div>
-      </div>
+  <button class="ctrl-circle cc-leave" onclick="leaveClass()">
+    <span class="material-symbols-outlined">call_end</span>
+  </button>
+</div>
 
-      <!-- Chat toggle -->
-      <div class="ctrl" onclick="toggleChat()">
-        <div class="ctrl-circle cc-chat-off" id="chat-btn">💬</div>
-        <div class="ctrl-label">Chat</div>
-      </div>
-
-      <div class="ctrl-sep"></div>
-
-      <!-- Leave -->
-      <div class="ctrl" onclick="leaveClass()">
-        <div class="ctrl-circle cc-leave">📴</div>
-        <div class="ctrl-label">Leave</div>
-      </div>
-
-    </div>
+    
   </div>
 
   <!-- Chat panel -->
@@ -452,7 +483,7 @@ body {
 // ══════════════════════════════════════════
 const CONFIG = {
   classes: {
-    "d542ccf765015a2ea3495c2fea97f5620ce3c090d5305638c4ee9ed4861ba7b9":  { videoId: "YOUR_VIDEO_ID_1", title: "Today's Class" },
+    "c1ee18f065326ea3e6c024b766c63f5546dfe89b2b62b4ad6b5aebbfaa9907e1":  { videoId: "YOUR_VIDEO_ID_1", title: "Today's Class" },
     "PHYSICS01":   { videoId: "YOUR_VIDEO_ID_2", title: "Physics — Ch 1" },
     "CHEM02":      { videoId: "YOUR_VIDEO_ID_3", title: "Chemistry — Ch 2" },
     // Add more codes + video IDs here
@@ -460,7 +491,6 @@ const CONFIG = {
 
   classHour:   20,   // 8 PM (24hr)
   classMinute: 0,
-
   classDurationMins: 90,
 
   // Your 2030-scheduled YouTube stream ID (for live chat embed)
@@ -504,7 +534,7 @@ window.addEventListener('load', () => {
 
 // ── GATE (SECURE HASH VERSION) ────────────────
 async function checkCode() {
-  const input = document.getElementById('code-input').value.trim().toUpperCase();
+  const input = document.getElementById('code-input').value.trim();
   
   if (!input) return;
 
@@ -679,16 +709,15 @@ function onStateChange(e) {
 function toggleMic() {
   micOn = !micOn;
   const btn = document.getElementById('mic-btn');
-  const lbl = document.getElementById('mic-label');
+  const icon = btn.querySelector('.material-symbols-outlined');
+  
   if (micOn) {
-    btn.className = 'ctrl-circle cc-on';
-    btn.textContent = '🎤';
-    lbl.textContent = 'Mute';
-    showToast('🎤 Microphone is listen-only in this session');
+    btn.classList.remove('cc-off');
+    icon.textContent = 'mic'; // Filled icon
+    showToast('🎤 Microphone is on');
   } else {
-    btn.className = 'ctrl-circle cc-off';
-    btn.textContent = '🎤';
-    lbl.textContent = 'Unmute';
+    btn.classList.add('cc-off');
+    icon.textContent = 'mic_off';
   }
 }
 
@@ -696,16 +725,18 @@ function toggleMic() {
 function toggleCam() {
   camOn = !camOn;
   const btn = document.getElementById('cam-btn');
-  const lbl = document.getElementById('cam-label');
+  const icon = btn.querySelector('.material-symbols-outlined');
+  // Note: We removed lbl because modern UI uses tooltips or icon changes only
+
   if (camOn) {
-    btn.className = 'ctrl-circle cc-on';
-    btn.textContent = '📷';
-    lbl.textContent = 'Stop Video';
-    showToast('📷 Video is view-only in this session');
+    // UI looks "Active" (Gray background)
+    btn.classList.remove('cc-off');
+    icon.textContent = 'videocam'; 
+    showToast('📷 Video is on');
   } else {
-    btn.className = 'ctrl-circle cc-off';
-    btn.textContent = '📷';
-    lbl.textContent = 'Start Video';
+    // UI looks "Disabled" (Red background)
+    btn.classList.add('cc-off');
+    icon.textContent = 'videocam_off';
   }
 }
 
@@ -716,18 +747,25 @@ let handQueue = [];
 function toggleHand() {
   handUp = !handUp;
   const btn = document.getElementById('hand-btn');
-  const lbl = document.getElementById('hand-label');
+  const icon = btn.querySelector('.material-symbols-outlined');
 
   if (handUp) {
+    // Switch to active state (Amber color from your CSS)
     btn.className = 'ctrl-circle cc-hand-on';
-    lbl.textContent = 'Lower Hand';
+    
+    // Optional: Switch icon to a 'filled' version if desired
+    // icon.style.fontVariationSettings = "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24";
+    
     showToast('✋ Hand raised! Teacher has been notified');
     showHandNotif('You', true);
-    // Simulate a few others raising hands
     simulateOtherHands();
   } else {
-    btn.className = 'ctrl-circle cc-hand-off';
-    lbl.textContent = 'Raise Hand';
+    // Return to default gray state
+    btn.className = 'ctrl-circle';
+    
+    // Reset icon fill if you used the optional line above
+    // icon.style.fontVariationSettings = "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24";
+    
     hideHandNotif();
     handQueue = [];
   }

@@ -448,11 +448,11 @@ body {
 
 <script>
 // ══════════════════════════════════════════
-//  ⚙️  CONFIG — edit these
+// zzzConfig — edit these
 // ══════════════════════════════════════════
 const CONFIG = {
   classes: {
-    "SRZONE2026":  { videoId: "YOUR_VIDEO_ID_1", title: "Today's Class" },
+    "d542ccf765015a2ea3495c2fea97f5620ce3c090d5305638c4ee9ed4861ba7b9":  { videoId: "YOUR_VIDEO_ID_1", title: "Today's Class" },
     "PHYSICS01":   { videoId: "YOUR_VIDEO_ID_2", title: "Physics — Ch 1" },
     "CHEM02":      { videoId: "YOUR_VIDEO_ID_3", title: "Chemistry — Ch 2" },
     // Add more codes + video IDs here
@@ -502,9 +502,20 @@ window.addEventListener('load', () => {
   // Show gate
 });
 
-function checkCode() {
-  const code = document.getElementById('code-input').value.trim().toUpperCase();
-  const cls  = CONFIG.classes[code];
+// ── GATE (SECURE HASH VERSION) ────────────────
+async function checkCode() {
+  const input = document.getElementById('code-input').value.trim().toUpperCase();
+  
+  if (!input) return;
+
+  // Generate SHA-256 hash of the user input
+  const msgBuffer = new TextEncoder().encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const inputHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  const cls = CONFIG.classes[inputHash];
+
   if (!cls) {
     document.getElementById('gate-error').style.display = 'block';
     const inp = document.getElementById('code-input');
@@ -512,7 +523,13 @@ function checkCode() {
     setTimeout(() => inp.style.borderColor = '', 1500);
     return;
   }
-  localStorage.setItem('srzone_v2', JSON.stringify({ code, exp: Date.now() + CONFIG.sessionMs }));
+
+  // Save the hash instead of plain text in LocalStorage
+  localStorage.setItem('srzone_v2', JSON.stringify({ 
+    code: inputHash, 
+    exp: Date.now() + CONFIG.sessionMs 
+  }));
+
   currentClass = cls;
   launchApp();
 }
@@ -636,8 +653,23 @@ function onStateChange(e) {
   // Class ended naturally
   if (e.data === YT.PlayerState.ENDED) {
     videoStarted = false;
-    showStatusScreen('✅', "Class has ended!", "Great work today. See you tomorrow! 📚", false, 0);
+
+    // 1. Kill the entire classroom UI
+    document.getElementById('main').style.display = 'none';
+    
+    // 2. Hide the bottom bar
     document.getElementById('bottom-bar').style.display = 'none';
+
+    // 3. (Optional) Update top bar to show it's no longer LIVE
+    const liveChip = document.querySelector('.chip-live');
+    if (liveChip) liveChip.innerHTML = 'FINISHED';
+
+    // 4. Show your graceful status screen
+    showStatusScreen('✅', "Class has ended!", "Great work today. See you tomorrow! 📚", false, 0);
+
+    // 5. Clean up timers
+    clearInterval(clockTick);
+    clearInterval(statusTick);
   }
 }
 

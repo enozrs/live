@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SR Zone — Live Class</title>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #202124;
+  --bg2:      #2b2d30;
+  --bg3:      #3c4043;
+  --border:   #3c4043;
+  --text:     #e8eaed;
+  --text2:    #9aa0a6;
+  --accent:   #8ab4f8;
+  --red:      #ea4335;
+  --green:    #34a853;
+  --amber:    #fbbc04;
+  --radius:   8px;
+  --bar-h:    72px;
+}
+
+body {
+  font-family: 'Google Sans', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ══════════════ GATE ══════════════ */
+#gate {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+
+.gate-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2.5rem 2rem;
+  width: 340px; max-width: 92vw;
+  display: flex; flex-direction: column; gap: 1.2rem;
+  text-align: center;
+}
+
+.gate-logo { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; }
+.gate-logo span { color: var(--accent); }
+
+.gate-sub { font-size: 13px; color: var(--text2); }
+
+.gate-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  padding: 12px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  text-align: center;
+  letter-spacing: 2px;
+}
+.gate-input:focus { border-color: var(--accent); }
+.gate-input::placeholder { letter-spacing: 0; color: var(--text2); font-size: 13px; }
+
+.gate-btn {
+  width: 100%;
+  background: #1a73e8;
+  color: #fff; border: none;
+  border-radius: var(--radius);
+  padding: 13px; font-family: inherit;
+  font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: background 0.2s, transform 0.1s;
+}
+.gate-btn:hover { background: #1765cc; }
+.gate-btn:active { transform: scale(0.98); }
+
+.gate-error { font-size: 13px; color: var(--red); display: none; }
+.gate-note { font-size: 11px; color: var(--text2); }
+
+/* ══════════════ STATUS SCREEN ══════════════ */
+#status-screen {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 20px; z-index: 500;
+}
+
+.status-emoji { font-size: 52px; }
+.status-title { font-size: 24px; font-weight: 500; }
+.status-sub { font-size: 15px; color: var(--text2); text-align: center; max-width: 320px; line-height: 1.6; }
+
+.countdown-pill {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 10px 24px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--text2);
+}
+
+#countdown-val {
+  font-size: 20px; font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+}
+
+/* ══════════════ TOP BAR ══════════════ */
+#topbar {
+  height: 52px; flex-shrink: 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 16px; gap: 12px;
+  z-index: 10;
+}
+
+.tb-title { font-size: 15px; font-weight: 500; }
+.tb-sep { flex: 1; }
+
+.tb-chip {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; padding: 4px 10px;
+  border-radius: 99px; font-weight: 500;
+}
+
+.chip-live {
+  background: rgba(234,67,53,0.15);
+  border: 1px solid rgba(234,67,53,0.35);
+  color: #f28b82;
+}
+
+.live-dot {
+  width: 7px; height: 7px;
+  background: var(--red);
+  border-radius: 50%;
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+.chip-time {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+
+/* ══════════════ MAIN AREA ══════════════ */
+#main {
+  flex: 1; display: flex;
+  overflow: hidden; min-height: 0;
+}
+
+/* ══════════════ VIDEO COLUMN ══════════════ */
+#video-col {
+  flex: 1; position: relative;
+  background: #000; display: flex;
+  flex-direction: column; min-width: 0;
+}
+
+#video-wrap {
+  flex: 1; position: relative; overflow: hidden;
+}
+
+#yt-player {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+
+/* THE SHIELD */
+#click-shield {
+  position: absolute; inset: 0;
+  z-index: 5; cursor: default;
+}
+
+/* Teacher tile (top-right) */
+#teacher-tile {
+  position: absolute; top: 12px; right: 12px;
+  width: 130px; height: 78px;
+  background: #1a1a2e;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 5px; z-index: 6;
+  overflow: hidden;
+}
+
+.tile-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #1a73e8;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 600;
+}
+
+.tile-name {
+  font-size: 10px; color: var(--text2);
+  background: rgba(0,0,0,0.6);
+  padding: 2px 8px; border-radius: 99px;
+}
+
+/* Hand raise notifications */
+#hand-notif {
+  position: absolute; bottom: 16px; left: 16px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 13px; color: var(--text2);
+  z-index: 6;
+  display: none;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════ BOTTOM BAR ══════════════ */
+#bottom-bar {
+  height: var(--bar-h); flex-shrink: 0;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  display: none; align-items: center;
+  justify-content: center; gap: 10px;
+  padding: 0 16px; z-index: 20;
+  position: relative;
+}
+
+.ctrl {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+  cursor: pointer; border: none;
+  background: transparent; color: var(--text);
+  font-family: inherit; padding: 0 4px;
+}
+
+.ctrl-circle {
+  width: 46px; height: 46px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; transition: background 0.15s, transform 0.1s;
+  border: none; cursor: pointer;
+}
+
+.ctrl-circle:active { transform: scale(0.92); }
+
+.ctrl-label {
+  font-size: 10px; color: var(--text2);
+  white-space: nowrap; font-weight: 500;
+}
+
+/* States */
+.cc-off { background: var(--red); color: #fff; }
+.cc-on  { background: var(--bg3); color: var(--text); }
+.cc-hand-off { background: var(--bg3); color: var(--text); }
+.cc-hand-on  { background: var(--amber); color: #000; }
+.cc-chat-off { background: var(--bg3); color: var(--text); }
+.cc-chat-on  { background: var(--accent); color: #000; }
+.cc-leave    { background: var(--red); color: #fff; }
+
+.ctrl-sep {
+  width: 1px; height: 36px;
+  background: var(--border); margin: 0 4px;
+}
+
+/* ══════════════ CHAT PANEL ══════════════ */
+#chat-panel {
+  width: 320px; flex-shrink: 0;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  display: none; flex-direction: column;
+  overflow: hidden;
+}
+
+#chat-panel.open { display: flex; }
+
+.chat-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  justify-content: space-between;
+}
+
+.chat-head-title { font-size: 13px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+
+.chat-close {
+  background: none; border: none;
+  color: var(--text2); font-size: 18px;
+  cursor: pointer; padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.chat-close:hover { background: var(--bg3); }
+
+#yt-chat-frame {
+  flex: 1; border: none;
+  background: #0f0f0f; min-height: 0;
+}
+
+/* ══════════════ TOAST ══════════════ */
+#toast {
+  position: fixed; bottom: 84px; left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 16px; font-size: 13px;
+  color: var(--text2); opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 9999; pointer-events: none; white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ══════════════ RESPONSIVE ══════════════ */
+@media (max-width: 640px) {
+  #chat-panel { position: fixed; inset: 0; width: 100%; z-index: 100; border: none; }
+  #teacher-tile { width: 90px; height: 56px; top: 8px; right: 8px; }
+  .ctrl-circle { width: 40px; height: 40px; font-size: 16px; }
+  #bottom-bar { gap: 6px; }
+  .ctrl-label { font-size: 9px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ GATE ══ -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-logo">SR <span>Zone</span></div>
+    <div class="gate-sub">Enter your class access code</div>
+    <input id="code-input" class="gate-input" type="text"
+      maxlength="16" placeholder="Class code" autocomplete="off" spellcheck="false" />
+    <div id="gate-error" class="gate-error">Incorrect code. Please try again.</div>
+    <button class="gate-btn" onclick="checkCode()">Join Class</button>
+    <div class="gate-note">Access is saved on this device for 6 hours</div>
+  </div>
+</div>
+
+<!-- ══ STATUS SCREEN ══ -->
+<div id="status-screen">
+  <div class="status-emoji" id="s-emoji">🕐</div>
+  <div class="status-title" id="s-title">Loading...</div>
+  <div class="status-sub" id="s-sub"></div>
+  <div class="countdown-pill" id="s-countdown" style="display:none">
+    Class starts in &nbsp;<span id="countdown-val">00:00:00</span>
+  </div>
+</div>
+
+<!-- ══ TOP BAR ══ -->
+<div id="topbar" style="display:none">
+  <div class="tb-title" id="tb-title">SR Zone</div>
+  <div class="tb-sep"></div>
+  <div class="tb-chip chip-live"><div class="live-dot"></div>LIVE</div>
+  <div class="tb-chip chip-time" id="tb-clock">--:--</div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div id="main" style="display:none">
+
+  <!-- Video column -->
+  <div id="video-col">
+    <div id="video-wrap">
+      <div id="yt-player"></div>
+      <div id="click-shield"></div>
+
+      <!-- Teacher tile -->
+      <div id="teacher-tile">
+        <div class="tile-avatar">SR</div>
+        <div class="tile-name">Teacher</div>
+      </div>
+
+      <!-- Hand raise notification -->
+      <div id="hand-notif"></div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div id="bottom-bar">
+
+      <!-- Mic -->
+      <div class="ctrl" onclick="toggleMic()">
+        <div class="ctrl-circle cc-off" id="mic-btn">🎤</div>
+        <div class="ctrl-label" id="mic-label">Unmute</div>
+      </div>
+
+      <!-- Camera -->
+      <div class="ctrl" onclick="toggleCam()">
+        <div class="ctrl-circle cc-off" id="cam-btn">📷</div>
+        <div class="ctrl-label" id="cam-label">Start Video</div>
+      </div>
+
+      <div class="ctrl-sep"></div>
+
+      <!-- Hand raise -->
+      <div class="ctrl" onclick="toggleHand()">
+        <div class="ctrl-circle cc-hand-off" id="hand-btn">✋</div>
+        <div class="ctrl-label" id="hand-label">Raise Hand</div>
+      </div>
+
+      <!-- Chat toggle -->
+      <div class="ctrl" onclick="toggleChat()">
+        <div class="ctrl-circle cc-chat-off" id="chat-btn">💬</div>
+        <div class="ctrl-label">Chat</div>
+      </div>
+
+      <div class="ctrl-sep"></div>
+
+      <!-- Leave -->
+      <div class="ctrl" onclick="leaveClass()">
+        <div class="ctrl-circle cc-leave">📴</div>
+        <div class="ctrl-label">Leave</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Chat panel -->
+  <div id="chat-panel">
+    <div class="chat-head">
+      <span class="chat-head-title">Class Chat</span>
+      <button class="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+    <iframe id="yt-chat-frame" src="" allow="autoplay" sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- YouTube IFrame API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+// ══════════════════════════════════════════
+//  ⚙️  CONFIG — edit these
+// ══════════════════════════════════════════
+const CONFIG = {
+  classes: {
+    "SRZONE2026":  { videoId: "YOUR_VIDEO_ID_1", title: "Today's Class" },
+    "PHYSICS01":   { videoId: "YOUR_VIDEO_ID_2", title: "Physics — Ch 1" },
+    "CHEM02":      { videoId: "YOUR_VIDEO_ID_3", title: "Chemistry — Ch 2" },
+    // Add more codes + video IDs here
+  },
+
+  classHour:   20,   // 8 PM (24hr)
+  classMinute: 0,
+
+  classDurationMins: 90,
+
+  // Your 2030-scheduled YouTube stream ID (for live chat embed)
+  ytChatStreamId: "iTDZ5cqHYF4",
+
+  // Your domain (for YouTube chat embed_domain param)
+  domain: "live.thesrzone.com",
+
+  sessionMs: 6 * 60 * 60 * 1000,
+};
+// ══════════════════════════════════════════
+
+// State
+let player        = null;
+let currentClass  = null;
+let clockTick     = null;
+let statusTick    = null;
+let videoStarted  = false;
+
+// Toggle states
+let micOn   = false;
+let camOn   = false;
+let handUp  = false;
+let chatOpen = false;
+
+// ── GATE ──────────────────────────────────
+document.getElementById('code-input')
+  .addEventListener('keydown', e => { if (e.key === 'Enter') checkCode(); });
+
+window.addEventListener('load', () => {
+  try {
+    const s = JSON.parse(localStorage.getItem('srzone_v2'));
+    if (s && Date.now() < s.exp && CONFIG.classes[s.code]) {
+      currentClass = CONFIG.classes[s.code];
+      launchApp();
+      return;
+    }
+  } catch {}
+  // Show gate
+});
+
+function checkCode() {
+  const code = document.getElementById('code-input').value.trim().toUpperCase();
+  const cls  = CONFIG.classes[code];
+  if (!cls) {
+    document.getElementById('gate-error').style.display = 'block';
+    const inp = document.getElementById('code-input');
+    inp.style.borderColor = '#ea4335';
+    setTimeout(() => inp.style.borderColor = '', 1500);
+    return;
+  }
+  localStorage.setItem('srzone_v2', JSON.stringify({ code, exp: Date.now() + CONFIG.sessionMs }));
+  currentClass = cls;
+  launchApp();
+}
+
+// ── APP LAUNCH ────────────────────────────
+function launchApp() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('topbar').style.display = 'flex';
+  document.getElementById('main').style.display  = 'flex';
+  document.getElementById('tb-title').textContent = currentClass.title;
+
+  startClock();
+  checkState();
+  statusTick = setInterval(checkState, 1000);
+}
+
+// ── CLOCK ─────────────────────────────────
+function startClock() {
+  function tick() {
+    const n = new Date();
+    document.getElementById('tb-clock').textContent =
+      n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  tick();
+  clockTick = setInterval(tick, 1000);
+}
+
+// ── STATE MACHINE ─────────────────────────
+function classStartToday() {
+  const d = new Date();
+  d.setHours(CONFIG.classHour, CONFIG.classMinute, 0, 0);
+  return d;
+}
+
+function checkState() {
+  const now   = new Date();
+  const start = classStartToday();
+  const end   = new Date(start.getTime() + CONFIG.classDurationMins * 60000);
+
+  if (now < start) {
+    showStatusScreen('🕐', "Class hasn't started yet",
+      `Today's session begins at ${fmtTime(start)}.`, true, start - now);
+    ensureBottomBarHidden();
+  } else if (now >= start && now < end) {
+    hideStatusScreen();
+    const elapsed = Math.floor((now - start) / 1000);
+    showClassroom(elapsed);
+  } else {
+    showStatusScreen('✅', "Class has ended for today",
+      "Great session! The next class is tomorrow. 📚", false, 0);
+    ensureBottomBarHidden();
+  }
+}
+
+function showStatusScreen(emoji, title, sub, countdown, msLeft) {
+  const ss = document.getElementById('status-screen');
+  ss.style.display = 'flex';
+  document.getElementById('s-emoji').textContent = emoji;
+  document.getElementById('s-title').textContent = title;
+  document.getElementById('s-sub').textContent   = sub;
+  const box = document.getElementById('s-countdown');
+  if (countdown && msLeft > 0) {
+    box.style.display = 'flex';
+    document.getElementById('countdown-val').textContent = msToClock(msLeft);
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function hideStatusScreen() {
+  document.getElementById('status-screen').style.display = 'none';
+}
+
+function ensureBottomBarHidden() {
+  document.getElementById('bottom-bar').style.display = 'none';
+}
+
+// ── CLASSROOM ─────────────────────────────
+function showClassroom(seekSecs) {
+  if (videoStarted) return;
+  videoStarted = true;
+
+  document.getElementById('bottom-bar').style.display = 'flex';
+
+  // Init YouTube IFrame API player
+  player = new YT.Player('yt-player', {
+    videoId: currentClass.videoId,
+    playerVars: {
+      autoplay:        1,
+      controls:        0,
+      disablekb:       1,
+      modestbranding:  1,
+      rel:             0,
+      fs:              0,
+      playsinline:     1,
+      iv_load_policy:  3,
+      start:           seekSecs,
+    },
+    events: {
+      onReady:       onReady,
+      onStateChange: onStateChange,
+    }
+  });
+
+  // Load chat
+  const chatSrc = `https://www.youtube.com/live_chat?v=${CONFIG.ytChatStreamId}&embed_domain=${CONFIG.domain}`;
+  document.getElementById('yt-chat-frame').src = chatSrc;
+}
+
+function onReady(e) {
+  e.target.playVideo();
+  e.target.unMute();
+  e.target.setVolume(100);
+}
+
+function onStateChange(e) {
+  // Force resume if paused (students can't pause)
+  if (e.data === YT.PlayerState.PAUSED) {
+    setTimeout(() => player && player.playVideo(), 150);
+  }
+  // Class ended naturally
+  if (e.data === YT.PlayerState.ENDED) {
+    videoStarted = false;
+    showStatusScreen('✅', "Class has ended!", "Great work today. See you tomorrow! 📚", false, 0);
+    document.getElementById('bottom-bar').style.display = 'none';
+  }
+}
+
+// ── CONTROLS ──────────────────────────────
+
+// Mic — fake toggle with on/off visual
+function toggleMic() {
+  micOn = !micOn;
+  const btn = document.getElementById('mic-btn');
+  const lbl = document.getElementById('mic-label');
+  if (micOn) {
+    btn.className = 'ctrl-circle cc-on';
+    btn.textContent = '🎤';
+    lbl.textContent = 'Mute';
+    showToast('🎤 Microphone is listen-only in this session');
+  } else {
+    btn.className = 'ctrl-circle cc-off';
+    btn.textContent = '🎤';
+    lbl.textContent = 'Unmute';
+  }
+}
+
+// Camera — fake toggle
+function toggleCam() {
+  camOn = !camOn;
+  const btn = document.getElementById('cam-btn');
+  const lbl = document.getElementById('cam-label');
+  if (camOn) {
+    btn.className = 'ctrl-circle cc-on';
+    btn.textContent = '📷';
+    lbl.textContent = 'Stop Video';
+    showToast('📷 Video is view-only in this session');
+  } else {
+    btn.className = 'ctrl-circle cc-off';
+    btn.textContent = '📷';
+    lbl.textContent = 'Start Video';
+  }
+}
+
+// Hand raise — fake but shows notification
+const handNames = ["Aarav", "Priya", "Rohan", "Sneha", "Kiran", "Dev", "Ananya", "Raj"];
+let handQueue = [];
+
+function toggleHand() {
+  handUp = !handUp;
+  const btn = document.getElementById('hand-btn');
+  const lbl = document.getElementById('hand-label');
+
+  if (handUp) {
+    btn.className = 'ctrl-circle cc-hand-on';
+    lbl.textContent = 'Lower Hand';
+    showToast('✋ Hand raised! Teacher has been notified');
+    showHandNotif('You', true);
+    // Simulate a few others raising hands
+    simulateOtherHands();
+  } else {
+    btn.className = 'ctrl-circle cc-hand-off';
+    lbl.textContent = 'Raise Hand';
+    hideHandNotif();
+    handQueue = [];
+  }
+}
+
+function simulateOtherHands() {
+  const n = Math.floor(Math.random() * 3) + 1;
+  for (let i = 0; i < n; i++) {
+    setTimeout(() => {
+      const name = handNames[Math.floor(Math.random() * handNames.length)];
+      showHandNotif(name, false);
+    }, (i + 1) * 2200);
+  }
+}
+
+function showHandNotif(name, isYou) {
+  handQueue.push(name);
+  const notif = document.getElementById('hand-notif');
+  const list  = handQueue.map(n => n === 'You' ? '<strong>You</strong>' : n).join(', ');
+  notif.innerHTML = `✋ ${list} raised hand${handQueue.length > 1 ? 's' : ''}`;
+  notif.style.display = 'block';
+}
+
+function hideHandNotif() {
+  document.getElementById('hand-notif').style.display = 'none';
+}
+
+// Chat toggle
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('chat-panel');
+  const btn   = document.getElementById('chat-btn');
+
+  if (chatOpen) {
+    panel.classList.add('open');
+    btn.className = 'ctrl-circle cc-chat-on';
+  } else {
+    panel.classList.remove('open');
+    btn.className = 'ctrl-circle cc-chat-off';
+  }
+}
+
+// Leave
+function leaveClass() {
+  if (!confirm('Leave the class session?')) return;
+  player && player.pauseVideo();
+  clearInterval(clockTick);
+  clearInterval(statusTick);
+  localStorage.removeItem('srzone_v2');
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('topbar').style.display = 'none';
+  document.getElementById('gate').style.display = 'flex';
+  videoStarted = false;
+  player = null;
+  micOn = camOn = handUp = chatOpen = false;
+}
+
+// ── TOAST ─────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── UTILS ─────────────────────────────────
+function fmtTime(d) {
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function msToClock(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return [h, m, sec].map(x => String(x).padStart(2, '0')).join(':');
+}
+
+// Block right-click on video area
+document.addEventListener('contextmenu', e => {
+  if (e.target.closest('#video-wrap')) e.preventDefault();
+});
+</script>
+</body>
+</html>

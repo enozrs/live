@@ -74,23 +74,24 @@
         const VALID_CODE = "enozrs"; // Change this daily/weekly
         const VIDEO_ID = "5D7SnhC-9IA"; 
         const CLASS_START_HOUR = 13; // 8 PM (24-hour format)
-        const CLASS_START_MINUTE = 30;
+        const CLASS_START_MINUTE = 59;
         const VIDEO_DURATION_MINUTES = 45; // Length of your recording
 
         let player;
 
         // --- Authentication & Local Storage ---
-        window.onload = () => {
-            const savedAuth = JSON.parse(localStorage.getItem('classAuth'));
-            if (savedAuth && (Date.now() - savedAuth.timestamp < 6 * 60 * 60 * 1000)) { // 6 hours
-                // Wait for user to click a 'Resume' button due to autoplay policies, or bypass if safe
-                document.getElementById('auth-screen').innerHTML = `
-                    <div class="auth-box">
-                        <h2>Welcome Back!</h2>
-                        <button onclick="initClassLogic()">Enter Classroom</button>
-                    </div>`;
-            }
-        };
+// --- fix the slow loading on phones
+document.addEventListener('DOMContentLoaded', () => {
+    const savedAuth = JSON.parse(localStorage.getItem('classAuth'));
+    if (savedAuth && (Date.now() - savedAuth.timestamp < 6 * 60 * 60 * 1000)) { // 6 hours
+        // Wait for user to click a 'Resume' button due to autoplay policies
+        document.getElementById('auth-screen').innerHTML = `
+            <div class="auth-box">
+                <h2>Welcome Back!</h2>
+                <button onclick="initClassLogic()">Enter Classroom</button>
+            </div>`;
+    }
+});
 
         function checkCode() {
             const input = document.getElementById('classCode').value;

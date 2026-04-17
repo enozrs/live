@@ -348,7 +348,7 @@ const CONFIG = {
   },
 
   classHour:         00,
-  classMinute:       51,
+  classMinute:       59,
   // ── IMPORTANT ──────────────────────────────────────────────
   // Set this to EXACTLY your video's actual length in minutes.
   // When video ENDED fires = class is genuinely over.
@@ -536,7 +536,12 @@ function hideStatusScreen() {
 
 // Manual fallback — if reload didn't fire on time (very slow device/network)
 function manualSync() {
-  location.reload();
+    const start = classStartToday();
+    const now = new Date();
+    const elapsed = Math.floor((now - start) / 1000);
+    
+    hideStatusScreen();
+    showClassroom(elapsed);
 }
 
 // ── Classroom ─────────────────────────────────────────────────

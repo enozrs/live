@@ -21,7 +21,6 @@
   --green:    #34a853;
   --amber:    #fbbc04;
   --radius:   8px;
-  --bar-h:    72px;
 }
 
 body {
@@ -54,7 +53,6 @@ body {
 
 .gate-logo { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; }
 .gate-logo span { color: var(--accent); }
-
 .gate-sub { font-size: 13px; color: var(--text2); }
 
 .gate-input {
@@ -180,13 +178,14 @@ body {
 #yt-player {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  pointer-events: none;
+  /* NO pointer-events: none here — iframe needs touch to enable autoplay */
 }
 
-/* THE SHIELD */
+/* THE SHIELD — only covers the player to block seek, not the whole wrap */
 #click-shield {
   position: absolute; inset: 0;
   z-index: 5; cursor: default;
+  /* Transparent — just catches clicks to prevent seeking/pausing */
 }
 
 /* Teacher tile (top-right) */
@@ -217,7 +216,7 @@ body {
 
 /* Hand raise notifications */
 #hand-notif {
-  position: absolute; bottom: 16px; left: 16px;
+  position: absolute; bottom: 96px; left: 16px;
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -234,108 +233,62 @@ body {
 }
 
 /* ══════════════ BOTTOM BAR ══════════════ */
-/* ══════════════ BOTTOM BAR (POLISHED) ══════════════ */
 #bottom-bar {
   height: 80px;
   flex-shrink: 0;
   background: var(--bg);
   border-top: 1px solid var(--border);
-  display: flex; /* Always flex, but controlled by opacity */
+  display: none; /* Hidden by default; shown via JS when class is live */
   align-items: center;
   justify-content: center;
   gap: 12px;
   padding: 0 24px;
   z-index: 20;
   position: relative;
-  
-  /* The "Pro" Logic */
-  transition: opacity 0.4s ease, transform 0.4s ease;
-  opacity: 0; 
-  pointer-events: none; /* Can't click when hidden */
-  transform: translateY(10px); /* Slight slide down effect */
 }
 
-  /* This class will be added by JS */
-#bottom-bar.active {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
+/* ── Tap-to-show overlay for mobile ── */
+/* When controls are auto-hidden, a transparent tap zone covers the video */
+#tap-zone {
+  position: absolute; inset: 0;
+  z-index: 4; /* below shield (5) but above iframe */
+  display: none; /* shown when controls are hidden */
 }
 
-/* Individual Control Wrapper (removes old label gap) */
 .ctrl {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* The Button Circle */
 .ctrl-circle {
-  width: 48px;
-  height: 48px;
+  width: 48px; height: 48px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
-  background: #3c4043; /* Google gray */
+  background: #3c4043;
   color: white;
 }
+.ctrl-circle:hover { background: #4c5054; }
+.ctrl-circle:active { transform: scale(0.92); }
 
-.ctrl-circle:hover {
-  background: #4c5054;
-}
+.cc-off { background: #ea4335 !important; }
+.cc-off:hover { background: #d93025 !important; }
 
-.ctrl-circle:active {
-  transform: scale(0.92);
-}
+.cc-hand-on { background: var(--amber) !important; color: #000 !important; }
+.cc-chat-on { background: var(--accent) !important; color: #000 !important; }
 
-/* ══════════════ STATES ══════════════ */
+.cc-leave { background: #ea4335; width: 64px; border-radius: 32px; }
+.cc-leave:hover { background: #d93025; }
 
-/* Mic/Cam OFF (Red State) */
-.cc-off {
-  background: #ea4335 !important;
-}
-.cc-off:hover {
-  background: #d93025 !important;
-}
-
-/* Hand Raised (Amber State) */
-.cc-hand-on {
-  background: var(--amber) !important;
-  color: #000 !important;
-}
-
-/* Chat Active (Accent Blue State) */
-.cc-chat-on {
-  background: var(--accent) !important;
-  color: #000 !important;
-}
-
-/* Leave Button (The Red Pill) */
-.cc-leave {
-  background: #ea4335;
-  width: 64px; /* Slightly wider pill shape */
-  border-radius: 32px;
-}
-.cc-leave:hover {
-  background: #d93025;
-}
-
-/* ══════════════ ICONS & SEPARATOR ══════════════ */
 .material-symbols-outlined {
   font-size: 22px;
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-.ctrl-sep {
-  width: 1px;
-  height: 32px;
-  background: var(--border);
-  margin: 0 8px;
-}
+.ctrl-sep { width: 1px; height: 32px; background: var(--border); margin: 0 8px; }
 
 /* ══════════════ CHAT PANEL ══════════════ */
 #chat-panel {
@@ -373,7 +326,7 @@ body {
 
 /* ══════════════ TOAST ══════════════ */
 #toast {
-  position: fixed; bottom: 84px; left: 50%;
+  position: fixed; bottom: 100px; left: 50%;
   transform: translateX(-50%) translateY(12px);
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -385,75 +338,79 @@ body {
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* ══════════════ AUTOPLAY PROMPT (mobile) ══════════════ */
+/* When autoplay is blocked, we show a tap-to-play overlay */
+#play-prompt {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: none; /* shown by JS if autoplay is blocked */
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+  z-index: 10; cursor: pointer;
+}
+
+#play-prompt-inner {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 36px;
+  text-align: center;
+  display: flex; flex-direction: column; gap: 12px;
+  align-items: center;
+}
+
+.play-icon {
+  width: 64px; height: 64px;
+  background: #1a73e8;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.play-icon .material-symbols-outlined { font-size: 32px; }
+
+#play-prompt p { font-size: 15px; color: var(--text2); }
+
 /* ══════════════ RESPONSIVE ══════════════ */
 @media (max-width: 640px) {
-  /* This makes the chat slide up from the bottom but leave 10% of the video visible */
-  #chat-panel { 
-    position: fixed; 
-    top: 10%; /* The "Peek" effect */
-    bottom: 0;
-    left: 0;
-    width: 100%; 
-    z-index: 100; 
+  #chat-panel {
+    position: fixed;
+    top: 10%;
+    bottom: 0; left: 0;
+    width: 100%;
+    z-index: 100;
     border: none;
-    border-radius: 16px 16px 0 0; /* Modern rounded corners */
-    box-shadow: 0 -10px 25px rgba(0,0,0,0.5); /* Adds depth over the video */
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -10px 25px rgba(0,0,0,0.5);
   }
 
   #teacher-tile { width: 90px; height: 56px; top: 8px; right: 8px; }
-  
-  /* Make the buttons a bit smaller so they don't look cramped on small screens */
   .ctrl-circle { width: 42px; height: 42px; }
-  
-  #bottom-bar { 
-    gap: 8px; 
+
+  #bottom-bar {
+    gap: 8px;
     padding: 0 12px;
-    z-index: 110; /* Keep buttons ABOVE the chat panel */
+    z-index: 110;
   }
 }
 
-/* 📱 PRO LANDSCAPE OPTIMIZATION */
 @media (orientation: landscape) and (max-height: 500px) {
-  /* Hide UI elements to free up vertical space */
-  #topbar, #teacher-tile, .ctrl-sep { 
-    display: none !important; 
-  }
+  #topbar, #teacher-tile, .ctrl-sep { display: none !important; }
 
-  /* Force the main container to fill every pixel */
-  #main {
-    height: 100vh;
-    width: 100vw;
-  }
+  #main { height: 100vh; width: 100vw; }
+  #video-col { height: 100vh; }
 
-  #video-col {
-    height: 100vh;
-  }
-
-  /* Shrink the bottom bar and make it translucent so it floats over the video */
   #bottom-bar {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    bottom: 0; left: 0; right: 0;
     height: 60px;
     border-top: none;
     background: rgba(32, 33, 36, 0.85);
     gap: 20px;
   }
 
-  .ctrl-circle {
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  /* Ensure the video expands to fill the background */
-  #video-wrap {
-    height: 100%;
-    width: 100%;
-  }
-}  
-  
+  .ctrl-circle { width: 40px; height: 40px; background: rgba(255,255,255,0.1); }
+  #video-wrap { height: 100%; width: 100%; }
+}
 </style>
 </head>
 <body>
@@ -492,49 +449,57 @@ body {
 <!-- ══ MAIN ══ -->
 <div id="main" style="display:none">
 
-  <!-- Video column -->
   <div id="video-col">
     <div id="video-wrap">
       <div id="yt-player"></div>
+
+      <!-- Tap zone: transparent, sits below shield, used to reveal controls on mobile -->
+      <div id="tap-zone"></div>
+
+      <!-- Shield: sits above tap-zone, blocks seeking via mouse but passes through once controls visible -->
       <div id="click-shield"></div>
 
-      <!-- Teacher tile -->
+      <!-- Autoplay blocked prompt -->
+      <div id="play-prompt" onclick="userInitiatedPlay()">
+        <div id="play-prompt-inner">
+          <div class="play-icon">
+            <span class="material-symbols-outlined">play_arrow</span>
+          </div>
+          <p>Tap to join the live class</p>
+        </div>
+      </div>
+
       <div id="teacher-tile">
         <div class="tile-avatar">SR</div>
         <div class="tile-name">Teacher</div>
       </div>
 
-      <!-- Hand raise notification -->
       <div id="hand-notif"></div>
     </div>
 
-    <!-- Bottom bar -->
-<div id="bottom-bar">
-  <button class="ctrl-circle cc-off" id="mic-btn" onclick="toggleMic()">
-    <span class="material-symbols-outlined">mic_off</span>
-  </button>
+    <div id="bottom-bar">
+      <button class="ctrl-circle cc-off" id="mic-btn" onclick="toggleMic()">
+        <span class="material-symbols-outlined">mic_off</span>
+      </button>
 
-  <button class="ctrl-circle cc-off" id="cam-btn" onclick="toggleCam()">
-    <span class="material-symbols-outlined">videocam_off</span>
-  </button>
+      <button class="ctrl-circle cc-off" id="cam-btn" onclick="toggleCam()">
+        <span class="material-symbols-outlined">videocam_off</span>
+      </button>
 
-  <button class="ctrl-circle" id="hand-btn" onclick="toggleHand()">
-    <span class="material-symbols-outlined">pan_tool</span>
-  </button>
+      <button class="ctrl-circle" id="hand-btn" onclick="toggleHand()">
+        <span class="material-symbols-outlined">pan_tool</span>
+      </button>
 
-  <button class="ctrl-circle" id="chat-btn" onclick="toggleChat()">
-    <span class="material-symbols-outlined">chat</span>
-  </button>
+      <button class="ctrl-circle" id="chat-btn" onclick="toggleChat()">
+        <span class="material-symbols-outlined">chat</span>
+      </button>
 
-  <button class="ctrl-circle cc-leave" onclick="leaveClass()">
-    <span class="material-symbols-outlined">call_end</span>
-  </button>
-</div>
-
-    
+      <button class="ctrl-circle cc-leave" onclick="leaveClass()">
+        <span class="material-symbols-outlined">call_end</span>
+      </button>
+    </div>
   </div>
 
-  <!-- Chat panel -->
   <div id="chat-panel">
     <div class="chat-head">
       <span class="chat-head-title">Class Chat</span>
@@ -545,50 +510,89 @@ body {
 
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
-<!-- YouTube IFrame API -->
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
 // ══════════════════════════════════════════
-// zzzConfig — edit these
+// CONFIG — edit these
 // ══════════════════════════════════════════
 const CONFIG = {
   classes: {
-    "d542ccf765015a2ea3495c2fea97f5620ce3c090d5305638c4ee9ed4861ba7b9":  { videoId: "5D7SnhC-9IA", title: "Today's Class" },
-    "PHYSICS01":   { videoId: "YOUR_VIDEO_ID_2", title: "Physics — Ch 1" },
-    "CHEM02":      { videoId: "YOUR_VIDEO_ID_3", title: "Chemistry — Ch 2" },
-    // Add more codes + video IDs here
+    "d542ccf765015a2ea3495c2fea97f5620ce3c090d5305638c4ee9ed4861ba7b9": { videoId: "5D7SnhC-9IA", title: "Today's Class" },
+    "PHYSICS01": { videoId: "YOUR_VIDEO_ID_2", title: "Physics — Ch 1" },
+    "CHEM02":    { videoId: "YOUR_VIDEO_ID_3", title: "Chemistry — Ch 2" },
   },
 
-  classHour:   23,   // 8 PM (24hr)
-  classMinute: 29,
-  classDurationMins: 5,
+  classHour:         10,
+  classMinute:       57,
+  classDurationMins: 90,
 
-  // Your 2030-scheduled YouTube stream ID (for live chat embed)
   ytChatStreamId: "iTDZ5cqHYF4",
-
-  // Your domain (for YouTube chat embed_domain param)
-  domain: "live.thesrzone.com",
-
-  sessionMs: 6 * 60 * 60 * 1000,
+  domain:         "live.thesrzone.com",
+  sessionMs:      6 * 60 * 60 * 1000,
 };
 // ══════════════════════════════════════════
 
-// State
 let player        = null;
 let currentClass  = null;
 let clockTick     = null;
 let statusTick    = null;
 let videoStarted  = false;
+let playerReady   = false;
 
-// Toggle states
-let micOn   = false;
-let camOn   = false;
-let handUp  = false;
+let micOn    = false;
+let camOn    = false;
+let handUp   = false;
 let chatOpen = false;
+
+// ── Controls auto-hide ────────────────────
+// On desktop: mouse-driven fade out after 4s.
+// On mobile: tap toggles visibility; controls stay shown for 5s then hide.
+let controlsVisible  = false;
+let controlsTimeout  = null;
+const isMobile = () => ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+function showControls() {
+  if (!videoStarted) return;
+  controlsVisible = true;
+  const bar = document.getElementById('bottom-bar');
+  bar.style.display = 'flex';
+  document.getElementById('tap-zone').style.display = 'none';
+  clearTimeout(controlsTimeout);
+  // Don't auto-hide if chat is open (user may be typing)
+  if (!chatOpen) {
+    controlsTimeout = setTimeout(hideControls, isMobile() ? 5000 : 4000);
+  }
+}
+
+function hideControls() {
+  if (chatOpen) return; // never hide while chat is open
+  controlsVisible = false;
+  const bar = document.getElementById('bottom-bar');
+  // On mobile: hide the bar so more of the video is visible
+  // On desktop: keep it visible (better UX, matches original intent)
+  if (isMobile()) {
+    bar.style.display = 'none';
+    document.getElementById('tap-zone').style.display = 'block';
+  }
+}
+
+// Desktop: show on mousemove
+document.addEventListener('mousemove', e => {
+  if (e.target.closest('#video-col') || e.target.closest('#bottom-bar')) showControls();
+});
+
+// Keep controls visible when hovering the bar
+document.addEventListener('DOMContentLoaded', () => {
+  const bar = document.getElementById('bottom-bar');
+  if (bar) bar.addEventListener('mouseenter', () => { clearTimeout(controlsTimeout); });
+
+  // Tap zone: single tap reveals controls
+  const tapZone = document.getElementById('tap-zone');
+  if (tapZone) tapZone.addEventListener('touchend', e => { e.preventDefault(); showControls(); });
+});
 
 // ── GATE ──────────────────────────────────
 document.getElementById('code-input')
@@ -603,20 +607,16 @@ window.addEventListener('load', () => {
       return;
     }
   } catch {}
-  // Show gate
 });
 
-// ── GATE (SECURE HASH VERSION) ────────────────
 async function checkCode() {
   const input = document.getElementById('code-input').value.trim();
-  
   if (!input) return;
 
-  // Generate SHA-256 hash of the user input
-  const msgBuffer = new TextEncoder().encode(input);
+  const msgBuffer  = new TextEncoder().encode(input);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const inputHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashArray  = Array.from(new Uint8Array(hashBuffer));
+  const inputHash  = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
   const cls = CONFIG.classes[inputHash];
 
@@ -628,10 +628,9 @@ async function checkCode() {
     return;
   }
 
-  // Save the hash instead of plain text in LocalStorage
-  localStorage.setItem('srzone_v2', JSON.stringify({ 
-    code: inputHash, 
-    exp: Date.now() + CONFIG.sessionMs 
+  localStorage.setItem('srzone_v2', JSON.stringify({
+    code: inputHash,
+    exp:  Date.now() + CONFIG.sessionMs
   }));
 
   currentClass = cls;
@@ -640,10 +639,10 @@ async function checkCode() {
 
 // ── APP LAUNCH ────────────────────────────
 function launchApp() {
-  document.getElementById('gate').style.display = 'none';
-  document.getElementById('topbar').style.display = 'flex';
-  document.getElementById('main').style.display  = 'flex';
-  document.getElementById('tb-title').textContent = currentClass.title;
+  document.getElementById('gate').style.display    = 'none';
+  document.getElementById('topbar').style.display  = 'flex';
+  document.getElementById('main').style.display    = 'flex';
+  document.getElementById('tb-title').textContent  = currentClass.title;
 
   startClock();
   checkState();
@@ -676,7 +675,9 @@ function checkState() {
   if (now < start) {
     showStatusScreen('🕐', "Class hasn't started yet",
       `Today's session begins at ${fmtTime(start)}.`, true, start - now);
-    ensureBottomBarHidden();
+    // Reset so showClassroom() can run fresh next time
+    if (videoStarted) { videoStarted = false; }
+    document.getElementById('bottom-bar').style.display = 'none';
   } else if (now >= start && now < end) {
     hideStatusScreen();
     const elapsed = Math.floor((now - start) / 1000);
@@ -684,7 +685,8 @@ function checkState() {
   } else {
     showStatusScreen('✅', "Class has ended for today",
       "Great session! The next class is tomorrow. 📚", false, 0);
-    ensureBottomBarHidden();
+    if (videoStarted) { videoStarted = false; }
+    document.getElementById('bottom-bar').style.display = 'none';
   }
 }
 
@@ -707,88 +709,118 @@ function hideStatusScreen() {
   document.getElementById('status-screen').style.display = 'none';
 }
 
-function ensureBottomBarHidden() {
-  document.getElementById('bottom-bar').style.display = 'none';
-}
-
 // ── CLASSROOM ─────────────────────────────
 function showClassroom(seekSecs) {
   if (videoStarted) return;
   videoStarted = true;
 
-  document.getElementById('bottom-bar').style.display = 'flex';
+  // Show controls immediately (bottom-bar is always visible on desktop;
+  // on mobile it starts visible, then auto-hides after 5s)
+  showControls();
 
-  // Init YouTube IFrame API player
+  // Load chat iframe
+  const chatSrc = `https://www.youtube.com/live_chat?v=${CONFIG.ytChatStreamId}&embed_domain=${CONFIG.domain}`;
+  document.getElementById('yt-chat-frame').src = chatSrc;
+
+  // Init YouTube player
   player = new YT.Player('yt-player', {
     videoId: currentClass.videoId,
     playerVars: {
-      autoplay:        1,
-      controls:        0,
-      disablekb:       1,
-      modestbranding:  1,
-      rel:             0,
-      fs:              0,
-      playsinline:     1,
-      iv_load_policy:  3,
-      start:           seekSecs,
+      autoplay:       1,
+      controls:       0,
+      disablekb:      1,
+      modestbranding: 1,
+      rel:            0,
+      fs:             0,
+      playsinline:    1,  // CRITICAL for iOS inline playback
+      iv_load_policy: 3,
+      start:          seekSecs,
       mute:           1,  // Start muted — browsers allow muted autoplay
     },
     events: {
       onReady:       onReady,
       onStateChange: onStateChange,
+      onError:       onPlayerError,
     }
   });
-
-  // Load chat
-  const chatSrc = `https://www.youtube.com/live_chat?v=${CONFIG.ytChatStreamId}&embed_domain=${CONFIG.domain}`;
-  document.getElementById('yt-chat-frame').src = chatSrc;
 }
 
 function onReady(e) {
+  playerReady = true;
+  // Play muted first (always works), then try to unmute
   e.target.playVideo();
-  e.target.unMute();
-  e.target.setVolume(100);
+
+  // Attempt to unmute after a short delay
+  // If the browser blocks it, the play-prompt will handle it
+  setTimeout(() => {
+    try {
+      e.target.unMute();
+      e.target.setVolume(100);
+    } catch(err) {
+      // Unmuting failed — video is playing muted; show prompt to let user unmute
+      showPlayPrompt();
+    }
+  }, 800);
 }
 
 function onStateChange(e) {
+  if (e.data === YT.PlayerState.PLAYING) {
+    // Successfully playing — hide any play prompt
+    document.getElementById('play-prompt').style.display = 'none';
+  }
+
   // Force resume if paused (students can't pause)
   if (e.data === YT.PlayerState.PAUSED) {
-    setTimeout(() => player && player.playVideo(), 150);
+    setTimeout(() => {
+      if (player && videoStarted) player.playVideo();
+    }, 150);
   }
-  // Class ended naturally
+
   if (e.data === YT.PlayerState.ENDED) {
     videoStarted = false;
-
-    // 1. Kill the entire classroom UI
+    playerReady  = false;
     document.getElementById('main').style.display = 'none';
-    
-    // 2. Hide the bottom bar
     document.getElementById('bottom-bar').style.display = 'none';
-
-    // 3. (Optional) Update top bar to show it's no longer LIVE
     const liveChip = document.querySelector('.chip-live');
     if (liveChip) liveChip.innerHTML = 'FINISHED';
-
-    // 4. Show your graceful status screen
     showStatusScreen('✅', "Class has ended!", "Great work today. See you tomorrow! 📚", false, 0);
-
-    // 5. Clean up timers
     clearInterval(clockTick);
     clearInterval(statusTick);
   }
 }
 
-// ── CONTROLS ──────────────────────────────
+function onPlayerError(e) {
+  // If the video fails to load (e.g. offline, bad ID), reset so checkState retries
+  videoStarted = false;
+  playerReady  = false;
+}
 
-// Mic — fake toggle with on/off visual
+// ── PLAY PROMPT ───────────────────────────
+// Shown when autoplay with sound is blocked by the browser
+function showPlayPrompt() {
+  const prompt = document.getElementById('play-prompt');
+  prompt.style.display = 'flex';
+}
+
+// Called when user taps the "Tap to join" overlay
+function userInitiatedPlay() {
+  document.getElementById('play-prompt').style.display = 'none';
+  if (player && playerReady) {
+    player.unMute();
+    player.setVolume(100);
+    player.playVideo();
+  }
+  showControls();
+}
+
+// ── CONTROLS ──────────────────────────────
 function toggleMic() {
   micOn = !micOn;
-  const btn = document.getElementById('mic-btn');
+  const btn  = document.getElementById('mic-btn');
   const icon = btn.querySelector('.material-symbols-outlined');
-  
   if (micOn) {
     btn.classList.remove('cc-off');
-    icon.textContent = 'mic'; // Filled icon
+    icon.textContent = 'mic';
     showToast('Microphone is on');
   } else {
     btn.classList.add('cc-off');
@@ -796,51 +828,33 @@ function toggleMic() {
   }
 }
 
-// Camera — fake toggle
 function toggleCam() {
   camOn = !camOn;
-  const btn = document.getElementById('cam-btn');
+  const btn  = document.getElementById('cam-btn');
   const icon = btn.querySelector('.material-symbols-outlined');
-  // Note: We removed lbl because modern UI uses tooltips or icon changes only
-
   if (camOn) {
-    // UI looks "Active" (Gray background)
     btn.classList.remove('cc-off');
-    icon.textContent = 'videocam'; 
+    icon.textContent = 'videocam';
     showToast('Video is on');
   } else {
-    // UI looks "Disabled" (Red background)
     btn.classList.add('cc-off');
     icon.textContent = 'videocam_off';
   }
 }
 
-// Hand raise — fake but shows notification
 const handNames = ["Aarav", "Priya", "Rohan", "Sneha", "Kiran", "Dev", "Ananya", "Raj"];
 let handQueue = [];
 
 function toggleHand() {
   handUp = !handUp;
-  const btn = document.getElementById('hand-btn');
-  const icon = btn.querySelector('.material-symbols-outlined');
-
+  const btn  = document.getElementById('hand-btn');
   if (handUp) {
-    // Switch to active state (Amber color from your CSS)
     btn.className = 'ctrl-circle cc-hand-on';
-    
-    // Optional: Switch icon to a 'filled' version if desired
-    // icon.style.fontVariationSettings = "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24";
-    
     showToast('✋ Hand raised! Teacher has been notified');
     showHandNotif('You', true);
     simulateOtherHands();
   } else {
-    // Return to default gray state
     btn.className = 'ctrl-circle';
-    
-    // Reset icon fill if you used the optional line above
-    // icon.style.fontVariationSettings = "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24";
-    
     hideHandNotif();
     handQueue = [];
   }
@@ -868,62 +882,37 @@ function hideHandNotif() {
   document.getElementById('hand-notif').style.display = 'none';
 }
 
-// Chat toggle
 function toggleChat() {
   chatOpen = !chatOpen;
   const panel = document.getElementById('chat-panel');
   const btn   = document.getElementById('chat-btn');
-
   if (chatOpen) {
     panel.classList.add('open');
     btn.className = 'ctrl-circle cc-chat-on';
+    clearTimeout(controlsTimeout); // keep controls visible while chat is open
   } else {
     panel.classList.remove('open');
-    btn.className = 'ctrl-circle cc-chat-off';
+    btn.className = 'ctrl-circle';
+    // Restart the auto-hide timer
+    controlsTimeout = setTimeout(hideControls, isMobile() ? 5000 : 4000);
   }
 }
 
-// Leave
 function leaveClass() {
   if (!confirm('Leave the class session?')) return;
-  player && player.pauseVideo();
+  if (player) player.pauseVideo();
   clearInterval(clockTick);
   clearInterval(statusTick);
   localStorage.removeItem('srzone_v2');
-  document.getElementById('main').style.display = 'none';
-  document.getElementById('topbar').style.display = 'none';
-  document.getElementById('gate').style.display = 'flex';
+  document.getElementById('main').style.display    = 'none';
+  document.getElementById('topbar').style.display  = 'none';
+  document.getElementById('gate').style.display    = 'flex';
   videoStarted = false;
-  player = null;
+  playerReady  = false;
+  player       = null;
   micOn = camOn = handUp = chatOpen = false;
 }
 
-let controlsTimeout;
-
-function showControls() {
-  const bar = document.getElementById('bottom-bar');
-  
-  // Only run this if the classroom is actually active
-  if (!videoStarted) return; 
-
-  bar.classList.add('active');
-
-  clearTimeout(controlsTimeout);
-  controlsTimeout = setTimeout(() => {
-    // Don't hide if chat is open (student might be typing)
-    if (!chatOpen) {
-      bar.classList.remove('active');
-    }
-  }, 4000); // 4 seconds is the "Google" standard
-}
-
-// Listen specifically on the video area and the bar itself
-document.getElementById('video-col').addEventListener('mousemove', showControls);
-document.getElementById('video-col').addEventListener('touchstart', showControls);
-document.getElementById('bottom-bar').addEventListener('mouseenter', () => {
-  clearTimeout(controlsTimeout); // Keep it visible if mouse is OVER the bar
-});
-  
 // ── TOAST ─────────────────────────────────
 let toastTimer;
 function showToast(msg) {
@@ -940,14 +929,13 @@ function fmtTime(d) {
 }
 
 function msToClock(ms) {
-  const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
+  const s   = Math.floor(ms / 1000);
+  const h   = Math.floor(s / 3600);
+  const m   = Math.floor((s % 3600) / 60);
   const sec = s % 60;
   return [h, m, sec].map(x => String(x).padStart(2, '0')).join(':');
 }
 
-// Block right-click on video area
 document.addEventListener('contextmenu', e => {
   if (e.target.closest('#video-wrap')) e.preventDefault();
 });

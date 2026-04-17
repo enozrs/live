@@ -348,7 +348,7 @@ const CONFIG = {
   },
 
   classHour:         00,
-  classMinute:       43,
+  classMinute:       51,
   // ── IMPORTANT ──────────────────────────────────────────────
   // Set this to EXACTLY your video's actual length in minutes.
   // When video ENDED fires = class is genuinely over.
@@ -499,8 +499,12 @@ function checkState() {
     }
 
   } else if (now >= start && now < end) {
-    hideStatusScreen();
-    showClassroom(Math.floor((now - start) / 1000));
+  if (!videoStarted) {
+        // Show a "Class is Live" state with a big button
+        showStatusScreen('🚀', "Class is Live!", "The session has started.", false, 0);
+        document.getElementById('sync-btn').style.display = 'block'; 
+        document.getElementById('sync-btn').textContent = "🚀 ENTER CLASSROOM";
+    }
     startStudentCountUpdater();
 
   } else {

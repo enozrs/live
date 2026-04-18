@@ -233,6 +233,14 @@ body {
 @media (orientation: landscape) and (max-height: 500px) {
   #topbar, #teacher-tile { display: none !important; }
   #main { height: 100dvh; }
+
+  /* In landscape, we give chat 100% height to ensure the "Send" button shows */
+  #chat-panel { 
+    top: 0 !important; 
+    height: 100dvh !important; 
+    border-radius: 0; 
+  }
+  
   #bottom-bar {
     position: relative; bottom: 0; left: 0; right: 0;
     height: 60px; border-top: none;

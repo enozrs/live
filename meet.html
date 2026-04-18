@@ -124,13 +124,12 @@ body {
 .chip-count { background: var(--bg2); border: 1px solid var(--border); color: var(--text2); }
 
 /* ══ MAIN ══ */
-#main { flex: 1; display: flex; overflow: hidden; min-height: 0; }
-#video-col { flex: 1; position: relative; background: #000; display: flex; flex-direction: column; min-width: 0; }
-#video-wrap { flex: 1; position: relative; overflow: hidden; }
-
-#yt-player { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-#tap-zone { position: absolute; inset: 0; z-index: 4; display: none; }
-#click-shield { position: absolute; inset: 0; z-index: 5; cursor: default; }
+#main { flex: 1; display: flex; height: calc(100dvh - 52px); overflow: hidden; }
+#video-col { flex: 1; display: flex; flex-direction: column; position: relative; background: #000; }
+#video-wrap { flex: 1; height: 100%; position: relative; }
+#yt-player { position: absolute; width: 100%; height: 100%; pointer-events: none; }
+#tap-zone { position: absolute; inset: 0; z-index: 5; display: none; }
+#click-shield { position: absolute; inset: 0; z-index: 4; cursor: default; }
 
 /* Teacher PiP tile */
 #teacher-tile {
@@ -170,12 +169,18 @@ body {
 
 /* ══ BOTTOM BAR ══ */
 #bottom-bar {
-  height: 80px; flex-shrink: 0; background: var(--bg);
+  height: 80px; 
+  flex-shrink: 0; 
+  background: var(--bg);
   border-top: 1px solid var(--border);
   display: none;
-  align-items: center; justify-content: center;
-  gap: 12px; padding: 0 24px; z-index: 20; position: relative;
+  align-items: center; 
+  justify-content: center;
+  gap: 12px; 
+  padding: 0 24px; 
+  z-index: 20; 
 }
+  
 .ctrl-circle {
   width: 48px; height: 48px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -229,7 +234,7 @@ body {
   #topbar, #teacher-tile { display: none !important; }
   #main { height: 100dvh; }
   #bottom-bar {
-    position: absolute; bottom: 0; left: 0; right: 0;
+    position: relative; bottom: 0; left: 0; right: 0;
     height: 60px; border-top: none;
     background: rgba(32,33,36,0.88); gap: 20px;
   }
@@ -347,8 +352,8 @@ const CONFIG = {
     },
   },
 
-  classHour:         00,
-  classMinute:       59,
+  classHour:         07,
+  classMinute:       07,
   // ── IMPORTANT ──────────────────────────────────────────────
   // Set this to EXACTLY your video's actual length in minutes.
   // When video ENDED fires = class is genuinely over.
@@ -359,7 +364,7 @@ const CONFIG = {
   ytChatStreamId:  "iTDZ5cqHYF4",
   domain:          "live.thesrzone.com",
   sessionMs:       6 * 60 * 60 * 1000,
-  studentCountBase: 24, // tweak to match your real expected class size
+  studentCountBase: 95, // tweak to match your real expected class size
 };
 // ══════════════════════════════════════════════════════
 
@@ -390,14 +395,16 @@ function showControls() {
   document.getElementById('bottom-bar').style.display = 'flex';
   document.getElementById('tap-zone').style.display = 'none';
   clearTimeout(controlsTimeout);
-  if (!chatOpen) controlsTimeout = setTimeout(hideControls, isMobile() ? 5000 : 4000);
+  controlsTimeout = setTimeout(hideControls, 5000);
 }
 
 function hideControls() {
   if (chatOpen && !isMobile()) return;
   controlsVisible = false;
+  document.getElementById('bottom-bar').style.display = 'none';
+  
+  // Bring back the tap-zone so mobile users can tap to show controls again
   if (isMobile()) {
-    document.getElementById('bottom-bar').style.display = 'none';
     document.getElementById('tap-zone').style.display = 'block';
   }
 }
@@ -487,9 +494,6 @@ function checkState() {
     countEl.style.display = 'block';
     countEl.textContent = `👥 ${simulatedCount()} students are waiting`;
 
-    // Show Join button in last 15 seconds — manual fallback for slow connections
-    document.getElementById('sync-btn').style.display = msLeft < 15000 ? 'block' : 'none';
-
     // ── RELOAD ON TIMER ZERO ──────────────────────────────────
     // Fresh page = YT API already loaded in <head> = instant play.
     // This is the cleanest solution to the race condition.
@@ -503,7 +507,7 @@ function checkState() {
         // Show a "Class is Live" state with a big button
         showStatusScreen('🚀', "Class is Live!", "The session has started.", false, 0);
         document.getElementById('sync-btn').style.display = 'block'; 
-        document.getElementById('sync-btn').textContent = "🚀 ENTER CLASSROOM";
+        document.getElementById('sync-btn').textContent = "ENTER CLASSROOM";
     }
     startStudentCountUpdater();
 
@@ -594,6 +598,7 @@ function onStateChange(e) {
     stopStudentCountUpdater();
     document.getElementById('main').style.display       = 'none';
     document.getElementById('bottom-bar').style.display = 'none';
+    document.getElementById('sync-btn').style.display = 'none';
     showStatusScreen('✅', "Class has ended!", "Great work today. See you next class! 📚", false, 0);
   }
 }

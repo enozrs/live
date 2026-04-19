@@ -686,23 +686,38 @@ function toggleCam() {
   showToast(camOn ? 'Video is on' : 'Video is off');
 }
 
+const handNames = ["Manish", "Priya", "Rohan", "Sneha", "Kiran", "Samir", "Pradip", "Smriti"];
 let handQueue = [];
+
 function toggleHand() {
   handUp = !handUp;
   document.getElementById('hand-btn').className = handUp ? 'ctrl-circle cc-hand-on' : 'ctrl-circle';
   if (handUp) {
     showToast('✋ Hand raised!');
     showHandNotif('You');
+    simulateOtherHands();       // ← new line
   } else {
     document.getElementById('hand-notif').style.display = 'none';
     handQueue = [];
   }
 }
 
+function simulateOtherHands() {
+  const n = Math.floor(Math.random() * 3) + 1; // 1–3 other students
+  for (let i = 0; i < n; i++) {
+    setTimeout(() => {
+      if (!handUp) return; // user already lowered hand, don't add more
+      const name = handNames[Math.floor(Math.random() * handNames.length)];
+      showHandNotif(name);
+    }, (i + 1) * 2200); // staggered: 2.2s, 4.4s, 6.6s
+  }
+}
+
 function showHandNotif(name) {
   handQueue.push(name);
   const notif = document.getElementById('hand-notif');
-  notif.innerHTML = `✋ ${handQueue.join(', ')} raised hand${handQueue.length > 1 ? 's' : ''}`;
+  const list  = handQueue.map(n => n === 'You' ? '<strong>You</strong>' : n).join(', ');
+  notif.innerHTML = `✋ ${list} raised hand${handQueue.length > 1 ? 's' : ''}`;
   notif.style.display = 'block';
 }
 

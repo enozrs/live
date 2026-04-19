@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Emergency Classes – Baisakh 6, 7 & 8</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f1a;
+      --surface: #131929;
+      --card: #1a2236;
+      --border: rgba(255,255,255,0.07);
+      --accent: #f97316;
+      --accent-lt: rgba(249,115,22,0.12);
+      --blue: #3b82f6;
+      --blue-lt: rgba(59,130,246,0.12);
+      --green: #10b981;
+      --green-lt: rgba(16,185,129,0.12);
+      --amber: #f59e0b;
+      --amber-lt: rgba(245,158,11,0.12);
+      --text: #f1f5f9;
+      --text-soft: #94a3b8;
+      --text-mute: #475569;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 36px 20px 28px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: -60px;
+      width: 260px; height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(249,115,22,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -40px; right: -40px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(59,130,246,0.14) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .badge-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .badge-emer {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--accent-lt);
+      border: 1px solid rgba(249,115,22,0.35);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 10px; font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .badge-emer .pulse {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent);
+      animation: blink 1.4s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    .hero-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 26px; font-weight: 800;
+      line-height: 1.15;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .hero-title span { color: var(--accent); }
+
+    .hero-sub {
+      font-size: 13px; color: var(--text-soft);
+      line-height: 1.6; max-width: 360px;
+    }
+
+    /* ── REASSURANCE BANNER ── */
+    .reassure {
+      max-width: 600px; margin: 0 auto;
+      padding: 0 16px 16px;
+    }
+
+    .reassure-card {
+      background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.08));
+      border: 1px solid rgba(16,185,129,0.25);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+
+    .reassure-icon {
+      font-size: 22px; flex-shrink: 0; margin-top: 1px;
+    }
+
+    .reassure-text {
+      flex: 1;
+    }
+
+    .reassure-text strong {
+      display: block;
+      font-size: 13px; font-weight: 600;
+      color: var(--green);
+      margin-bottom: 3px;
+    }
+
+    .reassure-text p {
+      font-size: 12px; color: var(--text-soft);
+      line-height: 1.55;
+    }
+
+    /* ── PAGE ── */
+    .page {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 8px 16px 80px;
+    }
+
+    /* ── DAY BLOCK ── */
+    .day-block {
+      margin-bottom: 28px;
+    }
+
+    .day-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .day-pill {
+      font-family: 'Syne', sans-serif;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+
+    .day-pill.d6 { background: var(--blue-lt); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+    .day-pill.d7 { background: var(--green-lt); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+    .day-pill.d8 { background: var(--amber-lt); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+
+    .day-date {
+      font-size: 13px; font-weight: 600; color: var(--text-soft);
+    }
+
+    .day-line {
+      flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ── CLASS CARD ── */
+    .class-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: transform 0.13s ease, border-color 0.13s ease, box-shadow 0.13s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .class-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      border-radius: 3px 0 0 3px;
+      opacity: 0;
+      transition: opacity 0.13s;
+    }
+
+    .class-card.type-fw::before { background: var(--amber); }
+    .class-card.type-lit::before { background: var(--green); }
+    .class-card.type-gr::before { background: var(--blue); }
+
+    .class-card:active {
+      transform: scale(0.975);
+      box-shadow: none;
+    }
+
+    .class-card:hover {
+      border-color: rgba(255,255,255,0.14);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .class-card:hover::before { opacity: 1; }
+
+    .slot-tag {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      width: 44px; height: 44px;
+      border-radius: 11px;
+      flex-shrink: 0;
+      gap: 1px;
+    }
+
+    .slot-tag.fw { background: var(--amber-lt); }
+    .slot-tag.lit { background: var(--green-lt); }
+    .slot-tag.gr { background: var(--blue-lt); }
+
+    .slot-time {
+      font-family: 'Syne', sans-serif;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.3px;
+    }
+
+    .slot-tag.fw .slot-time { color: var(--amber); }
+    .slot-tag.lit .slot-time { color: var(--green); }
+    .slot-tag.gr .slot-time { color: var(--blue); }
+
+    .slot-label {
+      font-size: 8px; font-weight: 500;
+    }
+
+    .slot-tag.fw .slot-label { color: rgba(245,158,11,0.65); }
+    .slot-tag.lit .slot-label { color: rgba(16,185,129,0.65); }
+    .slot-tag.gr .slot-label { color: rgba(59,130,246,0.65); }
+
+    .card-body { flex: 1; min-width: 0; }
+
+    .card-title {
+      font-size: 13.5px; font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+
+    .card-meta {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: var(--text-mute);
+    }
+
+    .meta-dot {
+      width: 3px; height: 3px; border-radius: 50%;
+      background: var(--text-mute); flex-shrink: 0;
+    }
+
+    .play-ring {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.13s, filter 0.13s;
+    }
+
+    .class-card:hover .play-ring { transform: scale(1.1); }
+
+    .play-ring.fw { background: var(--amber); }
+    .play-ring.lit { background: var(--green); }
+    .play-ring.gr { background: var(--blue); }
+
+    .play-tri {
+      width: 0; height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 9px solid white;
+      margin-left: 2px;
+    }
+
+    /* ── JOIN OVERLAY ── */
+    .join-overlay {
+      position: fixed; inset: 0;
+      background: #07101f;
+      z-index: 200;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.22s ease;
+      padding: 32px;
+    }
+
+    .join-overlay.active { opacity: 1; pointer-events: all; }
+
+    .spinner-wrap {
+      position: relative;
+      width: 90px; height: 90px;
+      margin: 0 auto 26px;
+    }
+
+    .spinner-ring {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      border: 2.5px solid transparent;
+      border-top-color: var(--accent);
+      animation: spin 1s linear infinite;
+    }
+
+    .spinner-ring.r2 { inset: 10px; border-top-color: var(--blue); animation-delay: -0.33s; animation-duration: 0.8s; }
+    .spinner-ring.r3 { inset: 20px; border-top-color: rgba(255,255,255,0.15); animation-delay: -0.15s; animation-duration: 0.6s; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    .spinner-core {
+      position: absolute; inset: 28px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+    }
+
+    .overlay-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px; font-weight: 800; color: #fff;
+      text-align: center; line-height: 1.25;
+      margin-bottom: 4px; max-width: 280px;
+    }
+
+    .overlay-sub {
+      font-size: 12px; color: rgba(255,255,255,0.4);
+      text-align: center; margin-bottom: 24px;
+    }
+
+    .join-steps {
+      display: flex; flex-direction: column; gap: 9px;
+      align-items: flex-start; margin-bottom: 0;
+    }
+
+    .join-step {
+      display: flex; align-items: center; gap: 10px;
+      color: rgba(255,255,255,0.2);
+      font-size: 12px; font-weight: 500;
+      transition: color 0.35s ease;
+    }
+
+    .join-step.done { color: rgba(255,255,255,0.85); }
+
+    .step-check {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: transparent; flex-shrink: 0;
+      transition: background 0.35s ease, color 0.35s ease;
+    }
+
+    .join-step.done .step-check { background: var(--green); color: white; }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="badge-row">
+      <div class="badge-emer"><span class="pulse"></span> Emergency Schedule</div>
+    </div>
+    <div class="hero-title">Baisakh <span>6, 7 & 8</span><br>Recorded Classes</div>
+    <div class="hero-sub">Sir is attending a family function. Your classes are scheduled below — same time slots, recorded sessions.</div>
+  </div>
+
+  <!-- REASSURANCE -->
+  <div class="reassure">
+    <div class="reassure-card">
+      <div class="reassure-icon">🎓</div>
+      <div class="reassure-text">
+        <strong>Live classes resume from Baisakh 9 — no gap in your prep!</strong>
+        <p>Sir will be back fully from Baisakh 9. These 3 days are covered with your recorded sessions so you don't lose a single day. Stay consistent — you're almost there! 💪</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLASSES -->
+  <div class="page">
+
+   <!-- DAY 1 — BAISAKH 6 -->
+<div class="day-block">
+  <div class="day-header">
+    <div class="day-pill d6">Day 1</div>
+    <div class="day-date">Baisakh 6</div>
+    <div class="day-line"></div>
+  </div>
+
+  <div class="class-card type-fw" data-url="https://www.youtube.com/watch?v=jgSy06XxJjs">
+    <div class="slot-tag fw">
+      <span class="slot-time">Morning Class</span>
+      <span class="slot-label">FREEWRITING</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Free Writing – Letter to the Editor</div>
+      <div class="card-meta"><span>⏱ 1h 10m</span><div class="meta-dot"></div><span>Shrii Lamichhane</span></div>
+    </div>
+    <div class="play-ring fw"><div class="play-tri"></div></div>
+  </div>
+
+  <div class="class-card type-gr" data-url="https://www.youtube.com/watch?v=SOuuIwAYJUs">
+    <div class="slot-tag gr">
+      <span class="slot-time">Afternoon Class</span>
+      <span class="slot-label">GRAMMAR</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Concord</div>
+      <div class="card-meta"><span>⏱ 1h 10m</span><div class="meta-dot"></div><span>Shrii Lamichhane</span></div>
+    </div>
+    <div class="play-ring gr"><div class="play-tri"></div></div>
+  </div>
+
+  <div class="class-card type-fw" data-url="https://www.youtube.com/watch?v=Li8ZXfL6k7g">
+    <div class="slot-tag fw">
+      <span class="slot-time">Night Class</span>
+      <span class="slot-label">FREEWRITING</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">News Story Writing + Story Writing + Interpreting Bar Graph</div>
+      <div class="card-meta"><span>⏱ 1h 30m</span><div class="meta-dot"></div><span>Shrii Lamichhane</span></div>
+    </div>
+    <div class="play-ring fw"><div class="play-tri"></div></div>
+  </div>
+</div>
+
+<!-- DAY 2 — BAISAKH 7 -->
+<div class="day-block">
+  <div class="day-header">
+    <div class="day-pill d7">Day 2</div>
+    <div class="day-date">Baisakh 7</div>
+    <div class="day-line"></div>
+  </div>
+
+  <div class="class-card type-fw" data-url="https://www.youtube.com/watch?v=lVeR90wNg9Y">
+    <div class="slot-tag fw">
+      <span class="slot-time">Morning Class</span>
+      <span class="slot-label">FREEWRITING</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Press Release</div>
+      <div class="card-meta"><span>⏱ 55m</span><div class="meta-dot"></div><span>Shrii Lamichhane</span></div>
+    </div>
+    <div class="play-ring fw"><div class="play-tri"></div></div>
+  </div>
+
+  <div class="class-card type-gr" data-url="https://www.youtube.com/watch?v=cI5_p-qKDjE">
+    <div class="slot-tag gr">
+      <span class="slot-time">Afternoon Class</span>
+      <span class="slot-label">GRAMMAR</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Gerunds + Conjunction</div>
+      <div class="card-meta"><span>⏱ 1h 08m</span><div class="meta-dot"></div><span>Shrii Lamichhane</span></div>
+    </div>
+    <div class="play-ring gr"><div class="play-tri"></div></div>
+  </div>
+
+  <div class="class-card type-fw" data-url="https://www.youtube.com/watch?v=pgsMnu8TIEU">
+    <div class="slot-tag fw">
+      <span class="slot-time">Night Class</span>
+      <span class="slot-label">FREEWRITING</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Freewriting Revision One Shot</div>
+      <div class="card-meta"><span>⏱ 1h 40m</span><div class="meta-dot"></div><span>Shrii Lamichhane</span></div>
+    </div>
+    <div class="play-ring fw"><div class="play-tri"></div></div>
+  </div>
+</div>
+
+<!-- DAY 3 — BAISAKH 8 -->
+<div class="day-block">
+  <div class="day-header">
+    <div class="day-pill d8">Day 3</div>
+    <div class="day-date">Baisakh 8</div>
+    <div class="day-line"></div>
+  </div>
+
+  <div class="class-card type-fw" data-url="https://www.youtube.com/watch?v=kBOC5IFHoh4">
+    <div class="slot-tag fw">
+      <span class="slot-time">Morning Class</span>
+      <span class="slot-label">FREEWRITING</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Press Release + Letter to Editor</div>
+      <div class="card-meta"><span>⏱ 55m</span><div class="meta-dot"></div><span>Shrii Lamichhane</span></div>
+    </div>
+    <div class="play-ring fw"><div class="play-tri"></div></div>
+  </div>
+
+  <div class="class-card type-gr" data-url="https://www.youtube.com/watch?v=_cPtKT-HOkU">
+    <div class="slot-tag gr">
+      <span class="slot-time">Afternoon Class</span>
+      <span class="slot-label">GRAMMAR</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Tense + A Matter of Husbands</div>
+      <div class="card-meta"><span>⏱ 1h 20m</span><div class="meta-dot"></div><span>Shrii Lamichhane</span></div>
+    </div>
+    <div class="play-ring gr"><div class="play-tri"></div></div>
+  </div>
+
+  <div class="class-card type-fw" data-url="https://www.youtube.com/watch?v=6AOg855nRzo">
+    <div class="slot-tag fw">
+      <span class="slot-time">Night Class</span>
+      <span class="slot-label">FREEWRITING</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">News Story Writing Trick</div>
+      <div class="card-meta"><span>⏱ 45m</span><div class="meta-dot"></div><span>Shrii Lamichhane</span></div>
+    </div>
+    <div class="play-ring fw"><div class="play-tri"></div></div>
+  </div>
+</div>
+
+  </div><!-- /page -->
+
+  <!-- JOIN OVERLAY -->
+  <div class="join-overlay" id="joinOverlay">
+    <div class="spinner-wrap">
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring r2"></div>
+      <div class="spinner-ring r3"></div>
+      <div class="spinner-core">🎓</div>
+    </div>
+    <div class="overlay-title" id="overlayTitle">Loading Class…</div>
+    <div class="overlay-sub" id="overlaySub">Class 12 English · SR Zone</div>
+    <div class="join-steps">
+      <div class="join-step" id="step1"><div class="step-check" id="check1">✓</div>Authenticating your access</div>
+      <div class="join-step" id="step2"><div class="step-check" id="check2">✓</div>Preparing your class</div>
+      <div class="join-step" id="step3"><div class="step-check" id="check3">✓</div>Connecting to classroom</div>
+    </div>
+  </div>
+
+  <script>
+    const overlay = document.getElementById('joinOverlay');
+    const oTitle  = document.getElementById('overlayTitle');
+    const oSub    = document.getElementById('overlaySub');
+    const stepIds = ['step1','step2','step3'];
+
+    function resetSteps() {
+      stepIds.forEach(id => document.getElementById(id).classList.remove('done'));
+    }
+
+    document.querySelectorAll('.class-card').forEach(card => {
+      card.addEventListener('click', function () {
+        const url   = this.dataset.url;
+        const title = this.querySelector('.card-title').textContent.trim();
+        const time  = this.querySelector('.slot-time').textContent.trim();
+        const label = this.querySelector('.slot-label').textContent.trim();
+
+        oTitle.textContent = title;
+        oSub.textContent   = time + ' · ' + label + ' · Class 12 English';
+
+        resetSteps();
+        overlay.classList.add('active');
+
+        let i = 0;
+        const iv = setInterval(() => {
+          if (i < stepIds.length) {
+            document.getElementById(stepIds[i]).classList.add('done');
+            i++;
+          } else clearInterval(iv);
+        }, 500);
+
+        setTimeout(() => {
+          overlay.classList.remove('active');
+          resetSteps();
+          window.location.href = url;
+        }, 2000);
+      });
+    });
+  </script>
+
+</body>
+</html>

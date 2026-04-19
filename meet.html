@@ -232,23 +232,65 @@ body {
 
 @media (orientation: landscape) and (max-height: 500px) {
   #topbar, #teacher-tile { display: none !important; }
-  #main { height: 100dvh; }
+  #main { height: 100dvh !important; }
 
-  /* In landscape, we give chat 100% height to ensure the "Send" button shows */
   #chat-panel { 
+    position: fixed !important;
     top: 0 !important; 
-    height: 100dvh !important; 
+    bottom: 0 !important; /* Locks to bottom edge of visual viewport */
+    left: 0 !important;
+    width: 100% !important;
+    height: auto !important; /* Overrides the 100dvh */
     border-radius: 0; 
+    z-index: 200; 
+    /* The display: flex !important was removed from here */
+    padding-bottom: env(safe-area-inset-bottom, 15px) !important; /* Protects against gesture bars */
+  }
+
+  .chat-head {
+    padding: 4px 12px !important;
+    height: 32px !important;
+    flex-shrink: 0 !important; /* Prevents header from shrinking */
+    background: var(--bg);
   }
   
-  #bottom-bar {
-    position: relative; bottom: 0; left: 0; right: 0;
-    height: 60px; border-top: none;
-    background: rgba(32,33,36,0.88); gap: 20px;
+  .chat-head-title { font-size: 11px !important; }
+  .chat-close { font-size: 14px !important; }
+
+  #yt-chat-frame {
+    height: auto !important;
+    flex: 1 1 auto !important; /* Fills remaining space mathematically */
+    min-height: 0 !important; /* Allows flex item to shrink smaller than content */
+    display: block; 
   }
-  .ctrl-circle { width: 40px; height: 40px; background: rgba(255,255,255,0.12); }
-  #hand-notif { bottom: 68px; }
+
+  #bottom-bar {
+    position: fixed; 
+    bottom: 10px; 
+    left: 50%;
+    transform: translateX(-50%);
+    height: 52px; 
+    width: auto;
+    background: rgba(32, 33, 36, 0.95); 
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    padding: 0 12px;
+    z-index: 210; 
+    display: none; 
+    align-items: center;
+  }
+
+  .ctrl-circle { 
+    width: 38px !important; 
+    height: 38px !important; 
+    background: rgba(255,255,255,0.1) !important; 
+  }
+  
+  #hand-notif { 
+    bottom: 70px !important; 
+  }
 }
+  
 </style>
 </head>
 <body>

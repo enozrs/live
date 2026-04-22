@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEB English Super Set — Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1209;
+    --paper: #f5f0e8;
+    --aged: #e8dfc8;
+    --accent: #8b1a1a;
+    --gold: #c8962a;
+    --light-gold: #f0d890;
+    --correct: #1a5c2a;
+    --correct-bg: #d4edda;
+    --wrong: #8b1a1a;
+    --wrong-bg: #f8d7da;
+    --neutral: #4a3f2f;
+    --border: #c8b89a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Source Serif 4', Georgia, serif;
+    background-color: var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(180,160,120,0.15) 27px, rgba(180,160,120,0.15) 28px),
+      url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    color: var(--ink);
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 36px 24px 28px;
+    text-align: center;
+    border-bottom: 4px solid var(--gold);
+    position: relative;
+    overflow: hidden;
+  }
+
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      45deg, transparent, transparent 10px,
+      rgba(200,150,42,0.04) 10px, rgba(200,150,42,0.04) 20px
+    );
+  }
+
+  .header-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(26px, 5vw, 46px);
+    font-weight: 900;
+    letter-spacing: -1px;
+    line-height: 1.1;
+  }
+
+  header h1 span { color: var(--gold); }
+
+  .header-sub {
+    margin-top: 10px;
+    font-size: 13px;
+    color: rgba(245,240,232,0.6);
+    font-style: italic;
+  }
+
+  /* Progress bar */
+  .progress-bar-wrap {
+    background: rgba(255,255,255,0.08);
+    height: 4px;
+    margin-top: 20px;
+    border-radius: 2px;
+    overflow: hidden;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--light-gold));
+    width: 0%;
+    transition: width 0.4s ease;
+    border-radius: 2px;
+  }
+  .progress-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(245,240,232,0.5);
+    margin-top: 8px;
+  }
+
+  .container {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* Section headers */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 44px 0 24px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .section-badge {
+    background: var(--accent);
+    color: var(--paper);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 4px 12px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .section-marks {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    white-space: nowrap;
+  }
+
+  /* Question cards */
+  .question-card {
+    background: rgba(255,255,255,0.55);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+
+  .question-card:hover { border-color: var(--gold); }
+
+  .question-card.answered-correct {
+    border-color: var(--correct);
+    background: rgba(212,237,218,0.35);
+  }
+
+  .question-card.answered-wrong {
+    border-color: var(--wrong);
+    background: rgba(248,215,218,0.35);
+  }
+
+  .q-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .q-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+  }
+
+  .q-type-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--neutral);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 2px;
+  }
+
+  .q-text {
+    font-size: 15.5px;
+    line-height: 1.65;
+    color: var(--ink);
+    margin-bottom: 14px;
+    font-weight: 400;
+  }
+
+  .q-instruction {
+    font-style: italic;
+    font-size: 13px;
+    color: var(--neutral);
+    display: block;
+    margin-top: 4px;
+  }
+
+  /* MCQ Options */
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  @media (max-width: 500px) { .options-grid { grid-template-columns: 1fr; } }
+
+  .option-btn {
+    background: var(--paper);
+    border: 1.5px solid var(--border);
+    padding: 9px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Source Serif 4', serif;
+    font-size: 14px;
+    color: var(--ink);
+    text-align: left;
+    transition: all 0.15s;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--gold);
+    background: rgba(200,150,42,0.08);
+  }
+
+  .option-btn .opt-key {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--aged);
+    padding: 1px 5px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .option-btn.correct {
+    border-color: var(--correct);
+    background: var(--correct-bg);
+    color: var(--correct);
+    font-weight: 600;
+  }
+
+  .option-btn.wrong {
+    border-color: var(--wrong);
+    background: var(--wrong-bg);
+    color: var(--wrong);
+  }
+
+  .option-btn:disabled { cursor: default; }
+
+  /* Fill-in-the-blank inputs */
+  .fill-answer-wrap {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .fill-input {
+    border: none;
+    border-bottom: 2px solid var(--border);
+    background: transparent;
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px;
+    color: var(--ink);
+    padding: 4px 6px;
+    outline: none;
+    min-width: 180px;
+    flex: 1;
+    transition: border-color 0.2s;
+  }
+
+  .fill-input:focus { border-color: var(--gold); }
+  .fill-input:disabled { opacity: 0.7; }
+
+  .fill-input.correct { border-color: var(--correct); color: var(--correct); }
+  .fill-input.wrong { border-color: var(--wrong); color: var(--wrong); }
+
+  .submit-btn {
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 8px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+
+  .submit-btn:hover { background: var(--accent); }
+
+  /* Feedback */
+  .feedback {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    display: none;
+  }
+
+  .feedback.show { display: block; }
+  .feedback.correct { background: var(--correct-bg); color: var(--correct); border-left: 3px solid var(--correct); }
+  .feedback.wrong { background: var(--wrong-bg); color: var(--wrong); border-left: 3px solid var(--wrong); }
+
+  .feedback strong { display: block; margin-bottom: 3px; font-weight: 700; }
+
+  /* Final Score */
+  #score-section {
+    display: none;
+    margin-top: 50px;
+    text-align: center;
+    padding: 44px 30px;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #score-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg, transparent, transparent 8px,
+      rgba(200,150,42,0.05) 8px, rgba(200,150,42,0.05) 16px
+    );
+  }
+
+  .score-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    position: relative;
+  }
+
+  .score-big {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(56px, 12vw, 96px);
+    font-weight: 900;
+    line-height: 1;
+    position: relative;
+  }
+
+  .score-big span { color: var(--gold); }
+
+  .score-out-of {
+    font-size: 18px;
+    color: rgba(245,240,232,0.55);
+    margin-top: 6px;
+    font-style: italic;
+    position: relative;
+  }
+
+  .score-grade {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 8px 28px;
+    border: 1.5px solid var(--gold);
+    color: var(--gold);
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    border-radius: 3px;
+    position: relative;
+  }
+
+  .score-breakdown {
+    margin-top: 28px;
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+    position: relative;
+  }
+
+  .breakdown-item {
+    text-align: center;
+    padding: 12px 20px;
+    border: 1px solid rgba(200,150,42,0.3);
+    border-radius: 4px;
+    min-width: 120px;
+  }
+
+  .breakdown-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--light-gold);
+  }
+
+  .breakdown-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(245,240,232,0.5);
+    margin-top: 4px;
+  }
+
+  .retry-btn {
+    margin-top: 30px;
+    background: var(--gold);
+    color: var(--ink);
+    border: none;
+    padding: 12px 32px;
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    transition: opacity 0.15s;
+  }
+
+  .retry-btn:hover { opacity: 0.85; }
+
+  .finish-btn-wrap {
+    text-align: center;
+    margin-top: 40px;
+  }
+
+  .finish-btn {
+    background: var(--accent);
+    color: var(--paper);
+    border: none;
+    padding: 14px 48px;
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: opacity 0.15s;
+  }
+
+  .finish-btn:hover { opacity: 0.88; }
+
+  /* Tick/Cross icons */
+  .result-icon {
+    font-size: 16px;
+    position: absolute;
+    top: 18px;
+    right: 18px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-label">NEB English · Super Set</div>
+  <h1>Grammar &amp; Vocabulary <span>Quiz</span></h1>
+  <div class="header-sub">30 Questions &nbsp;·&nbsp; 30 Marks &nbsp;·&nbsp; Answer all sections</div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+  <div class="progress-label" id="progressLabel">0 / 30 answered</div>
+</header>
+
+<div class="container">
+
+  <!-- GRAMMAR SECTION -->
+  <div class="section-header">
+    <span class="section-badge">Section 7</span>
+    <span class="section-title">Grammar</span>
+    <span class="section-marks">20 × 1 = 20 Marks</span>
+  </div>
+
+  <!-- Q7a -->
+  <div class="question-card" id="card-7a">
+    <div class="q-meta">
+      <span class="q-number">7a</span>
+      <span class="q-type-tag">MCQ</span>
+    </div>
+    <div class="q-text">
+      The elderly woman walked <strong>fairly</strong> slowly down the steep hill.<br>
+      <span class="q-instruction">Which word is the adverb in this sentence?</span>
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('7a',this,'fairly')"><span class="opt-key">A</span> fairly</button>
+      <button class="option-btn" onclick="checkMCQ('7a',this,'walked')"><span class="opt-key">B</span> walked</button>
+      <button class="option-btn" onclick="checkMCQ('7a',this,'elderly')"><span class="opt-key">C</span> elderly</button>
+      <button class="option-btn" onclick="checkMCQ('7a',this,'steep')"><span class="opt-key">D</span> steep</button>
+    </div>
+    <div class="feedback" id="fb-7a"></div>
+  </div>
+
+  <!-- Q7b -->
+  <div class="question-card" id="card-7b">
+    <div class="q-meta"><span class="q-number">7b</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      None of the information provided in the brochures ______ accurate.<br>
+      <span class="q-instruction">Choose the correct option for Subject-Verb Agreement.</span>
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('7b',this,'is')"><span class="opt-key">A</span> is</button>
+      <button class="option-btn" onclick="checkMCQ('7b',this,'are')"><span class="opt-key">B</span> are</button>
+      <button class="option-btn" onclick="checkMCQ('7b',this,'were')"><span class="opt-key">C</span> were</button>
+      <button class="option-btn" onclick="checkMCQ('7b',this,'have been')"><span class="opt-key">D</span> have been</button>
+    </div>
+    <div class="feedback" id="fb-7b"></div>
+  </div>
+
+  <!-- Q7c -->
+  <div class="question-card" id="card-7c">
+    <div class="q-meta"><span class="q-number">7c</span><span class="q-type-tag">Fill in Blank</span></div>
+    <div class="q-text">
+      Young people today are often indifferent ______ the traditional values of their ancestors.<br>
+      <span class="q-instruction">Complete the sentence with an appropriate preposition.</span>
+    </div>
+    <div class="fill-answer-wrap">
+      <input class="fill-input" id="input-7c" placeholder="Type preposition…" />
+      <button class="submit-btn" onclick="checkFill('7c', ['to'])">CHECK</button>
+    </div>
+    <div class="feedback" id="fb-7c"></div>
+  </div>
+
+  <!-- Q7d -->
+  <div class="question-card" id="card-7d">
+    <div class="q-meta"><span class="q-number">7d</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      She ______ have gone to the party; she has been ill in bed all day.<br>
+      <span class="q-instruction">Use a modal auxiliary for a strong negative logical deduction.</span>
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('7d',this,"can't")"><span class="opt-key">A</span> can't</button>
+      <button class="option-btn" onclick="checkMCQ('7d',this,'mustn\'t')"><span class="opt-key">B</span> mustn't</button>
+      <button class="option-btn" onclick="checkMCQ('7d',this,'shouldn\'t')"><span class="opt-key">C</span> shouldn't</button>
+      <button class="option-btn" onclick="checkMCQ('7d',this,'mightn\'t')"><span class="opt-key">D</span> mightn't</button>
+    </div>
+    <div class="feedback" id="fb-7d"></div>
+  </div>
+
+  <!-- Q7e -->
+  <div class="question-card" id="card-7e">
+    <div class="q-meta"><span class="q-number">7e</span><span class="q-type-tag">Fill in Blank</span></div>
+    <div class="q-text">
+      By the time the rescue team arrived, the hikers ______ (survive) on rainwater for three days.<br>
+      <span class="q-instruction">Put the correct form of the verb 'survive'.</span>
+    </div>
+    <div class="fill-answer-wrap">
+      <input class="fill-input" id="input-7e" placeholder="Type verb form…" />
+      <button class="submit-btn" onclick="checkFill('7e', ['had been surviving'])">CHECK</button>
+    </div>
+    <div class="feedback" id="fb-7e"></div>
+  </div>
+
+  <!-- Q7f -->
+  <div class="question-card" id="card-7f">
+    <div class="q-meta"><span class="q-number">7f</span><span class="q-type-tag">Fill in Blank</span></div>
+    <div class="q-text">
+      You can borrow my car ______ you drive carefully and refill the tank.<br>
+      <span class="q-instruction">Complete with an appropriate connective showing condition.</span>
+    </div>
+    <div class="fill-answer-wrap">
+      <input class="fill-input" id="input-7f" placeholder="Type connective…" />
+      <button class="submit-btn" onclick="checkFill('7f', ['provided that','as long as','provided','so long as'])">CHECK</button>
+    </div>
+    <div class="feedback" id="fb-7f"></div>
+  </div>
+
+  <!-- Q7g -->
+  <div class="question-card" id="card-7g">
+    <div class="q-meta"><span class="q-number">7g</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      The professor, ______ I have the greatest respect for, is retiring this month.<br>
+      <span class="q-instruction">Complete the sentence using a relative pronoun.</span>
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('7g',this,'whom')"><span class="opt-key">A</span> whom</button>
+      <button class="option-btn" onclick="checkMCQ('7g',this,'who')"><span class="opt-key">B</span> who</button>
+      <button class="option-btn" onclick="checkMCQ('7g',this,'which')"><span class="opt-key">C</span> which</button>
+      <button class="option-btn" onclick="checkMCQ('7g',this,'that')"><span class="opt-key">D</span> that</button>
+    </div>
+    <div class="feedback" id="fb-7g"></div>
+  </div>
+
+  <!-- Q7h -->
+  <div class="question-card" id="card-7h">
+    <div class="q-meta"><span class="q-number">7h</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      I clearly remember ______ the letter, but the recipient claims they never got it.<br>
+      <span class="q-instruction">Choose the correct gerund or infinitive form.</span>
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('7h',this,'posting')"><span class="opt-key">A</span> posting</button>
+      <button class="option-btn" onclick="checkMCQ('7h',this,'to post')"><span class="opt-key">B</span> to post</button>
+      <button class="option-btn" onclick="checkMCQ('7h',this,'posted')"><span class="opt-key">C</span> posted</button>
+      <button class="option-btn" onclick="checkMCQ('7h',this,'post')"><span class="opt-key">D</span> post</button>
+    </div>
+    <div class="feedback" id="fb-7h"></div>
+  </div>
+
+  <!-- Q7i -->
+  <div class="question-card" id="card-7i">
+    <div class="q-meta"><span class="q-number">7i</span><span class="q-type-tag">Fill in Blank</span></div>
+    <div class="q-text">
+      <em>Active:</em> They say that the new law will reduce the crime rate significantly.<br>
+      <span class="q-instruction">Change to passive voice starting with "It…". Type the full passive sentence.</span>
+    </div>
+    <div class="fill-answer-wrap">
+      <input class="fill-input" id="input-7i" placeholder="It is said that…" style="min-width:280px" />
+      <button class="submit-btn" onclick="checkFill('7i', ['it is said that the new law will reduce the crime rate significantly'])">CHECK</button>
+    </div>
+    <div class="feedback" id="fb-7i"></div>
+  </div>
+
+  <!-- Q7j -->
+  <div class="question-card" id="card-7j">
+    <div class="q-meta"><span class="q-number">7j</span><span class="q-type-tag">Fill in Blank</span></div>
+    <div class="q-text">
+      <em>Direct:</em> The traveler said, "What a magnificent view the Himalayas offer!"<br>
+      <span class="q-instruction">Change into indirect speech. Type your answer.</span>
+    </div>
+    <div class="fill-answer-wrap">
+      <input class="fill-input" id="input-7j" placeholder="The traveler exclaimed…" style="min-width:280px"/>
+      <button class="submit-btn" onclick="checkFill('7j', ['the traveler exclaimed with wonder that the himalayas offered a very magnificent view','the traveler exclaimed that the himalayas offered a magnificent view'])">CHECK</button>
+    </div>
+    <div class="feedback" id="fb-7j"></div>
+  </div>
+
+  <!-- Q7k -->
+  <div class="question-card" id="card-7k">
+    <div class="q-meta"><span class="q-number">7k</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      Neither of the two candidates ______ fit for the position.<br>
+      <span class="q-instruction">Choose the correct form of the verb.</span>
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('7k',this,'seems')"><span class="opt-key">A</span> seems</button>
+      <button class="option-btn" onclick="checkMCQ('7k',this,'seem')"><span class="opt-key">B</span> seem</button>
+      <button class="option-btn" onclick="checkMCQ('7k',this,'seeming')"><span class="opt-key">C</span> seeming</button>
+      <button class="option-btn" onclick="checkMCQ('7k',this,'have seemed')"><span class="opt-key">D</span> have seemed</button>
+    </div>
+    <div class="feedback" id="fb-7k"></div>
+  </div>
+
+  <!-- Q7l -->
+  <div class="question-card" id="card-7l">
+    <div class="q-meta"><span class="q-number">7l</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      Not only the students but also the teacher ______ confused by the sudden change in schedule.<br>
+      <span class="q-instruction">Choose the correct option for concord.</span>
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('7l',this,'was')"><span class="opt-key">A</span> was</button>
+      <button class="option-btn" onclick="checkMCQ('7l',this,'were')"><span class="opt-key">B</span> were</button>
+      <button class="option-btn" onclick="checkMCQ('7l',this,'are')"><span class="opt-key">C</span> are</button>
+      <button class="option-btn" onclick="checkMCQ('7l',this,'have been')"><span class="opt-key">D</span> have been</button>
+    </div>
+    <div class="feedback" id="fb-7l"></div>
+  </div>
+
+  <!-- Q7m -->
+  <div class="question-card" id="card-7m">
+    <div class="q-meta"><span class="q-number">7m</span><span class="q-type-tag">Fill in Blank</span></div>
+    <div class="q-text">
+      We are really looking forward ______ visiting the Rara Lake next autumn.<br>
+      <span class="q-instruction">Complete with the appropriate prepositional phrase.</span>
+    </div>
+    <div class="fill-answer-wrap">
+      <input class="fill-input" id="input-7m" placeholder="Type here…" />
+      <button class="submit-btn" onclick="checkFill('7m', ['to'])">CHECK</button>
+    </div>
+    <div class="feedback" id="fb-7m"></div>
+  </div>
+
+  <!-- Q7n -->
+  <div class="question-card" id="card-7n">
+    <div class="q-meta"><span class="q-number">7n</span><span class="q-type-tag">Fill in Blank</span></div>
+    <div class="q-text">
+      If the government had acted sooner, the crisis ______ (avoid).<br>
+      <span class="q-instruction">Complete with the correct form of 'avoid' (Type 3 Conditional, passive).</span>
+    </div>
+    <div class="fill-answer-wrap">
+      <input class="fill-input" id="input-7n" placeholder="Type verb form…" />
+      <button class="submit-btn" onclick="checkFill('7n', ['would have been avoided'])">CHECK</button>
+    </div>
+    <div class="feedback" id="fb-7n"></div>
+  </div>
+
+  <!-- Q7o -->
+  <div class="question-card" id="card-7o">
+    <div class="q-meta"><span class="q-number">7o</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      No sooner had I reached the station ______ the train pulled out.<br>
+      <span class="q-instruction">Complete using an appropriate connective.</span>
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('7o',this,'than')"><span class="opt-key">A</span> than</button>
+      <button class="option-btn" onclick="checkMCQ('7o',this,'when')"><span class="opt-key">B</span> when</button>
+      <button class="option-btn" onclick="checkMCQ('7o',this,'then')"><span class="opt-key">C</span> then</button>
+      <button class="option-btn" onclick="checkMCQ('7o',this,'that')"><span class="opt-key">D</span> that</button>
+    </div>
+    <div class="feedback" id="fb-7o"></div>
+  </div>
+
+  <!-- Q7p -->
+  <div class="question-card" id="card-7p">
+    <div class="q-meta"><span class="q-number">7p</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      Hard work is the key ______ success in any field of life.<br>
+      <span class="q-instruction">Complete with the correct preposition.</span>
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('7p',this,'to')"><span class="opt-key">A</span> to</button>
+      <button class="option-btn" onclick="checkMCQ('7p',this,'for')"><span class="opt-key">B</span> for</button>
+      <button class="option-btn" onclick="checkMCQ('7p',this,'of')"><span class="opt-key">C</span> of</button>
+      <button class="option-btn" onclick="checkMCQ('7p',this,'in')"><span class="opt-key">D</span> in</button>
+    </div>
+    <div class="feedback" id="fb-7p"></div>
+  </div>
+
+  <!-- Q7q -->
+  <div class="question-card" id="card-7q">
+    <div class="q-meta"><span class="q-number">7q</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      The man ______ car was stolen yesterday is a famous journalist.<br>
+      <span class="q-instruction">Complete using a relative pronoun.</span>
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('7q',this,'whose')"><span class="opt-key">A</span> whose</button>
+      <button class="option-btn" onclick="checkMCQ('7q',this,'whom')"><span class="opt-key">B</span> whom</button>
+      <button class="option-btn" onclick="checkMCQ('7q',this,'who')"><span class="opt-key">C</span> who</button>
+      <button class="option-btn" onclick="checkMCQ('7q',this,'which')"><span class="opt-key">D</span> which</button>
+    </div>
+    <div class="feedback" id="fb-7q"></div>
+  </div>
+
+  <!-- Q7r -->
+  <div class="question-card" id="card-7r">
+    <div class="q-meta"><span class="q-number">7r</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      He was seen ______ the street by the traffic police.<br>
+      <span class="q-instruction">Choose the correct non-finite verb form.</span>
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('7r',this,'to cross')"><span class="opt-key">A</span> to cross</button>
+      <button class="option-btn" onclick="checkMCQ('7r',this,'crossing')"><span class="opt-key">B</span> crossing</button>
+      <button class="option-btn" onclick="checkMCQ('7r',this,'cross')"><span class="opt-key">C</span> cross</button>
+      <button class="option-btn" onclick="checkMCQ('7r',this,'crossed')"><span class="opt-key">D</span> crossed</button>
+    </div>
+    <div class="feedback" id="fb-7r"></div>
+  </div>
+
+  <!-- Q7s -->
+  <div class="question-card" id="card-7s">
+    <div class="q-meta"><span class="q-number">7s</span><span class="q-type-tag">Fill in Blank</span></div>
+    <div class="q-text">
+      <em>Active:</em> The headmaster made the naughty boys clean the entire playground.<br>
+      <span class="q-instruction">Change into passive voice. Type the full passive sentence.</span>
+    </div>
+    <div class="fill-answer-wrap">
+      <input class="fill-input" id="input-7s" placeholder="The naughty boys were…" style="min-width:280px"/>
+      <button class="submit-btn" onclick="checkFill('7s', ['the naughty boys were made to clean the entire playground by the headmaster','the naughty boys were made to clean the entire playground'])">CHECK</button>
+    </div>
+    <div class="feedback" id="fb-7s"></div>
+  </div>
+
+  <!-- Q7t -->
+  <div class="question-card" id="card-7t">
+    <div class="q-meta"><span class="q-number">7t</span><span class="q-type-tag">Fill in Blank</span></div>
+    <div class="q-text">
+      <em>Direct:</em> My father said to me, "Don't waste your time on useless things."<br>
+      <span class="q-instruction">Change into indirect speech. Type your answer.</span>
+    </div>
+    <div class="fill-answer-wrap">
+      <input class="fill-input" id="input-7t" placeholder="My father advised…" style="min-width:280px"/>
+      <button class="submit-btn" onclick="checkFill('7t', ['my father advised me not to waste my time on useless things','my father told me not to waste my time on useless things'])">CHECK</button>
+    </div>
+    <div class="feedback" id="fb-7t"></div>
+  </div>
+
+  <!-- VOCABULARY SECTION -->
+  <div class="section-header">
+    <span class="section-badge">Section 8</span>
+    <span class="section-title">Vocabulary</span>
+    <span class="section-marks">10 × 1 = 10 Marks</span>
+  </div>
+
+  <!-- Q8a -->
+  <div class="question-card" id="card-8a">
+    <div class="q-meta"><span class="q-number">8a</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      Which of the following words has a <strong>different initial consonant sound</strong>?
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('8a',this,'Psychology')"><span class="opt-key">i</span> Psychology</button>
+      <button class="option-btn" onclick="checkMCQ('8a',this,'Pseudo')"><span class="opt-key">ii</span> Pseudo</button>
+      <button class="option-btn" onclick="checkMCQ('8a',this,'Pneumonia')"><span class="opt-key">iii</span> Pneumonia</button>
+      <button class="option-btn" onclick="checkMCQ('8a',this,'Physics')"><span class="opt-key">iv</span> Physics</button>
+    </div>
+    <div class="feedback" id="fb-8a"></div>
+  </div>
+
+  <!-- Q8b -->
+  <div class="question-card" id="card-8b">
+    <div class="q-meta"><span class="q-number">8b</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      Which of the following words has a <strong>different vowel sound</strong>?
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('8b',this,'Says')"><span class="opt-key">i</span> Says</button>
+      <button class="option-btn" onclick="checkMCQ('8b',this,'Said')"><span class="opt-key">ii</span> Said</button>
+      <button class="option-btn" onclick="checkMCQ('8b',this,'Paid')"><span class="opt-key">iii</span> Paid</button>
+      <button class="option-btn" onclick="checkMCQ('8b',this,'Bed')"><span class="opt-key">iv</span> Bed</button>
+    </div>
+    <div class="feedback" id="fb-8b"></div>
+  </div>
+
+  <!-- Q8c -->
+  <div class="question-card" id="card-8c">
+    <div class="q-meta"><span class="q-number">8c</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      Which of the following words is <strong>correctly spelt</strong>?
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('8c',this,'Lieutenant')"><span class="opt-key">i</span> Lieutenant</button>
+      <button class="option-btn" onclick="checkMCQ('8c',this,'Leutenant')"><span class="opt-key">ii</span> Leutenant</button>
+      <button class="option-btn" onclick="checkMCQ('8c',this,'Lieutenent')"><span class="opt-key">iii</span> Lieutenent</button>
+      <button class="option-btn" onclick="checkMCQ('8c',this,'Lutenant')"><span class="opt-key">iv</span> Lutenant</button>
+    </div>
+    <div class="feedback" id="fb-8c"></div>
+  </div>
+
+  <!-- Q8d -->
+  <div class="question-card" id="card-8d">
+    <div class="q-meta"><span class="q-number">8d</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      Which of the following words is <strong>correctly spelt</strong>?
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('8d',this,'Colonel')"><span class="opt-key">i</span> Colonel</button>
+      <button class="option-btn" onclick="checkMCQ('8d',this,'Colonal')"><span class="opt-key">ii</span> Colonal</button>
+      <button class="option-btn" onclick="checkMCQ('8d',this,'Colonnel')"><span class="opt-key">iii</span> Colonnel</button>
+      <button class="option-btn" onclick="checkMCQ('8d',this,'Colenel')"><span class="opt-key">iv</span> Colenel</button>
+    </div>
+    <div class="feedback" id="fb-8d"></div>
+  </div>
+
+  <!-- Q8e -->
+  <div class="question-card" id="card-8e">
+    <div class="q-meta"><span class="q-number">8e</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      Which of the following words does <strong>NOT</strong> contain a prefix?
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('8e',this,'Unison')"><span class="opt-key">i</span> Unison</button>
+      <button class="option-btn" onclick="checkMCQ('8e',this,'Under')"><span class="opt-key">ii</span> Under</button>
+      <button class="option-btn" onclick="checkMCQ('8e',this,'Unique')"><span class="opt-key">iii</span> Unique</button>
+      <button class="option-btn" onclick="checkMCQ('8e',this,'Universe')"><span class="opt-key">iv</span> Universe</button>
+    </div>
+    <div class="feedback" id="fb-8e"></div>
+  </div>
+
+  <!-- Q8f -->
+  <div class="question-card" id="card-8f">
+    <div class="q-meta"><span class="q-number">8f</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      In the word <strong>'Industrialization'</strong>, how many suffixes are used?
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('8f',this,'One')"><span class="opt-key">i</span> One</button>
+      <button class="option-btn" onclick="checkMCQ('8f',this,'Two')"><span class="opt-key">ii</span> Two</button>
+      <button class="option-btn" onclick="checkMCQ('8f',this,'Three')"><span class="opt-key">iii</span> Three</button>
+      <button class="option-btn" onclick="checkMCQ('8f',this,'Four')"><span class="opt-key">iv</span> Four</button>
+    </div>
+    <div class="feedback" id="fb-8f"></div>
+  </div>
+
+  <!-- Q8g -->
+  <div class="question-card" id="card-8g">
+    <div class="q-meta"><span class="q-number">8g</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      Which word comes exactly between <strong>'Master'</strong> and <strong>'Matrix'</strong> in a dictionary?
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('8g',this,'Massive')"><span class="opt-key">i</span> Massive</button>
+      <button class="option-btn" onclick="checkMCQ('8g',this,'Match')"><span class="opt-key">ii</span> Match</button>
+      <button class="option-btn" onclick="checkMCQ('8g',this,'Matter')"><span class="opt-key">iii</span> Matter</button>
+      <button class="option-btn" onclick="checkMCQ('8g',this,'Material')"><span class="opt-key">iv</span> Material</button>
+    </div>
+    <div class="feedback" id="fb-8g"></div>
+  </div>
+
+  <!-- Q8h -->
+  <div class="question-card" id="card-8h">
+    <div class="q-meta"><span class="q-number">8h</span><span class="q-type-tag">MCQ</span></div>
+    <div class="q-text">
+      Arrange these words in dictionary order: <strong>Stable, Static, Staff, Stage</strong>
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('8h',this,'Stable, Staff, Stage, Static')"><span class="opt-key">i</span> Stable, Staff, Stage, Static</button>
+      <button class="option-btn" onclick="checkMCQ('8h',this,'Staff, Stable, Stage, Static')"><span class="opt-key">ii</span> Staff, Stable, Stage, Static</button>
+      <button class="option-btn" onclick="checkMCQ('8h',this,'Static, Stage, Staff, Stable')"><span class="opt-key">iii</span> Static, Stage, Staff, Stable</button>
+      <button class="option-btn" onclick="checkMCQ('8h',this,'Stable, Stage, Staff, Static')"><span class="opt-key">iv</span> Stable, Stage, Staff, Static</button>
+    </div>
+    <div class="feedback" id="fb-8h"></div>
+  </div>
+
+  <!-- Q8i -->
+  <div class="question-card" id="card-8i">
+    <div class="q-meta"><span class="q-number">8i</span><span class="q-type-tag">Idiom</span></div>
+    <div class="q-text">
+      What does the idiom <strong>'A blessing in disguise'</strong> mean?
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('8i',this,'A religious prayer')"><span class="opt-key">i</span> A religious prayer</button>
+      <button class="option-btn" onclick="checkMCQ('8i',this,'A good thing that seemed bad at first')"><span class="opt-key">ii</span> A good thing that seemed bad at first</button>
+      <button class="option-btn" onclick="checkMCQ('8i',this,'A hidden treasure')"><span class="opt-key">iii</span> A hidden treasure</button>
+      <button class="option-btn" onclick="checkMCQ('8i',this,'A fake gift')"><span class="opt-key">iv</span> A fake gift</button>
+    </div>
+    <div class="feedback" id="fb-8i"></div>
+  </div>
+
+  <!-- Q8j -->
+  <div class="question-card" id="card-8j">
+    <div class="q-meta"><span class="q-number">8j</span><span class="q-type-tag">Idiom</span></div>
+    <div class="q-text">
+      "He is a <strong>dark horse</strong> in this election." What does 'dark horse' mean?
+    </div>
+    <div class="options-grid">
+      <button class="option-btn" onclick="checkMCQ('8j',this,'A black horse')"><span class="opt-key">i</span> A black horse</button>
+      <button class="option-btn" onclick="checkMCQ('8j',this,'A person who is unlikely to win')"><span class="opt-key">ii</span> A person who is unlikely to win</button>
+      <button class="option-btn" onclick="checkMCQ('8j',this,'An unexpected winner')"><span class="opt-key">iii</span> An unexpected winner</button>
+      <button class="option-btn" onclick="checkMCQ('8j',this,'A dishonest candidate')"><span class="opt-key">iv</span> A dishonest candidate</button>
+    </div>
+    <div class="feedback" id="fb-8j"></div>
+  </div>
+
+  <!-- FINISH BUTTON -->
+  <div class="finish-btn-wrap">
+    <button class="finish-btn" onclick="showScore()">📋 Submit &amp; See Score</button>
+  </div>
+
+  <!-- SCORE CARD -->
+  <div id="score-section">
+    <div class="score-label">Your Final Score</div>
+    <div class="score-big" id="scoreDisplay"><span id="scoreNum">0</span><span style="color:rgba(245,240,232,0.3);font-size:0.55em"> / 30</span></div>
+    <div class="score-out-of">out of 30 marks</div>
+    <div class="score-grade" id="scoreGrade">—</div>
+    <div class="score-breakdown">
+      <div class="breakdown-item">
+        <div class="breakdown-num" id="correctCount">0</div>
+        <div class="breakdown-label">Correct</div>
+      </div>
+      <div class="breakdown-item">
+        <div class="breakdown-num" id="wrongCount">0</div>
+        <div class="breakdown-label">Wrong</div>
+      </div>
+      <div class="breakdown-item">
+        <div class="breakdown-num" id="skipCount">0</div>
+        <div class="breakdown-label">Unanswered</div>
+      </div>
+    </div>
+    <br>
+    <button class="retry-btn" onclick="retryQuiz()">↺ Retry Quiz</button>
+  </div>
+
+</div>
+
+<script>
+  const ANSWERS = {
+    '7a': 'fairly',
+    '7b': 'is',
+    '7c': ['to'],
+    '7d': "can't",
+    '7e': ['had been surviving'],
+    '7f': ['provided that','as long as','provided','so long as'],
+    '7g': 'whom',
+    '7h': 'posting',
+    '7i': ['it is said that the new law will reduce the crime rate significantly'],
+    '7j': ['the traveler exclaimed with wonder that the himalayas offered a very magnificent view','the traveler exclaimed that the himalayas offered a magnificent view'],
+    '7k': 'seems',
+    '7l': 'was',
+    '7m': ['to'],
+    '7n': ['would have been avoided'],
+    '7o': 'than',
+    '7p': 'to',
+    '7q': 'whose',
+    '7r': 'to cross',
+    '7s': ['the naughty boys were made to clean the entire playground by the headmaster','the naughty boys were made to clean the entire playground'],
+    '7t': ['my father advised me not to waste my time on useless things','my father told me not to waste my time on useless things'],
+    '8a': 'Physics',
+    '8b': 'Paid',
+    '8c': 'Lieutenant',
+    '8d': 'Colonel',
+    '8e': 'Under',
+    '8f': 'Three',
+    '8g': 'Material',
+    '8h': 'Stable, Staff, Stage, Static',
+    '8i': 'A good thing that seemed bad at first',
+    '8j': 'An unexpected winner',
+  };
+
+  const EXPLANATIONS = {
+    '7a': "'Fairly' modifies 'slowly' (which modifies 'walked') — both are adverbs, but 'fairly' is the primary adverb in focus.",
+    '7b': "'None of' with uncountable noun 'information' takes a singular verb — is.",
+    '7c': "'Indifferent to' is a fixed adjective-preposition collocation.",
+    '7d': "'Can't have + V3' expresses strong negative deduction based on evidence (she was ill in bed).",
+    '7e': "Past Perfect Continuous — 'had been surviving' — shows an ongoing action up to a past moment.",
+    '7f': "'Provided that' / 'As long as' introduce conditional clauses of condition.",
+    '7g': "'Whom' is used as the object of the preposition 'for' in the relative clause.",
+    '7h': "'Remember + V-ing' refers to recalling a past action already completed.",
+    '7i': "Passive: 'It is said that the new law will reduce the crime rate significantly.'",
+    '7j': "Indirect: 'The traveler exclaimed with wonder that the Himalayas offered a very magnificent view.'",
+    '7k': "'Neither of' + plural noun takes a singular verb: 'seems'.",
+    '7l': "With 'Not only… but also', the verb agrees with the closer subject ('the teacher' → singular → 'was').",
+    '7m': "The phrase is 'look forward to' — 'to' is the preposition here, followed by a gerund.",
+    '7n': "Type 3 Conditional, passive voice: 'would have been avoided'.",
+    '7o': "'No sooner… than' is the fixed pairing. 'When' is incorrect here.",
+    '7p': "'Key to success' — 'to' is the correct preposition after 'key' (meaning path/way).",
+    '7q': "Possessive relative pronoun 'whose' is needed (the man's car).",
+    '7r': "In passive, verbs of perception (see, hear) require 'to + infinitive': 'to cross'.",
+    '7s': "Passive: 'The naughty boys were made to clean the entire playground by the headmaster.'",
+    '7t': "Imperative in indirect speech → 'advised/told + not to + verb': 'My father advised me not to waste my time on useless things.'",
+    '8a': "Psychology, Pseudo, Pneumonia all have silent first letters (sounds: /s/, /s/, /n/). Physics starts with /f/ — the odd one out.",
+    '8b': "Says /ɛ/, Said /ɛ/, Bed /ɛ/ — all share the short /e/ sound. Paid has the /eɪ/ diphthong — different.",
+    '8c': "The correct spelling is 'Lieutenant' (from French 'lieu' + 'tenant').",
+    '8d': "'Colonel' — famously tricky, pronounced 'kernel'. All other options are misspellings.",
+    '8e': "In 'Under', the 'un-' is part of the root word itself, not the prefix 'un-' (meaning not).",
+    '8f': "Industry + -al (→industrial) + -ize (→industrialize) + -ation (→industrialization) = 3 suffixes.",
+    '8g': "Alphabetically: Master → Mate-r-ial (M-a-t-e) → Matr-ix (M-a-t-r). 'Material' fits between Master and Matrix.",
+    '8h': "St-a-b (Stable) → St-a-f (Staff) → St-a-g (Stage) → St-a-t (Static). Correct dictionary order.",
+    '8i': "A blessing in disguise = something that first appeared bad but turned out to be good.",
+    '8j': "Dark horse = an unexpected winner; someone little-known who ends up winning.",
+  };
+
+  const state = {};
+  let answeredCount = 0;
+  const TOTAL = 30;
+
+  function updateProgress() {
+    const pct = (answeredCount / TOTAL) * 100;
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `${answeredCount} / ${TOTAL} answered`;
+  }
+
+  function checkMCQ(qid, btn, chosen) {
+    if (state[qid]) return;
+    state[qid] = chosen;
+    const card = document.getElementById('card-' + qid);
+    const fb = document.getElementById('fb-' + qid);
+    const correct = ANSWERS[qid];
+    const isCorrect = chosen === correct;
+
+    // Disable all buttons in this card
+    card.querySelectorAll('.option-btn').forEach(b => {
+      b.disabled = true;
+      const bVal = b.getAttribute('onclick').match(/'([^']+)'\)$/);
+      if (bVal && bVal[1] === correct) b.classList.add('correct');
+    });
+
+    if (!isCorrect) btn.classList.add('wrong');
+    card.classList.add(isCorrect ? 'answered-correct' : 'answered-wrong');
+
+    fb.innerHTML = isCorrect
+      ? `<strong>✓ Correct!</strong> ${EXPLANATIONS[qid]}`
+      : `<strong>✗ Incorrect.</strong> Correct answer: <em>${correct}</em>. ${EXPLANATIONS[qid]}`;
+    fb.className = 'feedback show ' + (isCorrect ? 'correct' : 'wrong');
+
+    answeredCount++;
+    updateProgress();
+  }
+
+  function checkFill(qid, acceptedArr) {
+    if (state[qid]) return;
+    const input = document.getElementById('input-' + qid);
+    const userVal = input.value.trim().toLowerCase();
+    if (!userVal) return;
+
+    const fb = document.getElementById('fb-' + qid);
+    const card = document.getElementById('card-' + qid);
+    const isCorrect = acceptedArr.some(a => a.toLowerCase() === userVal);
+
+    state[qid] = userVal;
+    input.disabled = true;
+    card.querySelector('.submit-btn').disabled = true;
+    input.classList.add(isCorrect ? 'correct' : 'wrong');
+    card.classList.add(isCorrect ? 'answered-correct' : 'answered-wrong');
+
+    fb.innerHTML = isCorrect
+      ? `<strong>✓ Correct!</strong> ${EXPLANATIONS[qid]}`
+      : `<strong>✗ Incorrect.</strong> Accepted answer: <em>${acceptedArr[0]}</em>. ${EXPLANATIONS[qid]}`;
+    fb.className = 'feedback show ' + (isCorrect ? 'correct' : 'wrong');
+
+    answeredCount++;
+    updateProgress();
+  }
+
+  function showScore() {
+    const allIds = Object.keys(ANSWERS);
+    let correct = 0, wrong = 0, skipped = 0;
+
+    allIds.forEach(qid => {
+      const ans = ANSWERS[qid];
+      const given = state[qid];
+      if (!given) { skipped++; return; }
+      const correctVal = Array.isArray(ans) ? ans[0] : ans;
+      const isC = Array.isArray(ans)
+        ? ans.some(a => a.toLowerCase() === given.toLowerCase())
+        : given.toLowerCase() === ans.toLowerCase();
+      if (isC) correct++; else wrong++;
+    });
+
+    document.getElementById('scoreNum').textContent = correct;
+    document.getElementById('correctCount').textContent = correct;
+    document.getElementById('wrongCount').textContent = wrong;
+    document.getElementById('skipCount').textContent = skipped;
+
+    const pct = (correct / TOTAL) * 100;
+    let grade = '';
+    if (pct >= 90) grade = 'Outstanding — A+';
+    else if (pct >= 80) grade = 'Distinction — A';
+    else if (pct >= 70) grade = 'Merit — B+';
+    else if (pct >= 60) grade = 'First Division — B';
+    else if (pct >= 50) grade = 'Second Division — C';
+    else if (pct >= 40) grade = 'Pass — D';
+    else grade = 'Needs Improvement';
+
+    document.getElementById('scoreGrade').textContent = grade;
+    const sec = document.getElementById('score-section');
+    sec.style.display = 'block';
+    sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function retryQuiz() {
+    window.location.reload();
+  }
+</script>
+</body>
+</html>

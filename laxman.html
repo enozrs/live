@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice / Packing List Generator</title>
+<style>
+  :root{
+    --navy:#16294a;
+    --steel:#3d5a80;
+    --paper:#ffffff;
+    --bg:#eef1f5;
+    --ink:#1a1a1a;
+    --line:#d7dce3;
+    --accent:#b7862f;
+    --danger:#b3423a;
+    --danger-bg:#fbebe9;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:Arial, Helvetica, sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- App shell ---------- */
+  .topbar{
+    background:var(--navy);
+    color:#fff;
+    padding:14px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:14px;
+  }
+  .topbar h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.3px;}
+  .topbar .sub{font-size:11px;color:#a9b7cf;margin-top:2px;font-weight:400;}
+  .topbar-actions{display:flex;gap:10px;align-items:center;}
+
+  .tabs{
+    display:flex;
+    background:rgba(255,255,255,.1);
+    border-radius:8px;
+    padding:3px;
+    gap:2px;
+  }
+  .tab-btn{
+    background:transparent;
+    color:#c4cede;
+    padding:8px 16px;
+    border-radius:6px;
+    font-size:12.5px;
+    font-weight:700;
+  }
+  .tab-btn.active{background:var(--accent);color:#1a1200;}
+  .tab-btn:hover:not(.active){background:rgba(255,255,255,.1);color:#fff;}
+
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:6px;
+    padding:9px 16px;
+    font-size:13px;
+    font-weight:600;
+    transition:background .15s ease, transform .05s ease;
+  }
+  button:active{transform:translateY(1px);}
+  .btn-primary{background:var(--accent);color:#1a1200;}
+  .btn-primary:hover{background:#c8973c;}
+  .btn-ghost{background:rgba(255,255,255,.12);color:#fff;}
+  .btn-ghost:hover{background:rgba(255,255,255,.22);}
+  .btn-add{background:var(--steel);color:#fff;}
+  .btn-add:hover{background:#4a6d9a;}
+  .btn-remove{background:var(--danger-bg);color:var(--danger);padding:6px 10px;font-size:12px;}
+  .btn-remove:hover{background:#f5d5d2;}
+
+  .main-grid{
+    display:grid;
+    grid-template-columns:400px 1fr;
+    gap:20px;
+    padding:20px;
+    align-items:start;
+  }
+
+  /* ---------- Form panel ---------- */
+  .form-panel{
+    background:var(--paper);
+    border-radius:var(--radius);
+    box-shadow:0 1px 3px rgba(20,30,50,.08), 0 1px 2px rgba(20,30,50,.06);
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+    max-height:calc(100vh - 100px);
+    overflow-y:auto;
+    position:sticky;
+    top:20px;
+  }
+  .panel-section h2{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.8px;
+    color:var(--steel);
+    margin:0 0 12px 0;
+    padding-bottom:8px;
+    border-bottom:1px solid var(--line);
+    font-weight:700;
+  }
+  .field{margin-bottom:10px;position:relative;}
+  .field label{
+    display:block;
+    font-size:11.5px;
+    color:#5b6472;
+    margin-bottom:4px;
+    font-weight:600;
+  }
+  .label-row{display:flex;align-items:center;justify-content:space-between;}
+  .icon-btn{
+    background:#eef1f5;
+    border-radius:5px;
+    padding:2px 7px;
+    font-size:12px;
+    color:var(--steel);
+    font-weight:700;
+    line-height:1.6;
+  }
+  .icon-btn:hover{background:#dfe4ea;}
+
+  .field input[type="text"],
+  .field input[type="date"],
+  .field input[type="number"],
+  .field select,
+  .field textarea{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:5px;
+    font-size:13px;
+    font-family:inherit;
+    color:var(--ink);
+    background:#fbfcfd;
+  }
+  .field textarea{resize:vertical;min-height:44px;}
+  .field input:focus,.field select:focus,.field textarea:focus{
+    outline:none;
+    border-color:var(--steel);
+    background:#fff;
+  }
+  .field.readonly input, .static-note{
+    background:#f1f3f6;
+    color:#6a7280;
+  }
+  .static-note{
+    font-size:12px;
+    color:#6a7280;
+    background:#f1f3f6;
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:10px 12px;
+    line-height:1.6;
+    white-space:pre-line;
+  }
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  .customer-dropdown{
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:6px;
+    box-shadow:0 6px 18px rgba(20,30,50,.14);
+    z-index:20;
+    max-height:220px;
+    overflow-y:auto;
+    margin-top:4px;
+  }
+  .customer-dropdown .cust-item{
+    padding:8px 12px;
+    font-size:12.5px;
+    border-bottom:1px solid #f0f1f3;
+  }
+  .customer-dropdown .cust-item:last-child{border-bottom:none;}
+  .customer-dropdown .cust-item:hover{background:#f4f6f9;}
+  .customer-dropdown .cust-item b{display:block;font-size:12.5px;}
+  .customer-dropdown .cust-item span{display:block;font-size:11px;color:#8a92a0;}
+  .customer-dropdown .cust-empty{padding:10px 12px;font-size:12px;color:#9aa2ad;}
+
+  .item-card{
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:12px;
+    margin-bottom:10px;
+    background:#fbfcfd;
+    position:relative;
+  }
+  .item-card .item-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:8px;
+  }
+  .item-card .item-head span{
+    font-size:11px;
+    font-weight:700;
+    color:var(--steel);
+    text-transform:uppercase;
+    letter-spacing:.5px;
+  }
+  .item-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .item-grid .full{grid-column:1 / -1;}
+  .item-total-preview{margin-top:8px;font-size:12px;color:#5b6472;text-align:right;}
+  .item-total-preview b{color:var(--ink);}
+
+  #addItemBtn{width:100%;margin-top:4px;}
+
+  .checkbox-field{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .checkbox-field input{width:16px;height:16px;}
+  .checkbox-field label{font-size:12.5px;font-weight:600;color:#5b6472;}
+
+  .footer-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .footer-actions button{flex:1;}
+
+  /* ---------- Preview panel ---------- */
+  .preview-panel{display:flex;justify-content:center;}
+  .invoice-page{
+    background:var(--paper);
+    width:210mm;
+    min-height:297mm;
+    padding:14mm 12mm;
+    box-shadow:0 1px 4px rgba(20,30,50,.1), 0 8px 24px rgba(20,30,50,.08);
+    position:relative;
+    font-family:Arial, Helvetica, sans-serif;
+    color:#111;
+  }
+  .inv-header{text-align:center;margin-bottom:14px;}
+  .inv-header h1{
+    font-family:Georgia,'Times New Roman',serif;
+    font-size:24px;
+    letter-spacing:.5px;
+    margin:0 0 8px 0;
+    font-weight:700;
+  }
+  .inv-header p{margin:2px 0;font-size:12.5px;color:#333;}
+
+  .inv-title-box{
+    border:1.5px solid #111;
+    text-align:center;
+    padding:10px;
+    margin:14px 0;
+    font-family:Georgia,'Times New Roman',serif;
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:1px;
+  }
+
+  .inv-meta-table{
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:16px;
+    font-size:12.5px;
+    table-layout:fixed;
+  }
+  .inv-meta-table td{border:1px solid #111;padding:6px 10px;vertical-align:top;}
+  .inv-meta-table .label-cell{font-weight:700;}
+  .inv-meta-table .right-col{width:34%;font-weight:700;}
+
+  table.items-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:4px;}
+  table.items-table th, table.items-table td{border:1px solid #111;padding:7px 8px;text-align:center;}
+  table.items-table th{
+    background:#eef1f5;
+    font-weight:700;
+    text-transform:uppercase;
+    font-size:11px;
+    letter-spacing:.3px;
+  }
+  table.items-table td.desc-cell{text-align:left;}
+  table.items-table tfoot td{font-weight:700;background:#f7f8fa;}
+
+  .total-words{font-size:12.5px;font-weight:700;margin:10px 0 18px 0;letter-spacing:.2px;}
+  .origin-line{font-size:12.5px;margin-bottom:20px;}
+
+  .bank-block{font-size:12.5px;line-height:1.55;position:relative;min-height:120px;}
+  .bank-block h3{font-size:12.5px;text-transform:uppercase;letter-spacing:.5px;margin:0 0 6px 0;}
+  .bank-block .bank-line{margin:1px 0;}
+  .bank-block .bank-line b{font-weight:700;}
+
+  .stamp-overlay{
+    position:absolute;
+    right:0;
+    bottom:-4px;
+    width:260px;
+    max-width:45%;
+    pointer-events:none;
+  }
+  .stamp-overlay img{width:100%;display:block;}
+
+  /* ---------- Print ---------- */
+  @media print{
+    @page{size:A4;margin:0;}
+    html,body{background:#fff;margin:0;padding:0;}
+    .no-print{display:none !important;}
+    .main-grid{display:block;padding:0;margin:0;}
+    .preview-panel{display:block;justify-content:unset;}
+    .invoice-page{
+      box-shadow:none;
+      width:210mm;
+      min-height:297mm;
+      margin:0;
+      padding:14mm 12mm;
+      page-break-after:always;
+    }
+  }
+
+  @media (max-width:1000px){
+    .main-grid{grid-template-columns:1fr;}
+    .form-panel{position:relative;top:0;max-height:none;}
+    .invoice-page{width:100%;min-height:auto;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar no-print">
+  <div>
+    <h1>Document Generator</h1>
+    <div class="sub">Laxman International Co., Limited</div>
+  </div>
+  <div class="topbar-actions">
+    <div class="tabs">
+      <button class="tab-btn active" data-doctype="invoice" id="tabInvoice" type="button">Commercial Invoice</button>
+      <button class="tab-btn" data-doctype="packing" id="tabPacking" type="button">Packing List</button>
+    </div>
+    <button class="btn-ghost" id="newInvoiceBtn">New</button>
+    <button class="btn-ghost" id="exportExcelBtn">Export Excel</button>
+    <button class="btn-primary" id="printBtn">Print / Save PDF</button>
+  </div>
+</div>
+
+<div class="main-grid">
+
+  <!-- ============ FORM PANEL ============ -->
+  <aside class="form-panel no-print">
+
+    <div class="panel-section">
+      <h2>Document Details</h2>
+      <div class="row2">
+        <div class="field readonly">
+          <label>Invoice No.</label>
+          <input type="text" id="invNo" readonly>
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="invDate">
+        </div>
+      </div>
+      <div class="field">
+        <label>Company Office / Address</label>
+        <select id="officeSelect">
+          <option value="YIWU">Yiwu Office (Zhejiang)</option>
+          <option value="HONGKONG">Hong Kong Office</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h2>Bill To</h2>
+      <div class="field">
+        <div class="label-row">
+          <label>Company / Customer Name</label>
+          <button type="button" class="icon-btn" id="historyBtn" title="Recent customers">&#128337; Recent</button>
+        </div>
+        <input type="text" id="toName" placeholder="TIRUPATI TRADING CO" autocomplete="off">
+        <div class="customer-dropdown no-print" id="customerDropdown" style="display:none;"></div>
+      </div>
+      <div class="field">
+        <label>Address</label>
+        <textarea id="toAddress" placeholder="154, MG ROAD, KOLKATA, KOLKATA&#10;WEST BENGAL, 700007"></textarea>
+      </div>
+      <div class="field">
+        <label>Phone</label>
+        <input type="text" id="toPhone" placeholder="+919903935739">
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h2>Items</h2>
+      <div id="itemsList"></div>
+      <button class="btn-add" id="addItemBtn" type="button">+ Add Item</button>
+    </div>
+
+    <div class="panel-section">
+      <h2>Business &amp; Bank Details</h2>
+      <div class="checkbox-field">
+        <input type="checkbox" id="showOrigin">
+        <label for="showOrigin">Show "China Origin" certification line</label>
+      </div>
+      <div class="static-note" id="staticNotePreview"></div>
+      <p style="font-size:11px;color:#9aa2ad;margin:8px 0 0 0;">Company name, bank details and the stamp image are fixed for this business. To change them, edit the CONFIG section near the top of the &lt;script&gt; in this file.</p>
+    </div>
+
+  </aside>
+
+  <!-- ============ PREVIEW PANEL ============ -->
+  <section class="preview-panel">
+    <div class="invoice-page" id="invoicePage">
+
+      <div class="inv-header">
+        <h1 id="pv-companyName">LAXMAN INTERNATIONAL CO., LIMITED</h1>
+        <p id="pv-companyAddress1">ROOM 203 UNIT 2 BUILDING 3 YINHAI THIRD DISTRICT,</p>
+        <p id="pv-companyAddress2">YIWU CITY</p>
+      </div>
+
+      <div class="inv-title-box" id="pv-docTitle">COMMERCIAL INVOICE</div>
+
+      <table class="inv-meta-table">
+        <tr>
+          <td class="label-cell" style="width:66%;">
+            TO: <span id="pv-toName">TIRUPATI TRADING CO</span><br>
+            <span id="pv-toAddress" style="font-weight:400;">154, MG ROAD, KOLKATA, KOLKATA<br>WEST BENGAL, 700007</span>
+          </td>
+          <td class="right-col">INV.NO: <span id="pv-invNo">LX2026040100</span></td>
+        </tr>
+        <tr>
+          <td class="label-cell">PHONE: <span id="pv-toPhone" style="font-weight:400;">+919903935739</span></td>
+          <td class="right-col">DATE: <span id="pv-invDate">16-04-2026</span></td>
+        </tr>
+      </table>
+
+      <table class="items-table">
+        <thead>
+          <tr id="pv-tableHeadRow">
+            <th style="width:6%;">SL NO</th>
+            <th>DESCRIPTION</th>
+            <th style="width:11%;">HSN</th>
+            <th style="width:9%;">QNT</th>
+            <th style="width:10%;">UNIT</th>
+            <th class="price-col" style="width:14%;">Rate/Unit</th>
+            <th class="price-col" style="width:14%;">Total USD</th>
+          </tr>
+        </thead>
+        <tbody id="pv-itemsBody"></tbody>
+        <tfoot>
+          <tr id="pv-totalRow">
+            <td colspan="3">TOTAL</td>
+            <td id="pv-totalQty">0</td>
+            <td></td>
+            <td class="price-col"></td>
+            <td class="price-col" id="pv-totalUsd">0.00</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div class="total-words" id="pv-totalWords">TOTAL: ZERO ONLY</div>
+
+      <div class="origin-line" id="pv-originLine">WE CERTIFY THAT THE ABOVE GOODS ARE CHINA ORIGIN</div>
+
+      <div class="bank-block">
+        <h3>Bank Information:</h3>
+        <p class="bank-line"><b>Company Name:</b> <span id="pv-bankCompanyName"></span></p>
+        <p class="bank-line"><b>Company Add:</b> <span id="pv-bankCompanyAddress"></span></p>
+        <p class="bank-line"><b>Beneficiary Bank:</b> <span id="pv-beneficiaryBank"></span></p>
+        <p class="bank-line"><b>Bank Address:</b> <span id="pv-bankAddress"></span></p>
+        <p class="bank-line"><b>Account No (NRA):</b> <span id="pv-bankAccount"></span></p>
+        <p class="bank-line"><b>Swift Code:</b> <span id="pv-bankSwift"></span></p>
+        <p class="bank-line"><b>Correspondent Bank (For USD Remittance):</b> <span id="pv-correspondentBank"></span></p>
+        <p class="bank-line"><b>Correspondent Swift:</b> <span id="pv-correspondentSwift"></span></p>
+
+        <div class="stamp-overlay" id="stampOverlay" style="display:none;">
+          <img id="stampImg" src="" alt="Company Stamp">
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>
+(function(){
+
+  /* =========================================================
+     CONFIG — fixed business data. Edit these values directly
+     in the source file if they ever need to change.
+     ========================================================= */
+  var CONFIG = {
+    companyName: 'LAXMAN INTERNATIONAL CO., LIMITED',
+    officeAddresses: {
+      YIWU: 'ROOM 203 UNIT 2 BUILDING 3 YINHAI THIRD DISTRICT,\nYIWU CITY',
+      HONGKONG: 'UNIT 18, 8/F, PETER LEUNG INDUSTRIAL BUILDING,\n103 WAI YIP STREET, KWUN TONG, HONG KONG'
+    },
+    bank: {
+      companyName: 'LAXMAN INTERNATIONAL CO.,LIMITED',
+      companyAddress: 'UNIT 18, 8/F, PETER LEUNG INDUSTRIAL BUILDING, 103 WAI YIP STREET, KWUN TONG, HONG KONG',
+      beneficiaryBank: 'ZHEJIANG CHOUZHOU COMMERCIAL BANK',
+      bankAddress: 'NO 188 SHANGCHENG AVENUE CHOUYIN BUILDING YIWU CITY',
+      account: 'NRA15602002010590064153',
+      swift: 'CZCBCN2X',
+      correspondentBank: 'CITIBANK NA',
+      correspondentSwift: 'CITIUS33XXX'
+    },
+    // Host your transparent PNG stamp/signature somewhere (your own server / CDN)
+    // and paste the direct image URL below. Leave as '' to show no stamp.
+    stampUrl: 'https://raw.githubusercontent.com/enozrs/live/refs/heads/main/stampSignLx.png'
+  };
+
+  var UNIT_PRESETS = ['Dz','Pairs','Pcs'];
+
+  /* ---------------- Storage ---------------- */
+  var PREFS_KEY = 'invoiceGen_prefs_v2';
+  var HISTORY_KEY = 'invoiceGen_customerHistory_v2';
+
+  function loadPrefs(){
+    try{
+      var raw = localStorage.getItem(PREFS_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){}
+    return { office:'YIWU', showOrigin:true };
+  }
+  function savePrefs(p){ try{ localStorage.setItem(PREFS_KEY, JSON.stringify(p)); }catch(e){} }
+
+  function loadHistory(){
+    try{
+      var raw = localStorage.getItem(HISTORY_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){}
+    return [];
+  }
+  function saveHistory(list){ try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); }catch(e){} }
+
+  function rememberCustomer(name, address, phone){
+    if(!name || !name.trim()) return;
+    var list = loadHistory();
+    var key = name.trim().toLowerCase();
+    list = list.filter(function(c){ return c.name.trim().toLowerCase() !== key; });
+    list.unshift({ name:name.trim(), address:address||'', phone:phone||'' });
+    if(list.length > 20) list = list.slice(0,20);
+    saveHistory(list);
+  }
+
+  /* ---------------- Invoice number / date ---------------- */
+  var SEQ_KEY = 'invoiceGen_hourSeq_v1';
+
+  function generateInvoiceNumber(){
+    var d = new Date();
+    var yyyy = d.getFullYear();
+    var mm = String(d.getMonth()+1).padStart(2,'0');
+    var dd = String(d.getDate()).padStart(2,'0');
+    var hh = String(d.getHours()).padStart(2,'0'); // 24hr
+    var hourKey = '' + yyyy + mm + dd + hh;
+
+    var seq = 1;
+    try{
+      var raw = localStorage.getItem(SEQ_KEY);
+      var record = raw ? JSON.parse(raw) : null;
+      if(record && record.hourKey === hourKey){
+        seq = record.seq + 1;
+      }
+      localStorage.setItem(SEQ_KEY, JSON.stringify({ hourKey: hourKey, seq: seq }));
+    }catch(e){}
+
+    return 'LX' + hourKey + '-' + String(seq).padStart(2,'0');
+  }
+  function todayISO(){
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function formatDisplayDate(iso){
+    if(!iso) return '';
+    var p = iso.split('-');
+    return p.length === 3 ? (p[2]+'-'+p[1]+'-'+p[0]) : iso;
+  }
+
+  /* ---------------- Number to words ---------------- */
+  var ONES = ['','ONE','TWO','THREE','FOUR','FIVE','SIX','SEVEN','EIGHT','NINE','TEN',
+    'ELEVEN','TWELVE','THIRTEEN','FOURTEEN','FIFTEEN','SIXTEEN','SEVENTEEN','EIGHTEEN','NINETEEN'];
+  var TENS = ['','','TWENTY','THIRTY','FORTY','FIFTY','SIXTY','SEVENTY','EIGHTY','NINETY'];
+
+  function threeDigitsToWords(n){
+    var s = '';
+    if(n >= 100){
+      s += ONES[Math.floor(n/100)] + ' HUNDRED';
+      n = n % 100;
+      if(n > 0) s += ' ';
+    }
+    if(n >= 20){
+      s += TENS[Math.floor(n/10)];
+      if(n % 10 > 0) s += '-' + ONES[n % 10];
+    } else if(n > 0){
+      s += ONES[n];
+    }
+    return s;
+  }
+  function integerToWords(num){
+    if(num === 0) return 'ZERO';
+    var groups = ['', ' THOUSAND', ' MILLION', ' BILLION'];
+    var parts = [], i = 0;
+    while(num > 0 && i < groups.length){
+      var chunk = num % 1000;
+      if(chunk > 0) parts.unshift(threeDigitsToWords(chunk) + groups[i]);
+      num = Math.floor(num / 1000);
+      i++;
+    }
+    return parts.join(' ').trim();
+  }
+  function amountToWords(amount){
+    amount = Math.round((parseFloat(amount) || 0) * 100) / 100;
+    var whole = Math.floor(amount);
+    var cents = Math.round((amount - whole) * 100);
+    var out = integerToWords(whole);
+    if(cents > 0) out += ' AND ' + integerToWords(cents) + ' CENT' + (cents === 1 ? '' : 'S');
+    out += ' ONLY';
+    return out;
+  }
+
+  /* ---------------- State ---------------- */
+  var prefs = loadPrefs();
+  var state = {
+    docType: 'invoice',
+    invNo: generateInvoiceNumber(),
+    invDate: todayISO(),
+    office: prefs.office || 'YIWU',
+    showOrigin: prefs.showOrigin !== false,
+    toName: '',
+    toAddress: '',
+    toPhone: '',
+    items: []
+  };
+
+  var itemIdCounter = 0;
+  function newItem(){
+    itemIdCounter++;
+    return { id: itemIdCounter, description:'', hsn:'', qty:'', unit:'Dz', rate:'' };
+  }
+
+  /* ---------------- DOM refs ---------------- */
+  var el = {};
+  ['invNo','invDate','officeSelect','toName','toAddress','toPhone',
+   'itemsList','addItemBtn','historyBtn','customerDropdown',
+   'showOrigin','staticNotePreview',
+   'printBtn','newInvoiceBtn','exportExcelBtn','tabInvoice','tabPacking'
+  ].forEach(function(id){ el[id] = document.getElementById(id); });
+
+  var pv = {};
+  ['pv-companyName','pv-companyAddress1','pv-companyAddress2','pv-docTitle',
+   'pv-toName','pv-toAddress','pv-toPhone','pv-invNo','pv-invDate',
+   'pv-tableHeadRow','pv-itemsBody','pv-totalRow','pv-totalQty','pv-totalUsd',
+   'pv-totalWords','pv-originLine',
+   'pv-bankCompanyName','pv-bankCompanyAddress','pv-beneficiaryBank','pv-bankAddress',
+   'pv-bankAccount','pv-bankSwift','pv-correspondentBank','pv-correspondentSwift',
+   'stampOverlay','stampImg'
+  ].forEach(function(id){ pv[id] = document.getElementById(id); });
+
+  /* ---------------- Init ---------------- */
+  function initForm(){
+    el.invNo.value = state.invNo;
+    el.invDate.value = state.invDate;
+    el.officeSelect.value = state.office;
+    el.toName.value = state.toName;
+    el.toAddress.value = state.toAddress;
+    el.toPhone.value = state.toPhone;
+    el.showOrigin.checked = state.showOrigin;
+
+    pv['pv-companyName'].textContent = CONFIG.companyName;
+    pv['pv-bankCompanyName'].textContent = CONFIG.bank.companyName;
+    pv['pv-bankCompanyAddress'].textContent = CONFIG.bank.companyAddress;
+    pv['pv-beneficiaryBank'].textContent = CONFIG.bank.beneficiaryBank;
+    pv['pv-bankAddress'].textContent = CONFIG.bank.bankAddress;
+    pv['pv-bankAccount'].textContent = CONFIG.bank.account;
+    pv['pv-bankSwift'].textContent = CONFIG.bank.swift;
+    pv['pv-correspondentBank'].textContent = CONFIG.bank.correspondentBank;
+    pv['pv-correspondentSwift'].textContent = CONFIG.bank.correspondentSwift;
+
+    el.staticNotePreview.textContent =
+      CONFIG.companyName + '\n\n' +
+      'Bank: ' + CONFIG.bank.beneficiaryBank + '\n' +
+      'A/C: ' + CONFIG.bank.account + '\n' +
+      'SWIFT: ' + CONFIG.bank.swift + '\n' +
+      'Correspondent: ' + CONFIG.bank.correspondentBank + ' (' + CONFIG.bank.correspondentSwift + ')';
+
+    if(CONFIG.stampUrl && CONFIG.stampUrl.indexOf('example.com') === -1){
+      pv['stampImg'].src = CONFIG.stampUrl;
+      pv['stampOverlay'].style.display = 'block';
+    } else {
+      pv['stampOverlay'].style.display = 'none';
+    }
+  }
+
+  /* ---------------- Items rendering (form side) ---------------- */
+  function unitControlHtml(item){
+    var isPreset = UNIT_PRESETS.indexOf(item.unit) !== -1;
+    var opts = UNIT_PRESETS.map(function(u){
+      return '<option value="'+u+'"'+(item.unit===u?' selected':'')+'>'+u+'</option>';
+    }).join('');
+    opts += '<option value="__OTHER__"'+(!isPreset?' selected':'')+'>Other (type)</option>';
+    var customVisible = !isPreset;
+    return (
+      '<select data-field="unitPreset" data-id="'+item.id+'">'+opts+'</select>' +
+      '<input type="text" data-field="unitCustom" data-id="'+item.id+'" ' +
+        'style="margin-top:6px;'+(customVisible?'':'display:none;')+'" ' +
+        'value="'+escapeAttr(isPreset?'':item.unit)+'" placeholder="Type unit e.g. Sets, Boxes">'
+    );
+  }
+
+  function renderItemsForm(){
+    el.itemsList.innerHTML = '';
+    state.items.forEach(function(item, idx){
+      var card = document.createElement('div');
+      card.className = 'item-card';
+      var total = (parseFloat(item.qty)||0) * (parseFloat(item.rate)||0);
+
+      card.innerHTML =
+        '<div class="item-head">' +
+          '<span>Item ' + (idx+1) + '</span>' +
+          '<button type="button" class="btn-remove" data-remove="' + item.id + '">Remove</button>' +
+        '</div>' +
+        '<div class="item-grid">' +
+          '<div class="field full">' +
+            '<label>Description</label>' +
+            '<input type="text" data-field="description" data-id="' + item.id + '" value="' + escapeAttr(item.description) + '" placeholder="e.g. BABY EARMUFF">' +
+          '</div>' +
+          '<div class="field">' +
+            '<label>HSN</label>' +
+            '<input type="text" data-field="hsn" data-id="' + item.id + '" value="' + escapeAttr(item.hsn) + '" placeholder="61171090">' +
+          '</div>' +
+          '<div class="field">' +
+            '<label>Unit</label>' +
+            unitControlHtml(item) +
+          '</div>' +
+          '<div class="field">' +
+            '<label>Quantity</label>' +
+            '<input type="number" step="any" data-field="qty" data-id="' + item.id + '" value="' + escapeAttr(item.qty) + '" placeholder="0">' +
+          '</div>' +
+          '<div class="field">' +
+            '<label>Rate/Unit (USD)</label>' +
+            '<input type="number" step="any" data-field="rate" data-id="' + item.id + '" value="' + escapeAttr(item.rate) + '" placeholder="0.00">' +
+          '</div>' +
+        '</div>' +
+        '<div class="item-total-preview">Row Total: <b>$' + total.toFixed(2) + '</b></div>';
+
+      el.itemsList.appendChild(card);
+    });
+  }
+
+  function escapeAttr(v){ return String(v == null ? '' : v).replace(/"/g,'&quot;'); }
+  function escapeHtml(v){
+    return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  /* ---------------- Preview rendering ---------------- */
+  function applyDocType(){
+    var isPacking = state.docType === 'packing';
+    pv['pv-docTitle'].textContent = isPacking ? 'PACKING LIST' : 'COMMERCIAL INVOICE';
+    document.querySelectorAll('.price-col').forEach(function(c){
+      c.style.display = isPacking ? 'none' : '';
+    });
+    pv['pv-totalWords'].style.display = isPacking ? 'none' : 'block';
+    el.tabInvoice.classList.toggle('active', !isPacking);
+    el.tabPacking.classList.toggle('active', isPacking);
+  }
+
+  function renderPreview(){
+    var addrLines = (CONFIG.officeAddresses[state.office] || '').split('\n');
+    pv['pv-companyAddress1'].textContent = addrLines[0] || '';
+    pv['pv-companyAddress2'].textContent = addrLines.slice(1).join(', ');
+
+    pv['pv-toName'].textContent = state.toName;
+    pv['pv-toAddress'].innerHTML = escapeHtml(state.toAddress).replace(/\n/g,'<br>');
+    pv['pv-toPhone'].textContent = state.toPhone;
+    pv['pv-invNo'].textContent = state.invNo;
+    pv['pv-invDate'].textContent = formatDisplayDate(state.invDate);
+
+    pv['pv-itemsBody'].innerHTML = '';
+    var totalQty = 0, totalUsd = 0;
+    state.items.forEach(function(item, idx){
+      var qty = parseFloat(item.qty) || 0;
+      var rate = parseFloat(item.rate) || 0;
+      var rowTotal = qty * rate;
+      totalQty += qty;
+      totalUsd += rowTotal;
+
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + (idx+1) + '</td>' +
+        '<td class="desc-cell">' + escapeHtml(item.description) + '</td>' +
+        '<td>' + escapeHtml(item.hsn) + '</td>' +
+        '<td>' + (item.qty === '' ? '' : qty) + '</td>' +
+        '<td>' + escapeHtml(item.unit) + '</td>' +
+        '<td class="price-col">' + (item.rate === '' ? '' : rate.toFixed(2)) + '</td>' +
+        '<td class="price-col">' + rowTotal.toFixed(2) + '</td>';
+      pv['pv-itemsBody'].appendChild(tr);
+    });
+
+    pv['pv-totalQty'].textContent = totalQty % 1 === 0 ? totalQty : totalQty.toFixed(2);
+    pv['pv-totalUsd'].textContent = totalUsd.toFixed(2);
+    pv['pv-totalWords'].textContent = 'TOTAL: ' + amountToWords(totalUsd);
+    pv['pv-originLine'].style.display = state.showOrigin ? 'block' : 'none';
+
+    applyDocType();
+  }
+
+  function renderAll(){
+    renderItemsForm();
+    renderPreview();
+  }
+
+  /* ---------------- Tabs ---------------- */
+  el.tabInvoice.addEventListener('click', function(){ state.docType = 'invoice'; applyDocType(); });
+  el.tabPacking.addEventListener('click', function(){ state.docType = 'packing'; applyDocType(); });
+
+  /* ---------------- Event handlers ---------------- */
+  el.invDate.addEventListener('input', function(){ state.invDate = el.invDate.value; renderPreview(); });
+  el.officeSelect.addEventListener('change', function(){
+    state.office = el.officeSelect.value;
+    prefs.office = state.office;
+    savePrefs(prefs);
+    renderPreview();
+  });
+  el.showOrigin.addEventListener('change', function(){
+    state.showOrigin = el.showOrigin.checked;
+    prefs.showOrigin = state.showOrigin;
+    savePrefs(prefs);
+    renderPreview();
+  });
+
+  el.toName.addEventListener('input', function(){ state.toName = el.toName.value; renderPreview(); });
+  el.toAddress.addEventListener('input', function(){ state.toAddress = el.toAddress.value; renderPreview(); });
+  el.toPhone.addEventListener('input', function(){ state.toPhone = el.toPhone.value; renderPreview(); });
+  el.toPhone.addEventListener('blur', function(){
+    rememberCustomer(state.toName, state.toAddress, state.toPhone);
+  });
+
+  /* Customer history dropdown */
+  function renderCustomerDropdown(){
+    var list = loadHistory();
+    if(list.length === 0){
+      el.customerDropdown.innerHTML = '<div class="cust-empty">No recent customers yet.</div>';
+    } else {
+      el.customerDropdown.innerHTML = list.map(function(c,i){
+        return '<div class="cust-item" data-idx="'+i+'"><b>' + escapeHtml(c.name) + '</b>' +
+          '<span>' + escapeHtml((c.address||'').replace(/\n/g,', ')) + (c.phone ? ' &middot; ' + escapeHtml(c.phone) : '') + '</span></div>';
+      }).join('');
+    }
+    el.customerDropdown.style.display = 'block';
+  }
+  el.historyBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(el.customerDropdown.style.display === 'block'){
+      el.customerDropdown.style.display = 'none';
+    } else {
+      renderCustomerDropdown();
+    }
+  });
+  el.customerDropdown.addEventListener('click', function(e){
+    var item = e.target.closest('.cust-item');
+    if(!item) return;
+    var idx = parseInt(item.getAttribute('data-idx'), 10);
+    var list = loadHistory();
+    var c = list[idx];
+    if(!c) return;
+    state.toName = c.name;
+    state.toAddress = c.address || '';
+    state.toPhone = c.phone || '';
+    el.toName.value = state.toName;
+    el.toAddress.value = state.toAddress;
+    el.toPhone.value = state.toPhone;
+    el.customerDropdown.style.display = 'none';
+    renderPreview();
+  });
+  document.addEventListener('click', function(e){
+    if(!el.customerDropdown.contains(e.target) && e.target !== el.historyBtn){
+      el.customerDropdown.style.display = 'none';
+    }
+  });
+
+  /* Items */
+  el.addItemBtn.addEventListener('click', function(){
+    state.items.push(newItem());
+    renderAll();
+  });
+
+  el.itemsList.addEventListener('input', function(e){
+    var target = e.target;
+    var id = target.getAttribute('data-id');
+    var field = target.getAttribute('data-field');
+    if(!id || !field) return;
+    var item = state.items.find(function(it){ return String(it.id) === id; });
+    if(!item) return;
+
+    if(field === 'unitPreset'){
+      if(target.value === '__OTHER__'){
+        var customBox = el.itemsList.querySelector('input[data-field="unitCustom"][data-id="'+id+'"]');
+        if(customBox){ customBox.style.display = ''; customBox.focus(); }
+        item.unit = '';
+      } else {
+        item.unit = target.value;
+        var customBox2 = el.itemsList.querySelector('input[data-field="unitCustom"][data-id="'+id+'"]');
+        if(customBox2){ customBox2.style.display = 'none'; customBox2.value=''; }
+      }
+    } else if(field === 'unitCustom'){
+      item.unit = target.value;
+    } else {
+      item[field] = target.value;
+    }
+
+    renderPreview();
+    if(field !== 'unitPreset'){
+      var card = target.closest('.item-card');
+      if(card){
+        var qty = parseFloat(item.qty) || 0;
+        var rate = parseFloat(item.rate) || 0;
+        var totalEl = card.querySelector('.item-total-preview b');
+        if(totalEl) totalEl.textContent = '$' + (qty*rate).toFixed(2);
+      }
+    }
+  });
+
+  el.itemsList.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-remove]');
+    if(!btn) return;
+    var id = btn.getAttribute('data-remove');
+    state.items = state.items.filter(function(it){ return String(it.id) !== id; });
+    if(state.items.length === 0) state.items.push(newItem());
+    renderAll();
+  });
+
+  /* Print */
+  el.printBtn.addEventListener('click', function(){
+    rememberCustomer(state.toName, state.toAddress, state.toPhone);
+    window.print();
+  });
+
+  /* Export Excel */
+  el.exportExcelBtn.addEventListener('click', function(){
+    exportToExcel().catch(function(err){
+      console.error(err);
+      alert('Excel export failed: ' + (err && err.message ? err.message : err));
+    });
+  });
+
+  async function exportToExcel(){
+    if(typeof ExcelJS === 'undefined'){
+      alert('The Excel export library could not be loaded. Please check your internet connection and try again.');
+      return;
+    }
+    rememberCustomer(state.toName, state.toAddress, state.toPhone);
+
+    var isPacking = state.docType === 'packing';
+    var lastColLetter = isPacking ? 'E' : 'G';
+    var origLabel = el.exportExcelBtn.textContent;
+    el.exportExcelBtn.textContent = 'Exporting…';
+    el.exportExcelBtn.disabled = true;
+
+    try{
+      var wb = new ExcelJS.Workbook();
+      var ws = wb.addWorksheet(isPacking ? 'Packing List' : 'Commercial Invoice', {
+        pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
+      });
+
+      ws.columns = (isPacking
+        ? [{width:8},{width:36},{width:16},{width:10},{width:12}]
+        : [{width:8},{width:32},{width:14},{width:9},{width:10},{width:13},{width:14}]
+      );
+
+      var r = 1;
+      function mergeRow(rowNum, text, opts){
+        opts = opts || {};
+        ws.mergeCells('A'+rowNum+':'+lastColLetter+rowNum);
+        var cell = ws.getCell('A'+rowNum);
+        cell.value = text;
+        cell.font = Object.assign({ name:'Arial', size: opts.size || 11, bold: !!opts.bold, italic: !!opts.italic }, opts.font||{});
+        cell.alignment = { horizontal: opts.align || 'center', vertical:'middle', wrapText:true };
+        if(opts.border){
+          cell.border = { top:{style:'medium'}, bottom:{style:'medium'}, left:{style:'medium'}, right:{style:'medium'} };
+        }
+        return cell;
+      }
+
+      mergeRow(r, CONFIG.companyName, { size:16, bold:true }); r++;
+      var addrLines = (CONFIG.officeAddresses[state.office] || '').split('\n');
+      mergeRow(r, addrLines[0] || '', { size:10 }); r++;
+      mergeRow(r, addrLines.slice(1).join(', '), { size:10 }); r++;
+      r++; // spacer
+      mergeRow(r, isPacking ? 'PACKING LIST' : 'COMMERCIAL INVOICE', { size:15, bold:true, border:true }); r++;
+      r++; // spacer
+
+      // TO / INV NO block
+      ws.mergeCells('A'+r+':D'+r);
+      ws.getCell('A'+r).value = 'TO: ' + (state.toName || '');
+      ws.getCell('A'+r).font = { bold:true, size:11 };
+      ws.mergeCells('E'+r+':'+lastColLetter+r);
+      ws.getCell('E'+r).value = 'INV.NO: ' + state.invNo;
+      ws.getCell('E'+r).font = { bold:true, size:11 };
+      ['A'+r,'E'+r].forEach(function(addr){ ws.getCell(addr).border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }; ws.getCell(addr).alignment={vertical:'middle'}; });
+      r++;
+
+      ws.mergeCells('A'+r+':D'+r);
+      ws.getCell('A'+r).value = (state.toAddress || '').replace(/\n/g, ', ');
+      ws.getCell('A'+r).font = { size:10.5 };
+      ws.mergeCells('E'+r+':'+lastColLetter+r);
+      ws.getCell('E'+r).value = 'DATE: ' + formatDisplayDate(state.invDate);
+      ws.getCell('E'+r).font = { bold:true, size:11 };
+      ['A'+r,'E'+r].forEach(function(addr){ ws.getCell(addr).border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }; ws.getCell(addr).alignment={vertical:'middle', wrapText:true}; });
+      r++;
+
+      ws.mergeCells('A'+r+':D'+r);
+      ws.getCell('A'+r).value = 'PHONE: ' + (state.toPhone || '');
+      ws.getCell('A'+r).font = { size:10.5 };
+      ws.mergeCells('E'+r+':'+lastColLetter+r);
+      ['A'+r,'E'+r].forEach(function(addr){ ws.getCell(addr).border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} }; ws.getCell(addr).alignment={vertical:'middle'}; });
+      r++;
+      r++; // spacer
+
+      // Items header
+      var headerRow = r;
+      var headers = isPacking
+        ? ['SL NO','DESCRIPTION','HSN','QNT','UNIT']
+        : ['SL NO','DESCRIPTION','HSN','QNT','UNIT','Rate/Unit','Total USD'];
+      headers.forEach(function(h, i){
+        var cell = ws.getCell(headerRow, i+1);
+        cell.value = h;
+        cell.font = { bold:true, size:10.5 };
+        cell.alignment = { horizontal:'center', vertical:'middle' };
+        cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFEEF1F5' } };
+        cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+      });
+      r++;
+
+      var firstItemRow = r;
+      state.items.forEach(function(item){
+        ws.getCell(r,1).value = { formula: 'ROW()-'+(firstItemRow-1) };
+        ws.getCell(r,2).value = item.description || '';
+        ws.getCell(r,3).value = item.hsn || '';
+        ws.getCell(r,4).value = item.qty === '' ? null : parseFloat(item.qty);
+        ws.getCell(r,5).value = item.unit || '';
+        if(!isPacking){
+          ws.getCell(r,6).value = item.rate === '' ? null : parseFloat(item.rate);
+          ws.getCell(r,6).numFmt = '0.00';
+          ws.getCell(r,7).value = { formula: 'D'+r+'*F'+r };
+          ws.getCell(r,7).numFmt = '0.00';
+        }
+        for(var c=1; c<=headers.length; c++){
+          var cell = ws.getCell(r,c);
+          cell.border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+          cell.alignment = { horizontal: c===2 ? 'left' : 'center', vertical:'middle', wrapText:true };
+        }
+        r++;
+      });
+      var lastItemRow = r - 1;
+
+      // Totals row
+      ws.mergeCells('A'+r+':C'+r);
+      ws.getCell('A'+r).value = 'TOTAL';
+      ws.getCell('A'+r).font = { bold:true };
+      ws.getCell('A'+r).alignment = { horizontal:'center' };
+      ws.getCell('D'+r).value = { formula: 'SUM(D'+firstItemRow+':D'+lastItemRow+')' };
+      ws.getCell('D'+r).font = { bold:true };
+      if(!isPacking){
+        ws.getCell('G'+r).value = { formula: 'SUM(G'+firstItemRow+':G'+lastItemRow+')' };
+        ws.getCell('G'+r).numFmt = '0.00';
+        ws.getCell('G'+r).font = { bold:true };
+      }
+      for(var c2=1; c2<=headers.length; c2++){
+        ws.getCell(r,c2).border = { top:{style:'thin'}, bottom:{style:'double'}, left:{style:'thin'}, right:{style:'thin'} };
+        ws.getCell(r,c2).fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF7F8FA' } };
+      }
+      var totalRow = r;
+      r++;
+      r++; // spacer
+
+      // Total in words (invoice only)
+      if(!isPacking){
+        var totalUsd = 0;
+        state.items.forEach(function(item){ totalUsd += (parseFloat(item.qty)||0) * (parseFloat(item.rate)||0); });
+        mergeRow(r, 'TOTAL: ' + amountToWords(totalUsd), { align:'left', bold:true, size:10.5 });
+        r++; r++;
+      }
+
+      // Origin line
+      if(state.showOrigin){
+        mergeRow(r, 'WE CERTIFY THAT THE ABOVE GOODS ARE CHINA ORIGIN', { align:'left', size:10.5 });
+        r++; r++;
+      }
+
+      // Bank info
+      mergeRow(r, 'BANK INFORMATION:', { align:'left', bold:true, size:11 }); r++;
+      var bankLines = [
+        ['Company Name:', CONFIG.bank.companyName],
+        ['Company Add:', CONFIG.bank.companyAddress],
+        ['Beneficiary Bank:', CONFIG.bank.beneficiaryBank],
+        ['Bank Address:', CONFIG.bank.bankAddress],
+        ['Account No (NRA):', CONFIG.bank.account],
+        ['Swift Code:', CONFIG.bank.swift],
+        ['Correspondent Bank (For USD Remittance):', CONFIG.bank.correspondentBank],
+        ['Correspondent Swift:', CONFIG.bank.correspondentSwift]
+      ];
+      var bankStartRow = r;
+      bankLines.forEach(function(pair){
+        ws.getCell('A'+r).value = pair[0];
+        ws.getCell('A'+r).font = { bold:true, size:10.5 };
+        ws.mergeCells('B'+r+':'+lastColLetter+r);
+        ws.getCell('B'+r).value = pair[1];
+        ws.getCell('B'+r).font = { size:10.5 };
+        ws.getCell('A'+r).alignment = { vertical:'middle' };
+        ws.getCell('B'+r).alignment = { vertical:'middle', wrapText:true };
+        r++;
+      });
+
+      // Stamp image (best effort — skipped silently if it can't be fetched)
+      if(CONFIG.stampUrl && CONFIG.stampUrl.indexOf('example.com') === -1){
+        try{
+          var resp = await fetch(CONFIG.stampUrl);
+          if(resp.ok){
+            var buf = await resp.arrayBuffer();
+            var imgId = wb.addImage({ buffer: buf, extension: 'png' });
+            var lastColIndex = isPacking ? 4 : 6; // 0-based index of last column
+            ws.addImage(imgId, {
+              tl: { col: Math.max(lastColIndex - 2, 0), row: Math.max(bankStartRow - 1, 0) },
+              ext: { width: 170, height: 170 }
+            });
+          }
+        }catch(imgErr){
+          console.warn('Stamp image could not be embedded in the Excel file:', imgErr);
+        }
+      }
+
+      var buffer = await wb.xlsx.writeBuffer();
+      var blob = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = state.invNo + (isPacking ? '_PackingList' : '_Invoice') + '.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      el.exportExcelBtn.textContent = origLabel;
+      el.exportExcelBtn.disabled = false;
+    }
+  }
+
+  /* New document */
+  el.newInvoiceBtn.addEventListener('click', function(){
+    if(!confirm('Start a new document? This clears the current customer and items (business details are kept).')) return;
+    rememberCustomer(state.toName, state.toAddress, state.toPhone);
+    state.invNo = generateInvoiceNumber();
+    state.invDate = todayISO();
+    state.toName = '';
+    state.toAddress = '';
+    state.toPhone = '';
+    state.items = [newItem()];
+    el.invNo.value = state.invNo;
+    el.invDate.value = state.invDate;
+    el.toName.value = '';
+    el.toAddress.value = '';
+    el.toPhone.value = '';
+    renderAll();
+  });
+
+  /* ---------------- Boot ---------------- */
+  state.items.push(newItem());
+  initForm();
+  renderAll();
+
+})();
+</script>
+
+</body>
+</html>

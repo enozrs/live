@@ -78,6 +78,8 @@
   .btn-add:hover{background:#4a6d9a;}
   .btn-remove{background:var(--danger-bg);color:var(--danger);padding:6px 10px;font-size:12px;}
   .btn-remove:hover{background:#f5d5d2;}
+  .btn-secondary{background:#e4e8ee;color:var(--navy);}
+  .btn-secondary:hover{background:#d5dbe4;}
 
   .main-grid{
     display:grid;
@@ -323,6 +325,27 @@
     .form-panel{position:relative;top:0;max-height:none;}
     .invoice-page{width:100%;min-height:auto;}
   }
+
+  @media (max-width:560px){
+    .topbar{padding:12px 14px;flex-direction:column;align-items:stretch;}
+    .topbar h1{font-size:16px;}
+    .topbar-actions{width:100%;flex-wrap:wrap;}
+    .tabs{width:100%;}
+    .tab-btn{flex:1;text-align:center;padding:9px 8px;}
+    .topbar-actions button:not(.tab-btn){flex:1 1 auto;padding:10px 10px;font-size:12.5px;}
+    .main-grid{padding:12px;gap:14px;}
+    .form-panel{padding:16px;gap:18px;}
+    .row2{grid-template-columns:1fr;}
+    .item-grid{grid-template-columns:1fr;}
+    .invoice-page{padding:8mm 6mm;}
+    .inv-header h1{font-size:19px;}
+    .inv-title-box{font-size:17px;padding:8px;}
+    .inv-meta-table td{padding:6px 7px;font-size:11.5px;}
+    table.items-table{font-size:11px;}
+    table.items-table th, table.items-table td{padding:5px 4px;}
+    .bank-block{font-size:11.5px;}
+    .stamp-overlay{width:170px;}
+  }
 </style>
 </head>
 <body>
@@ -361,10 +384,11 @@
         </div>
       </div>
       <div class="field">
-        <label>Company Office / Address</label>
-        <select id="officeSelect">
-          <option value="YIWU">Yiwu Office (Zhejiang)</option>
-          <option value="HONGKONG">Hong Kong Office</option>
+        <label>Company / Office Profile</label>
+        <select id="profileSelect">
+          <option value="LAXMAN_YIWU">Laxman — Yiwu Office</option>
+          <option value="LAXMAN_HK">Laxman — Hong Kong Office</option>
+          <option value="XINQUAN">Yiwu Xinquan Co. Ltd</option>
         </select>
       </div>
     </div>
@@ -376,18 +400,37 @@
           <label>Company / Customer Name</label>
           <button type="button" class="icon-btn" id="historyBtn" title="Recent customers">&#128337; Recent</button>
         </div>
-        <input type="text" id="toName" placeholder="TIRUPATI TRADING CO" autocomplete="off">
+        <input type="text" id="toName" placeholder="Enter customer name eg: Tirupati Trading Co" autocomplete="off">
         <div class="customer-dropdown no-print" id="customerDropdown" style="display:none;"></div>
       </div>
       <div class="field">
         <label>Address</label>
-        <textarea id="toAddress" placeholder="154, MG ROAD, KOLKATA, KOLKATA&#10;WEST BENGAL, 700007"></textarea>
+        <textarea id="toAddress" placeholder="Enter complete address with zip code"></textarea>
       </div>
       <div class="field">
         <label>Phone</label>
-        <input type="text" id="toPhone" placeholder="+919903935739">
+        <input type="text" id="toPhone" placeholder="Eg: +919903935739">
       </div>
     </div>
+
+    <div class="panel-section">
+      <h2>Scan Text From Image (OCR)</h2>
+      <div class="field">
+        <label>Upload or photograph a supplier note / label / packing list</label>
+        <input type="file" id="ocrFileInput" accept="image/*" capture="environment">
+      </div>
+      <div id="ocrStatus" style="font-size:12px;color:#5b6472;margin:4px 0 8px 0;"></div>
+      <div class="field" id="ocrResultWrap" style="display:none;">
+        <label>Extracted text — copy whatever you need, then paste into the fields below</label>
+        <textarea id="ocrResultText" readonly style="min-height:110px;font-family:monospace;font-size:12px;"></textarea>
+        <div class="footer-actions" style="margin-top:8px;">
+          <button class="btn-secondary" id="ocrCopyAllBtn" type="button">Copy All</button>
+          <button class="btn-secondary" id="ocrCopyCommaBtn" type="button">Copy Comma-Separated</button>
+        </div>
+      </div>
+      <p style="font-size:11px;color:#9aa2ad;margin:8px 0 0 0;">This is the one online-only feature — it loads a text-recognition library the first time you use it. Nothing is uploaded anywhere; recognition runs entirely in your browser. The rest of this app works fully offline.</p>
+    </div>  
+
 
     <div class="panel-section">
       <h2>Items</h2>
@@ -463,14 +506,7 @@
 
       <div class="bank-block">
         <h3>Bank Information:</h3>
-        <p class="bank-line"><b>Company Name:</b> <span id="pv-bankCompanyName"></span></p>
-        <p class="bank-line"><b>Company Add:</b> <span id="pv-bankCompanyAddress"></span></p>
-        <p class="bank-line"><b>Beneficiary Bank:</b> <span id="pv-beneficiaryBank"></span></p>
-        <p class="bank-line"><b>Bank Address:</b> <span id="pv-bankAddress"></span></p>
-        <p class="bank-line"><b>Account No (NRA):</b> <span id="pv-bankAccount"></span></p>
-        <p class="bank-line"><b>Swift Code:</b> <span id="pv-bankSwift"></span></p>
-        <p class="bank-line"><b>Correspondent Bank (For USD Remittance):</b> <span id="pv-correspondentBank"></span></p>
-        <p class="bank-line"><b>Correspondent Swift:</b> <span id="pv-correspondentSwift"></span></p>
+        <div id="pv-bankLines"></div>
 
         <div class="stamp-overlay" id="stampOverlay" style="display:none;">
           <img id="stampImg" src="" alt="Company Stamp">
@@ -491,25 +527,77 @@
      in the source file if they ever need to change.
      ========================================================= */
   var CONFIG = {
-    companyName: 'LAXMAN INTERNATIONAL CO., LIMITED',
-    officeAddresses: {
-      YIWU: 'ROOM 203 UNIT 2 BUILDING 3 YINHAI THIRD DISTRICT,\nYIWU CITY',
-      HONGKONG: 'UNIT 18, 8/F, PETER LEUNG INDUSTRIAL BUILDING,\n103 WAI YIP STREET, KWUN TONG, HONG KONG'
-    },
-    bank: {
-      companyName: 'LAXMAN INTERNATIONAL CO.,LIMITED',
-      companyAddress: 'UNIT 18, 8/F, PETER LEUNG INDUSTRIAL BUILDING, 103 WAI YIP STREET, KWUN TONG, HONG KONG',
-      beneficiaryBank: 'ZHEJIANG CHOUZHOU COMMERCIAL BANK',
-      bankAddress: 'NO 188 SHANGCHENG AVENUE CHOUYIN BUILDING YIWU CITY',
-      account: 'NRA15602002010590064153',
-      swift: 'CZCBCN2X',
-      correspondentBank: 'CITIBANK NA',
-      correspondentSwift: 'CITIUS33XXX'
-    },
-    // Host your transparent PNG stamp/signature somewhere (your own server / CDN)
-    // and paste the direct image URL below. Leave as '' to show no stamp.
-    stampUrl: 'https://raw.githubusercontent.com/enozrs/live/refs/heads/main/stampSignLx.png'
+    profiles: {
+      LAXMAN_YIWU: {
+        label: 'Laxman — Yiwu Office',
+        companyName: 'LAXMAN INTERNATIONAL CO., LIMITED',
+        address: 'ROOM 203 UNIT 2 BUILDING 3 YINHAI THIRD DISTRICT,\nYIWU CITY',
+        bank: {
+          companyName: 'LAXMAN INTERNATIONAL CO.,LIMITED',
+          companyAddress: 'UNIT 18, 8/F, PETER LEUNG INDUSTRIAL BUILDING, 103 WAI YIP STREET, KWUN TONG, HONG KONG',
+          beneficiaryBank: 'ZHEJIANG CHOUZHOU COMMERCIAL BANK',
+          bankAddress: 'NO 188 SHANGCHENG AVENUE CHOUYIN BUILDING YIWU CITY',
+          accountLabel: 'Account No (NRA):',
+          account: 'NRA15602002010590064153',
+          swift: 'CZCBCN2X',
+          correspondentBank: 'CITIBANK NA',
+          correspondentSwift: 'CITIUS33XXX'
+        },
+        // Host your transparent PNG stamp/signature somewhere and paste the direct image URL below.
+        stampUrl: 'https://raw.githubusercontent.com/enozrs/live/refs/heads/main/stampSignLx.png'
+      },
+      LAXMAN_HK: {
+        label: 'Laxman — Hong Kong Office',
+        companyName: 'LAXMAN INTERNATIONAL CO., LIMITED',
+        address: 'UNIT 18, 8/F, PETER LEUNG INDUSTRIAL BUILDING,\n103 WAI YIP STREET, KWUN TONG, HONG KONG',
+        bank: {
+          companyName: 'LAXMAN INTERNATIONAL CO.,LIMITED',
+          companyAddress: 'UNIT 18, 8/F, PETER LEUNG INDUSTRIAL BUILDING, 103 WAI YIP STREET, KWUN TONG, HONG KONG',
+          beneficiaryBank: 'ZHEJIANG CHOUZHOU COMMERCIAL BANK',
+          bankAddress: 'NO 188 SHANGCHENG AVENUE CHOUYIN BUILDING YIWU CITY',
+          accountLabel: 'Account No (NRA):',
+          account: 'NRA15602002010590064153',
+          swift: 'CZCBCN2X',
+          correspondentBank: 'CITIBANK NA',
+          correspondentSwift: 'CITIUS33XXX'
+        },
+        stampUrl: 'https://raw.githubusercontent.com/enozrs/live/refs/heads/main/stampSignLx.png'
+      },
+      XINQUAN: {
+        label: 'Yiwu Xinquan (Partner Co.)',
+        companyName: 'YIWU XINQUAN IMPORT & EXPORT CO.,LIMITED',
+        address: 'ROOM 1619, BLOCK A, CHOUYIN BUILDING,\nFUTIAN STREET, YIWU CITY, ZHEJIANG PROVINCE',
+        bank: {
+          companyName: 'YIWU XINQUAN IMPORT AND EXPORT CO.,LIMITED',
+          companyAddress: 'FALT B51F MANNING IND BLDG 116-118 HONGWING ST KWUN TONG KLN HONGKONG',
+          accountLabel: 'Account:',
+          account: 'NRA356011400100342040',
+          swift: 'FJIBCNBA530',
+          bankName: 'INDUSTRIAL BANK CO., LTD HANGZHOU BRANCH'
+        },
+        // Paste the real Xinquan stamp/signature PNG URL here when it's ready.
+        stampUrl: 'https://raw.githubusercontent.com/enozrs/live/refs/heads/main/XinquanLogo.png'
+      }
+    }
   };
+
+  function currentProfile(){
+    return CONFIG.profiles[state.profile] || CONFIG.profiles.LAXMAN_YIWU;
+  }
+
+  function buildBankLines(bank){
+    var lines = [];
+    lines.push(['Company Name:', bank.companyName]);
+    lines.push(['Company Add:', bank.companyAddress]);
+    if(bank.beneficiaryBank) lines.push(['Beneficiary Bank:', bank.beneficiaryBank]);
+    if(bank.bankAddress) lines.push(['Bank Address:', bank.bankAddress]);
+    lines.push([bank.accountLabel || 'Account:', bank.account]);
+    lines.push(['Swift Code:', bank.swift]);
+    if(bank.bankName) lines.push(['Bank Name:', bank.bankName]);
+    if(bank.correspondentBank) lines.push(['Correspondent Bank (For USD Remittance):', bank.correspondentBank]);
+    if(bank.correspondentSwift) lines.push(['Correspondent Swift:', bank.correspondentSwift]);
+    return lines;
+  }
 
   var UNIT_PRESETS = ['Dz','Pairs','Pcs'];
 
@@ -522,7 +610,7 @@
       var raw = localStorage.getItem(PREFS_KEY);
       if(raw) return JSON.parse(raw);
     }catch(e){}
-    return { office:'YIWU', showOrigin:true };
+    return { profile:'LAXMAN_YIWU', showOrigin:true };
   }
   function savePrefs(p){ try{ localStorage.setItem(PREFS_KEY, JSON.stringify(p)); }catch(e){} }
 
@@ -620,13 +708,23 @@
     return out;
   }
 
+  function arrayBufferToBase64(buffer){
+    var bytes = new Uint8Array(buffer);
+    var binary = '';
+    var chunkSize = 0x8000;
+    for(var i = 0; i < bytes.length; i += chunkSize){
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+  }
+
   /* ---------------- State ---------------- */
   var prefs = loadPrefs();
   var state = {
     docType: 'invoice',
     invNo: generateInvoiceNumber(),
     invDate: todayISO(),
-    office: prefs.office || 'YIWU',
+    profile: prefs.profile || 'LAXMAN_YIWU',
     showOrigin: prefs.showOrigin !== false,
     toName: '',
     toAddress: '',
@@ -642,9 +740,10 @@
 
   /* ---------------- DOM refs ---------------- */
   var el = {};
-  ['invNo','invDate','officeSelect','toName','toAddress','toPhone',
+  ['invNo','invDate','profileSelect','toName','toAddress','toPhone',
    'itemsList','addItemBtn','historyBtn','customerDropdown',
    'showOrigin','staticNotePreview',
+    'ocrFileInput','ocrStatus','ocrResultWrap','ocrResultText','ocrCopyAllBtn','ocrCopyCommaBtn',
    'printBtn','newInvoiceBtn','exportExcelBtn','tabInvoice','tabPacking'
   ].forEach(function(id){ el[id] = document.getElementById(id); });
 
@@ -652,45 +751,33 @@
   ['pv-companyName','pv-companyAddress1','pv-companyAddress2','pv-docTitle',
    'pv-toName','pv-toAddress','pv-toPhone','pv-invNo','pv-invDate',
    'pv-tableHeadRow','pv-itemsBody','pv-totalRow','pv-totalQty','pv-totalUsd',
-   'pv-totalWords','pv-originLine',
-   'pv-bankCompanyName','pv-bankCompanyAddress','pv-beneficiaryBank','pv-bankAddress',
-   'pv-bankAccount','pv-bankSwift','pv-correspondentBank','pv-correspondentSwift',
+   'pv-totalWords','pv-originLine','pv-bankLines',
    'stampOverlay','stampImg'
   ].forEach(function(id){ pv[id] = document.getElementById(id); });
 
   /* ---------------- Init ---------------- */
+  function updateStaticNote(){
+    var profile = currentProfile();
+    var bank = profile.bank;
+    var lines = [profile.companyName, ''];
+    lines.push('Bank: ' + (bank.beneficiaryBank || bank.bankName || ''));
+    lines.push('A/C: ' + bank.account);
+    lines.push('SWIFT: ' + bank.swift);
+    if(bank.correspondentBank){
+      lines.push('Correspondent: ' + bank.correspondentBank + ' (' + bank.correspondentSwift + ')');
+    }
+    el.staticNotePreview.textContent = lines.join('\n');
+  }
+
   function initForm(){
     el.invNo.value = state.invNo;
     el.invDate.value = state.invDate;
-    el.officeSelect.value = state.office;
+    el.profileSelect.value = state.profile;
     el.toName.value = state.toName;
     el.toAddress.value = state.toAddress;
     el.toPhone.value = state.toPhone;
     el.showOrigin.checked = state.showOrigin;
-
-    pv['pv-companyName'].textContent = CONFIG.companyName;
-    pv['pv-bankCompanyName'].textContent = CONFIG.bank.companyName;
-    pv['pv-bankCompanyAddress'].textContent = CONFIG.bank.companyAddress;
-    pv['pv-beneficiaryBank'].textContent = CONFIG.bank.beneficiaryBank;
-    pv['pv-bankAddress'].textContent = CONFIG.bank.bankAddress;
-    pv['pv-bankAccount'].textContent = CONFIG.bank.account;
-    pv['pv-bankSwift'].textContent = CONFIG.bank.swift;
-    pv['pv-correspondentBank'].textContent = CONFIG.bank.correspondentBank;
-    pv['pv-correspondentSwift'].textContent = CONFIG.bank.correspondentSwift;
-
-    el.staticNotePreview.textContent =
-      CONFIG.companyName + '\n\n' +
-      'Bank: ' + CONFIG.bank.beneficiaryBank + '\n' +
-      'A/C: ' + CONFIG.bank.account + '\n' +
-      'SWIFT: ' + CONFIG.bank.swift + '\n' +
-      'Correspondent: ' + CONFIG.bank.correspondentBank + ' (' + CONFIG.bank.correspondentSwift + ')';
-
-    if(CONFIG.stampUrl && CONFIG.stampUrl.indexOf('example.com') === -1){
-      pv['stampImg'].src = CONFIG.stampUrl;
-      pv['stampOverlay'].style.display = 'block';
-    } else {
-      pv['stampOverlay'].style.display = 'none';
-    }
+    updateStaticNote();
   }
 
   /* ---------------- Items rendering (form side) ---------------- */
@@ -767,7 +854,9 @@
   }
 
   function renderPreview(){
-    var addrLines = (CONFIG.officeAddresses[state.office] || '').split('\n');
+    var profile = currentProfile();
+    pv['pv-companyName'].textContent = profile.companyName;
+    var addrLines = (profile.address || '').split('\n');
     pv['pv-companyAddress1'].textContent = addrLines[0] || '';
     pv['pv-companyAddress2'].textContent = addrLines.slice(1).join(', ');
 
@@ -803,6 +892,18 @@
     pv['pv-totalWords'].textContent = 'TOTAL: ' + amountToWords(totalUsd);
     pv['pv-originLine'].style.display = state.showOrigin ? 'block' : 'none';
 
+    var bankLines = buildBankLines(profile.bank);
+    pv['pv-bankLines'].innerHTML = bankLines.map(function(pair){
+      return '<p class="bank-line"><b>' + escapeHtml(pair[0]) + '</b> ' + escapeHtml(pair[1]) + '</p>';
+    }).join('');
+
+    if(profile.stampUrl && profile.stampUrl.indexOf('example.com') === -1){
+      pv['stampImg'].src = profile.stampUrl;
+      pv['stampOverlay'].style.display = 'block';
+    } else {
+      pv['stampOverlay'].style.display = 'none';
+    }
+
     applyDocType();
   }
 
@@ -817,10 +918,11 @@
 
   /* ---------------- Event handlers ---------------- */
   el.invDate.addEventListener('input', function(){ state.invDate = el.invDate.value; renderPreview(); });
-  el.officeSelect.addEventListener('change', function(){
-    state.office = el.officeSelect.value;
-    prefs.office = state.office;
+  el.profileSelect.addEventListener('change', function(){
+    state.profile = el.profileSelect.value;
+    prefs.profile = state.profile;
     savePrefs(prefs);
+    updateStaticNote();
     renderPreview();
   });
   el.showOrigin.addEventListener('change', function(){
@@ -953,6 +1055,7 @@
     rememberCustomer(state.toName, state.toAddress, state.toPhone);
 
     var isPacking = state.docType === 'packing';
+    var profile = currentProfile();
     var lastColLetter = isPacking ? 'E' : 'G';
     var origLabel = el.exportExcelBtn.textContent;
     el.exportExcelBtn.textContent = 'Exporting…';
@@ -983,8 +1086,8 @@
         return cell;
       }
 
-      mergeRow(r, CONFIG.companyName, { size:16, bold:true }); r++;
-      var addrLines = (CONFIG.officeAddresses[state.office] || '').split('\n');
+      mergeRow(r, profile.companyName, { size:16, bold:true }); r++;
+      var addrLines = (profile.address || '').split('\n');
       mergeRow(r, addrLines[0] || '', { size:10 }); r++;
       mergeRow(r, addrLines.slice(1).join(', '), { size:10 }); r++;
       r++; // spacer
@@ -1091,16 +1194,7 @@
 
       // Bank info
       mergeRow(r, 'BANK INFORMATION:', { align:'left', bold:true, size:11 }); r++;
-      var bankLines = [
-        ['Company Name:', CONFIG.bank.companyName],
-        ['Company Add:', CONFIG.bank.companyAddress],
-        ['Beneficiary Bank:', CONFIG.bank.beneficiaryBank],
-        ['Bank Address:', CONFIG.bank.bankAddress],
-        ['Account No (NRA):', CONFIG.bank.account],
-        ['Swift Code:', CONFIG.bank.swift],
-        ['Correspondent Bank (For USD Remittance):', CONFIG.bank.correspondentBank],
-        ['Correspondent Swift:', CONFIG.bank.correspondentSwift]
-      ];
+      var bankLines = buildBankLines(profile.bank);
       var bankStartRow = r;
       bankLines.forEach(function(pair){
         ws.getCell('A'+r).value = pair[0];
@@ -1114,12 +1208,13 @@
       });
 
       // Stamp image (best effort — skipped silently if it can't be fetched)
-      if(CONFIG.stampUrl && CONFIG.stampUrl.indexOf('example.com') === -1){
+      if(profile.stampUrl && profile.stampUrl.indexOf('example.com') === -1){
         try{
-          var resp = await fetch(CONFIG.stampUrl);
+          var resp = await fetch(profile.stampUrl);
           if(resp.ok){
             var buf = await resp.arrayBuffer();
-            var imgId = wb.addImage({ buffer: buf, extension: 'png' });
+            var base64 = arrayBufferToBase64(buf);
+            var imgId = wb.addImage({ base64: 'data:image/png;base64,' + base64, extension: 'png' });
             var lastColIndex = isPacking ? 4 : 6; // 0-based index of last column
             ws.addImage(imgId, {
               tl: { col: Math.max(lastColIndex - 2, 0), row: Math.max(bankStartRow - 1, 0) },
@@ -1146,6 +1241,95 @@
       el.exportExcelBtn.disabled = false;
     }
   }
+  
+  
+  /* ---------------- OCR (online-only, lazy-loaded) ---------------- */
+  var TESSERACT_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+  var _tesseractLoadPromise = null;
+  function loadTesseract(){
+    if(typeof Tesseract !== 'undefined') return Promise.resolve();
+    if(_tesseractLoadPromise) return _tesseractLoadPromise;
+    _tesseractLoadPromise = new Promise(function(resolve, reject){
+      var s = document.createElement('script');
+      s.src = TESSERACT_URL;
+      s.onload = function(){ resolve(); };
+      s.onerror = function(){
+        _tesseractLoadPromise = null;
+        reject(new Error('Could not load the text-recognition library. Check your internet connection and try again.'));
+      };
+      document.head.appendChild(s);
+    });
+    return _tesseractLoadPromise;
+  }
+  function copyToClipboard(text, onDone){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ onDone(true); }).catch(function(){ fallbackCopy(text, onDone); });
+    } else {
+      fallbackCopy(text, onDone);
+    }
+  }
+  function fallbackCopy(text, onDone){
+    try{
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      onDone(!!ok);
+    }catch(e){
+      onDone(false);
+    }
+  }
+  el.ocrFileInput.addEventListener('change', function(){
+    var file = el.ocrFileInput.files && el.ocrFileInput.files[0];
+    if(!file) return;
+    runOcr(file);
+  });
+  async function runOcr(file){
+    el.ocrResultWrap.style.display = 'none';
+    el.ocrStatus.textContent = 'Loading text-recognition library…';
+    try{
+      await loadTesseract();
+    }catch(err){
+      el.ocrStatus.textContent = err.message;
+      el.ocrFileInput.value = '';
+      return;
+    }
+    el.ocrStatus.textContent = 'Reading image… this can take a few seconds.';
+    try{
+      var result = await Tesseract.recognize(file, 'eng');
+      var text = (result && result.data && result.data.text) ? result.data.text.trim() : '';
+      if(text){
+        el.ocrResultText.value = text;
+        el.ocrResultWrap.style.display = 'block';
+        el.ocrStatus.textContent = 'Done — copy what you need below.';
+      } else {
+        el.ocrResultWrap.style.display = 'none';
+        el.ocrStatus.textContent = 'No text detected in that image.';
+      }
+    }catch(err){
+      console.error(err);
+      el.ocrStatus.textContent = 'Text recognition failed: ' + (err && err.message ? err.message : err);
+    } finally {
+      el.ocrFileInput.value = '';
+    }
+  }
+  el.ocrCopyAllBtn.addEventListener('click', function(){
+    copyToClipboard(el.ocrResultText.value, function(ok){
+      el.ocrStatus.textContent = ok ? 'Copied to clipboard.' : 'Could not copy automatically — select the text and copy manually.';
+    });
+  });
+  el.ocrCopyCommaBtn.addEventListener('click', function(){
+    var joined = el.ocrResultText.value.split('\n').map(function(l){ return l.trim(); }).filter(Boolean).join(', ');
+    copyToClipboard(joined, function(ok){
+      el.ocrStatus.textContent = ok ? 'Comma-separated text copied to clipboard.' : 'Could not copy automatically — select the text and copy manually.';
+    });
+  });
+  
 
   /* New document */
   el.newInvoiceBtn.addEventListener('click', function(){

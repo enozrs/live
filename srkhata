@@ -1,0 +1,2114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SR Khata — Double Entry Accounting &amp; POS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  :root{ --accent:#007aff; }
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#f3f4f6;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:#c7cdd6;border-radius:4px;}
+  .tab-btn.active{background:var(--accent);color:#fff;}
+  .tab-btn.active svg{stroke:#fff;}
+  .toast{animation:slideIn .25s ease-out;}
+  @keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{opacity:.9;}
+  .btn-primary:disabled{background:#cbd5e1;cursor:not-allowed;}
+  #print-area{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #print-area, #print-area *{visibility:visible;}
+    #print-area{display:block !important;position:absolute;top:0;left:0;width:100%;}
+  }
+  .searchDropdown{max-height:220px;overflow-y:auto;}
+
+  /* ---- Mobile responsiveness ---- */
+  #sidebarOverlay{display:none;}
+  @media (max-width: 767px){
+    #sidebar{position:fixed;left:0;top:0;bottom:0;z-index:50;width:260px;transform:translateX(-100%);transition:transform .25s ease;}
+    #sidebar.open{transform:translateX(0);}
+    #sidebarOverlay.open{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;}
+    #hamburgerBtn{display:flex;}
+    .card-table{display:none;}
+    .card-list{display:block;}
+  }
+  @media (min-width: 768px){
+    #hamburgerBtn{display:none;}
+    .card-list{display:none;}
+  }
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .table-scroll table{min-width:640px;}
+  @media (min-width: 768px){ .table-scroll table{min-width:0;} }
+</style>
+</head>
+<body class="text-slate-800">
+
+<!-- ===================== MOCK LICENSE GATE ===================== -->
+<!-- NOTE: This is a client-side-only mock activation screen for internal prototyping.
+     It performs no real security check (password is hardcoded, no network call, no
+     encryption) and must be replaced with real server-side license verification
+     before any production use. -->
+<div id="gateScreen" class="min-h-screen w-full flex items-center justify-center bg-slate-100 p-4">
+  <div class="bg-white rounded-xl shadow-lg border w-full max-w-sm p-6">
+    <div class="flex items-center gap-2 mb-4 justify-center">
+      <i data-lucide="landmark" class="w-7 h-7" style="color:var(--accent)"></i>
+      <div class="font-bold text-lg">SR Khata</div>
+    </div>
+    <h2 class="text-center text-slate-700 font-semibold mb-1">Activate this installation</h2>
+    <p class="text-center text-xs text-slate-500 mb-4">Enter your activation code to continue.</p>
+    <input id="gatePassword" type="password" placeholder="Activation code" class="w-full border rounded-lg px-3 py-2 text-sm mb-2" autocomplete="off">
+    <div id="gateError" class="hidden text-red-600 text-xs mb-2">Incorrect activation code. Please try again.</div>
+    <button id="gateSubmit" class="btn-primary w-full py-2 rounded-lg text-sm font-medium">Unlock</button>
+  </div>
+</div>
+
+<div id="app" class="hidden flex h-screen overflow-hidden">
+  <div id="sidebarOverlay"></div>
+  <aside id="sidebar" class="w-64 bg-slate-900 text-slate-100 flex-shrink-0 flex flex-col">
+    <div class="p-4 border-b border-slate-700 flex items-center gap-2">
+      <i data-lucide="landmark" class="w-6 h-6" style="color:var(--accent)"></i>
+      <div>
+        <div class="font-bold text-lg leading-tight">SR Khata</div>
+        <div class="text-xs text-slate-400">Accounting &amp; POS</div>
+      </div>
+    </div>
+    <nav id="nav" class="flex-1 overflow-y-auto p-2 space-y-1 text-sm"></nav>
+    <div class="p-3 text-xs text-slate-500 border-t border-slate-700">v2.0 · Offline-first</div>
+  </aside>
+
+  <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+    <header class="bg-white border-b px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <button id="hamburgerBtn" class="p-2 -ml-1 rounded-lg hover:bg-slate-100 items-center justify-center flex-shrink-0"><i data-lucide="menu" class="w-5 h-5"></i></button>
+        <h1 id="pageTitle" class="text-lg sm:text-xl font-semibold text-slate-700 truncate">Dashboard</h1>
+      </div>
+      <div class="text-xs sm:text-sm text-slate-500 flex-shrink-0" id="todayDate"></div>
+    </header>
+    <main id="content" class="flex-1 overflow-y-auto p-3 sm:p-6"></main>
+  </div>
+</div>
+
+<div id="toastBox" class="fixed top-4 right-4 z-50 space-y-2 max-w-[90vw]"></div>
+<div id="modalRoot"></div>
+<div id="print-area"></div>
+
+<script>
+/* =========================================================
+   SHREE ERP — SINGLE FILE ACCOUNTING & POS APPLICATION
+   ========================================================= */
+
+const DB_KEY = 'shree_erp_db_v2';
+const uid = (p='ID') => p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const fmt = (n) => 'NPR ' + (Number(n)||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+const todayISO = () => new Date().toISOString().slice(0,10);
+
+function adToBsApprox(adDateStr){
+  try{
+    const d = new Date(adDateStr);
+    if(isNaN(d)) return '';
+    const year = d.getFullYear();
+    const bsYear = (d.getMonth() > 3 || (d.getMonth()===3 && d.getDate()>=14)) ? year+57 : year+56;
+    const bsMonth = ((d.getMonth() + 9) % 12) + 1;
+    const bsDay = d.getDate() <= 30 ? d.getDate() : 30;
+    return `${bsYear}-${String(bsMonth).padStart(2,'0')}-${String(bsDay).padStart(2,'0')} (approx.)`;
+  }catch(e){ return ''; }
+}
+
+function toast(msg, type='success'){
+  const colors = {success:'bg-emerald-600', error:'bg-red-600', warning:'bg-amber-500', info:'bg-blue-600'};
+  const icons = {success:'check-circle', error:'x-circle', warning:'alert-triangle', info:'info'};
+  const el = document.createElement('div');
+  el.className = `toast text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 text-sm ${colors[type]}`;
+  el.innerHTML = `<i data-lucide="${icons[type]}" class="w-4 h-4"></i><span>${msg}</span>`;
+  document.getElementById('toastBox').appendChild(el);
+  lucide.createIcons();
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(), 300); }, 3500);
+}
+
+function openModal(html){
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4" id="modalOverlay">
+      <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">${html}</div>
+    </div>`;
+  lucide.createIcons();
+  document.getElementById('modalOverlay').addEventListener('click', (e)=>{ if(e.target.id==='modalOverlay') closeModal(); });
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+
+/* ---------- DATABASE ---------- */
+let DB = null;
+
+function defaultChartOfAccounts(){
+  return [
+    {id:'CASH', name:'Cash in Hand', type:'Asset', system:true},
+    {id:'BANK', name:'Bank Account', type:'Asset', system:true},
+    {id:'AR', name:'Accounts Receivable / Debtors', type:'Asset', system:true},
+    {id:'INV', name:'Inventory / Stock Asset', type:'Asset', system:true},
+    {id:'AP', name:'Accounts Payable / Creditors', type:'Liability', system:true},
+    {id:'VAT', name:'VAT Payable (13%)', type:'Liability', system:true},
+    {id:'SALES', name:'Sales Account', type:'Revenue', system:true},
+    {id:'PURCH', name:'Purchase Account', type:'Expense', system:true},
+    {id:'EXP', name:'General Expenses', type:'Expense', system:true},
+  ];
+}
+
+function freshDB(){
+  return {
+    company: {name:'My Company Pvt. Ltd.', pan:'', address:'', fiscalYear:''},
+    accounts: defaultChartOfAccounts(),
+    customers: [],
+    vendors: [],
+    items: [],
+    vouchers: [],
+    budgets: [],
+    billCounter: 1000,
+    jvCounter: 1,
+    trCounter: 1,
+    payCounter: 1
+  };
+}
+
+function loadDB(){
+  const raw = localStorage.getItem(DB_KEY);
+  if(!raw){ DB = freshDB(); saveDB(); }
+  else{
+    try{ DB = JSON.parse(raw); if(!DB.budgets) DB.budgets=[]; }
+    catch(e){ DB = freshDB(); saveDB(); }
+  }
+}
+function saveDB(){ localStorage.setItem(DB_KEY, JSON.stringify(DB)); }
+
+/* ---------- ACCOUNTING CORE ---------- */
+function accountName(id){ const a = DB.accounts.find(x=>x.id===id); return a ? a.name : id; }
+
+function postVoucher(voucher){
+  const totalDebit = voucher.entries.reduce((s,e)=>s+(Number(e.debit)||0),0);
+  const totalCredit = voucher.entries.reduce((s,e)=>s+(Number(e.credit)||0),0);
+  if(Math.abs(totalDebit-totalCredit) > 0.009){
+    throw new Error('Unbalanced entry: Debits ('+fmt(totalDebit)+') must equal Credits ('+fmt(totalCredit)+')');
+  }
+  DB.vouchers.push(voucher);
+  saveDB();
+}
+
+function filterVouchers(from, to){
+  return DB.vouchers.filter(v => (!from || v.date>=from) && (!to || v.date<=to));
+}
+
+function getLedgerEntries(accountId, from, to){
+  const rows = [];
+  filterVouchers(from,to).forEach(v=>{
+    v.entries.forEach(e=>{
+      if(e.account === accountId){
+        rows.push({date:v.date, voucherId:v.id, billNo:v.billNo||v.id, type:v.type, narration:v.narration||'', debit:Number(e.debit)||0, credit:Number(e.credit)||0});
+      }
+    });
+  });
+  rows.sort((a,b)=> a.date.localeCompare(b.date));
+  let bal = 0;
+  return rows.map(r=>{ bal += (r.debit - r.credit); return {...r, balance:bal}; });
+}
+
+function getAccountBalance(accountId, from, to){
+  let debit=0, credit=0;
+  filterVouchers(from,to).forEach(v=> v.entries.forEach(e=>{
+    if(e.account===accountId){ debit += Number(e.debit)||0; credit += Number(e.credit)||0; }
+  }));
+  return {debit, credit, net: debit-credit};
+}
+
+/* Per-party sub-ledger (fixes party net balance bug: AR/AP tracked per party, not just pooled) */
+function getPartyEntries(partyId, account, from, to){
+  const rows = [];
+  filterVouchers(from,to).forEach(v=>{
+    v.entries.forEach(e=>{
+      if(e.account===account && e.party===partyId){
+        rows.push({date:v.date, voucherId:v.id, billNo:v.billNo||v.id, type:v.type, narration:v.narration||'', debit:Number(e.debit)||0, credit:Number(e.credit)||0});
+      }
+    });
+  });
+  rows.sort((a,b)=> a.date.localeCompare(b.date));
+  let bal=0;
+  return rows.map(r=>{ bal += (r.debit-r.credit); return {...r, balance:bal}; });
+}
+
+// Customer: positive = customer owes us (Due / red). Negative = we owe customer / customer overpaid (Advance / green).
+function customerBalance(custId, from, to){
+  let d=0,c=0;
+  filterVouchers(from,to).forEach(v=>v.entries.forEach(e=>{ if(e.account==='AR' && e.party===custId){ d+=Number(e.debit)||0; c+=Number(e.credit)||0; } }));
+  return d-c;
+}
+// Vendor: positive = we owe vendor (Due / red). Negative = vendor owes us / we overpaid (Advance / green).
+function vendorBalance(vendId, from, to){
+  let d=0,c=0;
+  filterVouchers(from,to).forEach(v=>v.entries.forEach(e=>{ if(e.account==='AP' && e.party===vendId){ d+=Number(e.debit)||0; c+=Number(e.credit)||0; } }));
+  return c-d;
+}
+
+function deleteVouchers(ids){
+  ids.forEach(id=>{
+    const v = DB.vouchers.find(x=>x.id===id);
+    if(!v) return;
+    if(v.type==='Sale' && Array.isArray(v.items)){
+      v.items.forEach(it=>{ const item = DB.items.find(i=>i.id===it.itemId); if(item) item.qty += it.qty; });
+    }
+    if(v.type==='Purchase' && Array.isArray(v.items)){
+      v.items.forEach(it=>{ const item = DB.items.find(i=>i.id===it.itemId); if(item) item.qty -= it.qty; });
+    }
+  });
+  DB.vouchers = DB.vouchers.filter(v=>!ids.includes(v.id));
+  saveDB();
+}
+
+/* ---------- NAVIGATION ---------- */
+const TABS = [
+  {id:'dashboard', label:'Dashboard', icon:'layout-dashboard'},
+  {id:'sales', label:'Sales / Invoicing (POS)', icon:'shopping-cart'},
+  {id:'purchases', label:'Purchases', icon:'truck'},
+  {id:'journal', label:'Journal Vouchers', icon:'book-text'},
+  {id:'transfer', label:'Account Transfer', icon:'arrow-left-right'},
+  {id:'parties', label:'Customers & Vendors', icon:'users'},
+  {id:'ledgers', label:'Account Ledgers', icon:'scroll-text'},
+  {id:'inventory', label:'Inventory Management', icon:'boxes'},
+  {id:'receiptspayments', label:'Receipts & Payments', icon:'wallet'},
+  {id:'budget', label:'Budgeting', icon:'pie-chart'},
+  {id:'reports', label:'Reports', icon:'bar-chart-3'},
+  {id:'settings', label:'Settings', icon:'settings'},
+];
+let currentTab = 'dashboard';
+let currentSaleCart = [];
+let currentPurchaseCart = [];
+let currentPartyView = null; // {id, type}
+let partySelectedTx = [];
+let ledgerFrom = '', ledgerTo = '';
+let partyFrom = '', partyTo = '';
+let transferSearchFrom = '', transferSearchTo = '';
+let transferFromAcc = '', transferToAcc = '';
+let salesSearch = '', salesFrom = '', salesTo = '';
+let purchSearch = '', purchFrom = '', purchTo = '';
+let rpSearch = '', rpFrom = '', rpTo = '';
+let bsDate = todayISO();
+
+function renderNav(){
+  const nav = document.getElementById('nav');
+  nav.innerHTML = TABS.map(t => `
+    <button data-tab="${t.id}" class="tab-btn w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 transition ${t.id===currentTab?'active':''}">
+      <i data-lucide="${t.icon}" class="w-4 h-4"></i><span>${t.label}</span>
+    </button>`).join('');
+  nav.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentTab = btn.dataset.tab; currentSaleCart=[]; currentPurchaseCart=[]; currentPartyView=null; partySelectedTx=[];
+      closeSidebar();
+      render();
+    });
+  });
+}
+
+/* ---------- MOBILE SIDEBAR ---------- */
+function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('open'); }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open'); }
+
+/* ---------- REUSABLE SEARCHABLE COMBOBOX ----------
+   Mounts a fully self-contained type-to-filter picker into `container`.
+   Does NOT depend on the app's render() cycle, so typing never loses focus. */
+function mountSearchCombo(container, opts){
+  const { options, value, placeholder, getLabel, getSub, onChange } = opts;
+  const labelFor = o => getLabel ? getLabel(o) : o.name;
+  const subFor = o => getSub ? (getSub(o)||'') : '';
+  let selected = options.find(o => String(o.id) === String(value)) || null;
+  let search = '';
+  let highlighted = -1;
+
+  container.innerHTML = `
+    <div class="relative combo-root">
+      <input type="text" class="combo-input w-full border rounded-lg px-3 py-2 text-sm" placeholder="${placeholder || 'Type to search...'}" autocomplete="off" value="${selected ? labelFor(selected).replace(/"/g,'&quot;') : ''}">
+      <div class="combo-dropdown absolute z-20 bg-white border rounded-lg shadow-lg w-full searchDropdown hidden mt-1"></div>
+    </div>`;
+  const input = container.querySelector('.combo-input');
+  const dropdown = container.querySelector('.combo-dropdown');
+
+  function filtered(){
+    const q = search.trim().toLowerCase();
+    if(!q) return options;
+    return options.filter(o => labelFor(o).toLowerCase().includes(q) || subFor(o).toLowerCase().includes(q));
+  }
+  function renderList(){
+    const list = filtered();
+    dropdown.innerHTML = list.length ? list.map((o,i)=>`
+      <div class="combo-opt px-3 py-2 text-sm hover:bg-slate-100 cursor-pointer ${i===highlighted?'bg-slate-100':''}" data-idx="${i}">
+        ${labelFor(o)}${subFor(o) ? `<span class="text-xs text-slate-400"> — ${subFor(o)}</span>` : ''}
+      </div>`).join('') : '<div class="px-3 py-2 text-sm text-slate-400">No results</div>';
+    dropdown.querySelectorAll('.combo-opt').forEach(el=>{
+      el.addEventListener('mousedown', (e)=>{ e.preventDefault(); choose(list[Number(el.dataset.idx)]); });
+    });
+  }
+  function open(){ highlighted=-1; renderList(); dropdown.classList.remove('hidden'); }
+  function close(){ dropdown.classList.add('hidden'); }
+  function choose(o){
+    selected = o || null; search=''; highlighted=-1;
+    input.value = o ? labelFor(o) : '';
+    close();
+    onChange(o ? o.id : '');
+  }
+
+  input.addEventListener('focus', open);
+  input.addEventListener('input', ()=>{ search = input.value; selected=null; onChange(''); open(); });
+  input.addEventListener('keydown', (e)=>{
+    const list = filtered();
+    if(e.key==='ArrowDown'){ e.preventDefault(); highlighted = Math.min(list.length-1, highlighted+1); renderList(); dropdown.classList.remove('hidden'); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); highlighted = Math.max(0, highlighted-1); renderList(); dropdown.classList.remove('hidden'); }
+    else if(e.key==='Enter'){ e.preventDefault(); if(list[highlighted]) choose(list[highlighted]); }
+    else if(e.key==='Escape'){ close(); }
+  });
+  document.addEventListener('mousedown', (e)=>{ if(!container.contains(e.target)) close(); });
+
+  return {
+    getValue: ()=> selected ? selected.id : '',
+    setOptions: (opts2)=>{ opts.options.length=0; opts.options.push(...opts2); renderList(); }
+  };
+}
+
+function render(){
+  renderNav();
+  document.getElementById('pageTitle').textContent = TABS.find(t=>t.id===currentTab).label;
+  document.getElementById('todayDate').textContent = 'A.D. ' + todayISO() + '  |  B.S. ' + adToBsApprox(todayISO());
+  const c = document.getElementById('content');
+  switch(currentTab){
+    case 'dashboard': c.innerHTML = renderDashboard(); break;
+    case 'sales': c.innerHTML = renderSales(); break;
+    case 'purchases': c.innerHTML = renderPurchases(); break;
+    case 'journal': c.innerHTML = renderJournal(); break;
+    case 'transfer': c.innerHTML = renderTransfer(); break;
+    case 'parties': c.innerHTML = currentPartyView ? renderPartyDetail() : renderParties(); break;
+    case 'ledgers': c.innerHTML = renderLedgers(); break;
+    case 'inventory': c.innerHTML = renderInventory(); break;
+    case 'receiptspayments': c.innerHTML = renderReceiptsPayments(); break;
+    case 'budget': c.innerHTML = renderBudget(); break;
+    case 'reports': c.innerHTML = renderReports(); break;
+    case 'settings': c.innerHTML = renderSettings(); break;
+  }
+  lucide.createIcons();
+  attachTabHandlers();
+}
+
+/* ================= DASHBOARD ================= */
+function renderDashboard(){
+  const cash = getAccountBalance('CASH').net + getAccountBalance('BANK').net;
+  const arTotal = DB.customers.reduce((s,c)=>s+Math.max(customerBalance(c.id),0),0);
+  const apTotal = DB.vendors.reduce((s,v)=>s+Math.max(vendorBalance(v.id),0),0);
+  const salesTotal = getAccountBalance('SALES').credit;
+  const purchTotal = getAccountBalance('PURCH').debit;
+  const expTotal = getAccountBalance('EXP').debit;
+  const netProfit = salesTotal - purchTotal - expTotal;
+  const invValue = DB.items.reduce((s,i)=>s+i.qty*i.rate,0);
+  const lowStock = DB.items.filter(i=>i.qty < 10);
+  const recentVouchers = [...DB.vouchers].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+
+  const today = todayISO();
+  const overdue = DB.vouchers.filter(v=>v.type==='Sale' && v.partyId!=='WALKIN' && v.dueDate && v.dueDate<today && customerBalance(v.partyId)>0);
+
+  const topDebtors = DB.customers.map(c=>({...c, bal:customerBalance(c.id)})).filter(c=>c.bal>0.005).sort((a,b)=>b.bal-a.bal).slice(0,6);
+  const topCreditors = DB.vendors.map(v=>({...v, bal:vendorBalance(v.id)})).filter(v=>v.bal>0.005).sort((a,b)=>b.bal-a.bal).slice(0,6);
+
+  const cards = [
+    {label:'Cash & Bank Balance', val:fmt(cash), icon:'wallet', color:'text-emerald-600 bg-emerald-50'},
+    {label:'Total Receivables (Due to us)', val:fmt(arTotal), icon:'arrow-down-circle', color:'text-red-600 bg-red-50'},
+    {label:'Total Payables (Due by us)', val:fmt(apTotal), icon:'arrow-up-circle', color:'text-red-600 bg-red-50'},
+    {label:'Net Profit / Loss', val:fmt(netProfit), icon:'trending-up', color: (netProfit>=0?'text-emerald-600 bg-emerald-50':'text-red-600 bg-red-50')},
+    {label:'Inventory Value', val:fmt(invValue), icon:'package', color:'text-purple-600 bg-purple-50'},
+    {label:'Total Vouchers', val: DB.vouchers.length, icon:'file-text', color:'text-slate-600 bg-slate-100'},
+  ];
+
+  return `
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-6">  
+    ${cards.map(c=>`
+      <div class="bg-white rounded-xl shadow-sm border p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+        <div class="p-2 sm:p-3 rounded-lg ${c.color}"><i data-lucide="${c.icon}" class="w-5 h-5 sm:w-6 sm:h-6"></i></div>
+        <div class="min-w-0"><div class="text-xs text-slate-500 truncate">${c.label}</div><div class="text-base sm:text-lg font-bold truncate">${c.val}</div></div>
+      </div>`).join('')}
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border p-4">
+      
+      <h3 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="history" class="w-4 h-4"></i> Recent Vouchers</h3>
+
+<!-- Mobile: stacked cards -->
+<div class="card-list space-y-2">
+  ${recentVouchers.length? recentVouchers.map(v=>{
+    const amt = v.total!==undefined ? v.total : v.entries.reduce((s,e)=>s+(e.debit||0),0);
+    return `<div class="border rounded-lg p-3 flex items-center justify-between">
+      <div class="min-w-0">
+        <div class="text-sm font-medium">${v.billNo||v.id}</div>
+        <div class="text-xs text-slate-500">${v.date} · <span class="px-1.5 py-0.5 rounded bg-slate-100">${v.type}</span></div>
+      </div>
+      <div class="font-semibold text-right shrink-0 ml-2">${fmt(amt)}</div>
+    </div>`;
+  }).join('') : '<div class="text-center py-6 text-slate-400">No vouchers yet — start by creating a Sale, Purchase, or Journal entry.</div>'}
+</div>
+
+<!-- Desktop: table -->
+<div class="card-table table-scroll">
+<table class="w-full text-sm">
+  <thead><tr class="text-left text-slate-500 border-b"><th class="py-2">Date</th><th>Bill/Ref</th><th>Type</th><th class="text-right">Amount</th></tr></thead>
+  <tbody>
+  ${recentVouchers.length? recentVouchers.map(v=>{
+    const amt = v.total!==undefined ? v.total : v.entries.reduce((s,e)=>s+(e.debit||0),0);
+    return `<tr class="border-b last:border-0"><td class="py-2">${v.date}</td><td>${v.billNo||v.id}</td><td><span class="px-2 py-0.5 rounded text-xs bg-slate-100">${v.type}</span></td><td class="text-right font-medium">${fmt(amt)}</td></tr>`;
+  }).join('') : '<tr><td colspan="4" class="text-center py-6 text-slate-400">No vouchers yet — start by creating a Sale, Purchase, or Journal entry.</td></tr>'}
+  </tbody>
+</table>
+</div>
+      
+    </div>
+    <div class="space-y-4">
+      <div class="bg-white rounded-xl shadow-sm border p-4">
+        <h3 class="font-semibold mb-3 flex items-center gap-2 text-amber-600"><i data-lucide="alert-triangle" class="w-4 h-4"></i> Low Stock Alerts</h3>
+        ${lowStock.length? lowStock.map(i=>`
+          <div class="flex justify-between items-center py-2 border-b last:border-0 text-sm">
+            <span>${i.name}</span><span class="font-bold text-red-600">${i.qty} ${i.unit}</span>
+          </div>`).join('') : '<p class="text-sm text-slate-400">All items sufficiently stocked.</p>'}
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border p-4">
+        <h3 class="font-semibold mb-3 flex items-center gap-2 text-red-600"><i data-lucide="bell-ring" class="w-4 h-4"></i> Pending Reminders (Overdue)</h3>
+        ${overdue.length? overdue.map(v=>{
+          const cust = DB.customers.find(c=>c.id===v.partyId);
+          return `<div class="flex justify-between items-center py-2 border-b last:border-0 text-sm">
+            <span>${cust?cust.name:'Customer'} — ${v.billNo}</span>
+            <span class="font-bold text-red-600">${fmt(customerBalance(v.partyId))}</span>
+          </div>`;
+        }).join('') : '<p class="text-sm text-slate-400">No overdue invoices.</p>'}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-white rounded-xl shadow-sm border p-4">
+      <h3 class="font-semibold mb-3 flex items-center gap-2 text-red-600"><i data-lucide="trending-down" class="w-4 h-4"></i> Top Debtors (Owe You Most)</h3>
+      ${topDebtors.length? topDebtors.map((c,i)=>`
+        <div class="flex justify-between items-center py-2 border-b last:border-0 text-sm">
+          <span class="flex items-center gap-2 min-w-0"><span class="text-xs text-slate-400 w-4">${i+1}.</span><button data-pid="${c.id}" data-ptype="customer" class="topPartyLink truncate text-left hover:underline" style="color:var(--accent)">${c.name}</button></span>
+          <span class="font-bold text-red-600 flex-shrink-0">${fmt(c.bal)}</span>
+        </div>`).join('') : '<p class="text-sm text-slate-400">No outstanding customer dues.</p>'}
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border p-4">
+      <h3 class="font-semibold mb-3 flex items-center gap-2 text-amber-600"><i data-lucide="trending-up" class="w-4 h-4"></i> Top Creditors (You Owe Most)</h3>
+      ${topCreditors.length? topCreditors.map((v,i)=>`
+        <div class="flex justify-between items-center py-2 border-b last:border-0 text-sm">
+          <span class="flex items-center gap-2 min-w-0"><span class="text-xs text-slate-400 w-4">${i+1}.</span><button data-pid="${v.id}" data-ptype="vendor" class="topPartyLink truncate text-left hover:underline" style="color:var(--accent)">${v.name}</button></span>
+          <span class="font-bold text-amber-600 flex-shrink-0">${fmt(v.bal)}</span>
+        </div>`).join('') : '<p class="text-sm text-slate-400">No outstanding vendor dues.</p>'}
+    </div>
+  </div>`;
+}
+
+/* ================= SALES / POS ================= */
+function renderSales(){
+  let sub=0, vat=0, total=0;
+  currentSaleCart.forEach(l=> sub += l.qty*l.rate - (l.discount||0));
+  vat = +(sub*0.13).toFixed(2);
+  total = +(sub+vat).toFixed(2);
+
+  if(DB.items.length===0){
+    return `<div class="bg-white rounded-xl shadow-sm border p-8 text-center text-slate-500">
+      <i data-lucide="package-x" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
+      Add inventory items first (Inventory Management tab) before creating a sales invoice.
+    </div>`;
+  }
+
+  const filteredSales = filterVoucherList(DB.vouchers.filter(v=>v.type==='Sale'), salesSearch, salesFrom, salesTo);
+
+  return `
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border p-4">
+      <h3 class="font-semibold mb-4">New Sales Invoice</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <div>
+          <label class="text-xs text-slate-500">Customer</label>
+          <div id="saleCustomerCombo"></div>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">Invoice Date (A.D.)</label>
+          <input id="saleDate" type="date" value="${todayISO()}" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">Due Date (optional)</label>
+          <input id="saleDueDate" type="date" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:flex sm:gap-2 gap-2 mb-3 sm:items-end border-t pt-3">
+        <div class="col-span-2 sm:flex-1">
+          <label class="text-xs text-slate-500">Item</label>
+          <div id="saleItemCombo"></div>
+        </div>
+        <div class="sm:w-20"><label class="text-xs text-slate-500">Qty</label><input id="saleQty" type="number" min="1" value="1" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+        <div class="sm:w-28"><label class="text-xs text-slate-500">Rate</label><input id="saleRate" type="number" min="0" step="0.01" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+        <div class="sm:w-24"><label class="text-xs text-slate-500">Discount</label><input id="saleDiscount" type="number" min="0" step="0.01" value="0" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+        <button id="addSaleLine" class="btn-primary px-3 py-2 rounded-lg text-sm flex items-center justify-center gap-1 col-span-2 sm:col-auto"><i data-lucide="plus" class="w-4 h-4"></i>Add</button>
+      </div>
+
+      <div class="table-scroll mb-3">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-slate-500 border-b"><th class="py-1">Item</th><th>Qty</th><th>Rate</th><th>Disc.</th><th class="text-right">Amount</th><th></th></tr></thead>
+        <tbody>
+          ${currentSaleCart.length? currentSaleCart.map((l,idx)=>`
+            <tr class="border-b">
+              <td class="py-1">${l.name}</td><td>${l.qty}</td><td>${fmt(l.rate)}</td><td>${fmt(l.discount||0)}</td>
+              <td class="text-right">${fmt(l.qty*l.rate-(l.discount||0))}</td>
+              <td><button data-idx="${idx}" class="removeSaleLine text-red-500 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+            </tr>`).join('') : `<tr><td colspan="6" class="text-center text-slate-400 py-4">No items added</td></tr>`}
+        </tbody>
+      </table>
+      </div>
+
+      <div class="flex items-center gap-2 mb-3">
+        <input type="checkbox" id="vatToggle" checked class="w-4 h-4">
+        <label for="vatToggle" class="text-sm">Apply 13% VAT</label>
+      </div>
+
+      <div class="border-t pt-3 space-y-1 text-sm max-w-xs sm:ml-auto">
+        <div class="flex justify-between"><span>Subtotal</span><span>${fmt(sub)}</span></div>
+        <div class="flex justify-between" id="vatLine"><span>VAT (13%)</span><span>${fmt(vat)}</span></div>
+        <div class="flex justify-between font-bold text-base border-t pt-1"><span>Grand Total</span><span id="saleGrandTotal">${fmt(total)}</span></div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-2 mt-4">
+        <button id="saveSale" class="bg-emerald-600 text-white px-4 py-3 sm:py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2"><i data-lucide="save" class="w-4 h-4"></i>Save & Post Invoice</button>
+        <button id="clearSale" class="bg-slate-200 px-4 py-3 sm:py-2 rounded-lg text-sm">Clear</button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border p-4">
+      <h3 class="font-semibold mb-3">Recent Sales</h3>
+      ${historyFilterBar('sales', salesSearch, salesFrom, salesTo)}
+      <div id="salesHistoryList" class="space-y-2 max-h-[60vh] overflow-y-auto">
+      ${filteredSales.slice().reverse().map(v=>`
+        <div class="border rounded-lg p-3 text-sm flex justify-between items-center gap-2">
+          <div class="min-w-0">
+            <div class="font-medium truncate">${v.billNo}</div>
+            <div class="text-xs text-slate-500 truncate">${v.date} · ${partyName(v)}</div>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <div class="font-bold">${fmt(v.total)}</div>
+            <button data-vid="${v.id}" class="printSaleBtn text-sm mt-1 py-1 px-1" style="color:var(--accent)"><i data-lucide="printer" class="w-3 h-3 inline"></i> Print</button>
+          </div>
+        </div>`).join('') || '<p class="text-slate-400 text-sm">No sales match your filters.</p>'}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* Shared helper for search+date filtering of a voucher list (Sales/Purchases history panels) */
+function filterVoucherList(list, search, from, to){
+  const q = (search||'').trim().toLowerCase();
+  return list.filter(v=>{
+    if(from && v.date < from) return false;
+    if(to && v.date > to) return false;
+    if(q){
+      const hay = [v.billNo||v.id, partyName(v), (v.items||[]).map(it=>it.name).join(' ')].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+/* Shared search + date-range filter bar markup, mirroring the Reports date-filter pattern */
+function historyFilterBar(prefix, search, from, to){
+  return `
+  <div class="mb-3 space-y-2">
+    <input id="${prefix}SearchInput" value="${search}" placeholder="Search bill no, party, or item..." class="w-full border rounded-lg px-3 py-2 text-sm">
+    <div class="flex items-center gap-2 flex-wrap">
+      <label class="text-xs text-slate-500">From:</label><input type="date" id="${prefix}FromDate" value="${from}" class="border rounded px-2 py-1 text-xs">
+      <label class="text-xs text-slate-500">To:</label><input type="date" id="${prefix}ToDate" value="${to}" class="border rounded px-2 py-1 text-xs">
+      <button id="${prefix}FilterResetBtn" class="text-xs px-2 py-1 rounded border">Reset</button>
+    </div>
+  </div>`;
+}
+function bindHistoryFilterBar(prefix, apply, reset){
+  const searchInput = document.getElementById(prefix+'SearchInput');
+  const fromInput = document.getElementById(prefix+'FromDate');
+  const toInput = document.getElementById(prefix+'ToDate');
+  if(searchInput) searchInput.addEventListener('input', ()=>{ apply(searchInput.value, fromInput.value, toInput.value); });
+  if(fromInput) fromInput.addEventListener('change', ()=>{ apply(searchInput.value, fromInput.value, toInput.value); });
+  if(toInput) toInput.addEventListener('change', ()=>{ apply(searchInput.value, fromInput.value, toInput.value); });
+  const resetBtn = document.getElementById(prefix+'FilterResetBtn');
+  if(resetBtn) resetBtn.addEventListener('click', reset);
+}
+function partyName(v){
+  if(v.partyId==='WALKIN') return 'Walk-in Customer';
+  const list = v.partyType==='customer'?DB.customers:DB.vendors;
+  const p = list.find(x=>x.id===v.partyId);
+  return p ? p.name : 'Unknown';
+}
+
+/* ================= PURCHASES ================= */
+function renderPurchases(){
+  const activeVendors = DB.vendors.filter(v=>v.active!==false);
+  if(activeVendors.length===0 || DB.items.length===0){
+    return `<div class="bg-white rounded-xl shadow-sm border p-8 text-center text-slate-500">
+      <i data-lucide="truck" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
+      Add at least one Vendor and one Inventory Item before recording a purchase.
+    </div>`;
+  }
+
+  let sub=0, vat=0, total=0;
+  currentPurchaseCart.forEach(l=> sub += l.qty*l.rate);
+  vat = +(sub*0.13).toFixed(2);
+  total = +(sub+vat).toFixed(2);
+
+  const filteredPurch = filterVoucherList(DB.vouchers.filter(v=>v.type==='Purchase'), purchSearch, purchFrom, purchTo);
+
+  return `
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border p-4">
+      <h3 class="font-semibold mb-4">New Purchase Entry</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <div>
+          <label class="text-xs text-slate-500">Vendor</label>
+          <div id="purchVendorCombo"></div>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">Purchase Date (A.D.)</label>
+          <input id="purchDate" type="date" value="${todayISO()}" class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 sm:flex sm:gap-2 gap-2 mb-3 sm:items-end border-t pt-3">
+        <div class="col-span-2 sm:flex-1">
+          <label class="text-xs text-slate-500">Item</label>
+          <div id="purchItemCombo"></div>
+        </div>
+        <div class="sm:w-20"><label class="text-xs text-slate-500">Qty</label><input id="purchQty" type="number" min="1" value="1" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+        <div class="sm:w-28"><label class="text-xs text-slate-500">Rate</label><input id="purchRate" type="number" min="0" step="0.01" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+        <button id="addPurchLine" class="btn-primary px-3 py-2 rounded-lg text-sm flex items-center justify-center gap-1 col-span-2 sm:col-auto"><i data-lucide="plus" class="w-4 h-4"></i>Add</button>
+      </div>
+
+      <div class="table-scroll mb-3">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-slate-500 border-b"><th class="py-1">Item</th><th>Qty</th><th>Rate</th><th class="text-right">Amount</th><th></th></tr></thead>
+        <tbody>
+        ${currentPurchaseCart.length? currentPurchaseCart.map((l,idx)=>`
+          <tr class="border-b">
+            <td class="py-1">${l.name}</td><td>${l.qty}</td><td>${fmt(l.rate)}</td>
+            <td class="text-right">${fmt(l.qty*l.rate)}</td>
+            <td><button data-idx="${idx}" class="removePurchLine text-red-500 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+          </tr>`).join('') : `<tr><td colspan="5" class="text-center text-slate-400 py-4">No items added</td></tr>`}
+        </tbody>
+      </table>
+      </div>
+
+      <div class="flex items-center gap-2 mb-3">
+        <input type="checkbox" id="purchVatToggle" checked class="w-4 h-4">
+        <label for="purchVatToggle" class="text-sm">Apply 13% VAT</label>
+      </div>
+      <div class="border-t pt-3 space-y-1 text-sm max-w-xs sm:ml-auto">
+        <div class="flex justify-between"><span>Subtotal</span><span>${fmt(sub)}</span></div>
+        <div class="flex justify-between"><span>VAT (13%)</span><span>${fmt(vat)}</span></div>
+        <div class="flex justify-between font-bold text-base border-t pt-1"><span>Grand Total</span><span>${fmt(total)}</span></div>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-2 mt-4">
+        <button id="savePurchase" class="bg-emerald-600 text-white px-4 py-3 sm:py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2"><i data-lucide="save" class="w-4 h-4"></i>Save & Post Purchase</button>
+        <button id="clearPurchase" class="bg-slate-200 px-4 py-3 sm:py-2 rounded-lg text-sm">Clear</button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border p-4">
+      <h3 class="font-semibold mb-3">Recent Purchases</h3>
+      ${historyFilterBar('purch', purchSearch, purchFrom, purchTo)}
+      <div id="purchHistoryList" class="space-y-2 max-h-[60vh] overflow-y-auto">
+      ${filteredPurch.slice().reverse().map(v=>`
+        <div class="border rounded-lg p-3 text-sm flex justify-between items-center gap-2">
+          <div class="min-w-0"><div class="font-medium truncate">${v.billNo}</div><div class="text-xs text-slate-500 truncate">${v.date} · ${partyName(v)}</div></div>
+          <div class="font-bold flex-shrink-0">${fmt(v.total)}</div>
+        </div>`).join('') || '<p class="text-slate-400 text-sm">No purchases match your filters.</p>'}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ================= JOURNAL VOUCHERS ================= */
+let jvLines = [{account:'', debit:0, credit:0},{account:'', debit:0, credit:0}];
+function renderJournal(){
+  const totalD = jvLines.reduce((s,l)=>s+(Number(l.debit)||0),0);
+  const totalC = jvLines.reduce((s,l)=>s+(Number(l.credit)||0),0);
+  const balanced = Math.abs(totalD-totalC) < 0.005 && totalD>0;
+
+  return `
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border p-4">
+      <h3 class="font-semibold mb-4">Manual Journal Voucher</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+        <div><label class="text-xs text-slate-500">Date (A.D.)</label><input id="jvDate" type="date" value="${todayISO()}" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+        <div><label class="text-xs text-slate-500">Narration</label><input id="jvNarration" placeholder="Description..." class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+      </div>
+      <div class="table-scroll mb-2">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-slate-500 border-b"><th class="py-1">Account</th><th class="w-32">Debit</th><th class="w-32">Credit</th><th></th></tr></thead>
+        <tbody id="jvRows">
+        ${jvLines.map((l,idx)=>`
+          <tr class="border-b" data-idx="${idx}">
+            <td class="py-1"><div class="jvAccountCombo" data-idx="${idx}"></div></td>
+            <td><input type="number" min="0" step="0.01" class="jvDebit w-full border rounded px-2 py-1 text-sm" data-idx="${idx}" value="${l.debit||''}"></td>
+            <td><input type="number" min="0" step="0.01" class="jvCredit w-full border rounded px-2 py-1 text-sm" data-idx="${idx}" value="${l.credit||''}"></td>
+            <td><button class="jvRemoveRow text-red-500 p-1" data-idx="${idx}"><i data-lucide="x" class="w-4 h-4"></i></button></td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot>
+          <tr class="font-semibold border-t">
+            <td class="py-2">Total</td>
+            <td class="${balanced?'text-emerald-600':'text-red-600'}">${fmt(totalD)}</td>
+            <td class="${balanced?'text-emerald-600':'text-red-600'}">${fmt(totalC)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+      </div>
+      <button id="jvAddRow" class="text-sm flex items-center gap-1 mb-4" style="color:var(--accent)"><i data-lucide="plus" class="w-4 h-4"></i>Add Line</button>
+      ${!balanced ? `<div class="bg-red-50 text-red-700 text-sm px-3 py-2 rounded-lg mb-3 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-4 h-4"></i>Total Debits must equal Total Credits before posting.</div>` : ''}
+      <button id="postJV" ${balanced?'':'disabled'} class="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 btn-primary"><i data-lucide="check" class="w-4 h-4"></i>Post Journal Voucher</button>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border p-4">
+      <h3 class="font-semibold mb-3">Recent Journal Vouchers</h3>
+      <div class="space-y-2 max-h-[70vh] overflow-y-auto">
+      ${DB.vouchers.filter(v=>v.type==='Journal').slice().reverse().map(v=>`
+        <div class="border rounded-lg p-3 text-sm">
+          <div class="font-medium">${v.billNo} <span class="text-xs text-slate-400">(${v.date})</span></div>
+          <div class="text-xs text-slate-500 mb-1">${v.narration||''}</div>
+          ${v.entries.map(e=>`<div class="flex justify-between text-xs"><span>${accountName(e.account)}</span><span>${e.debit?('Dr '+fmt(e.debit)):('Cr '+fmt(e.credit))}</span></div>`).join('')}
+        </div>`).join('') || '<p class="text-slate-400 text-sm">No journal entries yet.</p>'}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ================= ACCOUNT TRANSFER (with search-as-you-type) ================= */
+function renderTransfer(){
+  return `
+  <div class="max-w-2xl bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+    <h3 class="font-semibold mb-4 flex items-center gap-2"><i data-lucide="arrow-left-right" class="w-5 h-5"></i>Fund Transfer Between Accounts</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="text-xs text-slate-500">From Account</label>
+        <div id="transferFromCombo"></div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500">To Account</label>
+        <div id="transferToCombo"></div>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+      <div><label class="text-xs text-slate-500">Date</label><input id="transferDate" type="date" value="${todayISO()}" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+      <div><label class="text-xs text-slate-500">Amount</label><input id="transferAmount" type="number" min="0" step="0.01" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+    </div>
+    <div class="mb-4"><label class="text-xs text-slate-500">Note (optional)</label><input id="transferNote" placeholder="e.g. Deposited cash to bank" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+    <button id="postTransfer" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 w-full sm:w-auto"><i data-lucide="send" class="w-4 h-4"></i>Post Transfer</button>
+
+    <div class="mt-8">
+      <h4 class="font-semibold mb-2 text-sm">Recent Transfers</h4>
+      <div class="space-y-2 text-sm">
+      ${DB.vouchers.filter(v=>v.type==='Transfer').slice().reverse().map(v=>`
+        <div class="border rounded-lg p-3 flex flex-col sm:flex-row sm:justify-between gap-1">
+          <span>${v.date} · ${accountName(v.entries[1].account)} → ${accountName(v.entries[0].account)}</span>
+          <span class="font-bold">${fmt(v.entries[0].debit)}</span>
+        </div>`).join('') || '<p class="text-slate-400">No transfers yet.</p>'}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ================= PARTIES (CUSTOMERS & VENDORS) ================= */
+let partyTypeTab = 'customer';
+function renderParties(){
+  const list = partyTypeTab==='customer' ? DB.customers : DB.vendors;
+  return `
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex gap-2 bg-white rounded-xl shadow-sm border p-1 w-fit">
+      <button data-pt="customer" class="partyTypeTab px-3 py-1.5 rounded-lg text-sm ${partyTypeTab==='customer'?'btn-primary':''}">Customers</button>
+      <button data-pt="vendor" class="partyTypeTab px-3 py-1.5 rounded-lg text-sm ${partyTypeTab==='vendor'?'btn-primary':''}">Vendors</button>
+    </div>
+    <button id="addPartyBtn" class="btn-primary px-3 py-2 rounded-lg text-sm flex items-center gap-1"><i data-lucide="user-plus" class="w-4 h-4"></i>Add ${partyTypeTab==='customer'?'Customer':'Vendor'}</button>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    ${list.length? list.map(p=>{
+      const bal = partyTypeTab==='customer' ? customerBalance(p.id) : vendorBalance(p.id);
+      const due = bal>0.005; const advance = bal<-0.005;
+      return `
+      <div class="bg-white rounded-xl shadow-sm border p-4 ${p.active===false?'opacity-50':''}">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <div class="font-semibold">${p.name}</div>
+            <div class="text-xs text-slate-500">PAN: ${p.pan||'-'} · ${p.phone||'no phone'}</div>
+          </div>
+          <label class="flex items-center gap-1 text-xs cursor-pointer">
+            <input type="checkbox" class="partyActiveToggle" data-id="${p.id}" ${p.active!==false?'checked':''}> Active
+          </label>
+        </div>
+        <div class="text-sm mb-3">
+          Balance:
+          <span class="font-bold ${due?'text-red-600':advance?'text-emerald-600':'text-slate-500'}">
+            ${fmt(Math.abs(bal))} ${due?'(Due)':advance?'(Advance)':''}
+          </span>
+        </div>
+        <button data-id="${p.id}" class="openPartyBtn text-sm w-full border rounded-lg py-1.5" style="color:var(--accent)">View Ledger</button>
+      </div>`;
+    }).join('') : `<p class="text-slate-400 text-sm col-span-full">No ${partyTypeTab}s yet. Click "Add" to create one.</p>`}
+  </div>`;
+}
+
+function renderPartyDetail(){
+  const {id, type} = currentPartyView;
+  const list = type==='customer'?DB.customers:DB.vendors;
+  const p = list.find(x=>x.id===id);
+  if(!p){ currentPartyView=null; return renderParties(); }
+  const account = type==='customer'?'AR':'AP';
+  const rows = getPartyEntries(id, account, partyFrom, partyTo);
+  const bal = type==='customer'? customerBalance(id, partyFrom, partyTo) : vendorBalance(id, partyFrom, partyTo);
+  const due = bal>0.005, advance = bal<-0.005;
+
+  return `
+  <button id="backToParties" class="text-sm mb-3 flex items-center gap-1 text-slate-500"><i data-lucide="arrow-left" class="w-4 h-4"></i>Back to list</button>
+  <div class="bg-white rounded-xl shadow-sm border p-4 mb-4">
+    <div class="flex flex-wrap justify-between items-center gap-3">
+      <div>
+        <h3 class="font-semibold text-lg">${p.name}</h3>
+        <div class="text-xs text-slate-500">PAN: ${p.pan||'-'} · ${p.phone||'no phone'} · ${p.address||''}</div>
+      </div>
+      <div class="text-right">
+        <div class="text-xs text-slate-500">Net Balance</div>
+        <div class="text-xl font-bold ${due?'text-red-600':advance?'text-emerald-600':'text-slate-500'}">${fmt(Math.abs(bal))} ${due?'(Due)':advance?'(Advance / In our favor)':''}</div>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2 mt-4">
+      <button id="recordPaymentBtn" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1"><i data-lucide="banknote" class="w-4 h-4"></i>Record ${type==='customer'?'Payment Received':'Payment Made'}</button>
+      ${type==='customer' && p.phone ? `<button id="whatsappBtn" class="bg-[#25D366] text-white px-3 py-2 rounded-lg text-sm flex items-center gap-1"><i data-lucide="message-circle" class="w-4 h-4"></i>Send WhatsApp Reminder</button>` : ''}
+      <button id="printStatementBtn" class="border px-3 py-2 rounded-lg text-sm flex items-center gap-1"><i data-lucide="printer" class="w-4 h-4"></i>Print Statement</button>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-4">
+    <div class="flex items-center gap-2 mb-3 flex-wrap">
+      <label class="text-sm">From:</label><input type="date" id="partyFromDate" value="${partyFrom}" class="border rounded px-2 py-1 text-sm">
+      <label class="text-sm">To:</label><input type="date" id="partyToDate" value="${partyTo}" class="border rounded px-2 py-1 text-sm">
+      <button id="partyFilterBtn" class="bg-slate-800 text-white text-sm px-3 py-1.5 rounded-lg">Filter</button>
+      <button id="partyResetBtn" class="text-sm px-3 py-1.5 rounded-lg border">Reset</button>
+      <div class="flex-1"></div>
+      ${partySelectedTx.length ? `<button id="bulkDeleteTx" class="bg-red-600 text-white text-sm px-3 py-1.5 rounded-lg flex items-center gap-1"><i data-lucide="trash-2" class="w-4 h-4"></i>Delete Selected (${partySelectedTx.length})</button>` : ''}
+    </div>
+    <div class="table-scroll"><table class="w-full text-sm">
+      <thead><tr class="text-left text-slate-500 border-b"><th class="py-2"><input type="checkbox" id="selectAllTx"></th><th>Date</th><th>Ref</th><th>Type</th><th class="text-right">Debit</th><th class="text-right">Credit</th><th class="text-right">Balance</th></tr></thead>
+      <tbody>
+      ${rows.length? rows.map(r=>`
+        <tr class="border-b">
+          <td class="py-2"><input type="checkbox" class="txCheckbox" value="${r.voucherId}" ${partySelectedTx.includes(r.voucherId)?'checked':''}></td>
+          <td>${r.date}</td><td>${r.billNo}</td><td>${r.type}</td>
+          <td class="text-right ${r.debit?'text-red-600':''}">${r.debit?fmt(r.debit):''}</td>
+          <td class="text-right ${r.credit?'text-emerald-600':''}">${r.credit?fmt(r.credit):''}</td>
+          <td class="text-right font-medium">${fmt(Math.abs(r.balance))} ${r.balance>=0?'Dr':'Cr'}</td>
+        </tr>`).join('') : '<tr><td colspan="7" class="text-center py-6 text-slate-400">No transactions</td></tr>'}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+/* ================= ACCOUNT LEDGERS (system accounts) ================= */
+function renderLedgers(){
+  const opts = DB.accounts.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
+  return `
+  <div class="bg-white rounded-xl shadow-sm border p-4">
+    <div class="flex items-center gap-3 mb-4 flex-wrap">
+      <label class="text-sm font-medium">Account:</label>
+      <select id="ledgerSelect" class="border rounded-lg px-3 py-2 text-sm">${opts}</select>
+      <label class="text-sm">From:</label><input type="date" id="ledgerFromDate" value="${ledgerFrom}" class="border rounded px-2 py-1 text-sm">
+      <label class="text-sm">To:</label><input type="date" id="ledgerToDate" value="${ledgerTo}" class="border rounded px-2 py-1 text-sm">
+      <button id="ledgerFilterBtn" class="bg-slate-800 text-white text-sm px-3 py-1.5 rounded-lg">Filter</button>
+      <button id="ledgerResetBtn" class="text-sm px-3 py-1.5 rounded-lg border">Reset</button>
+      <button id="ledgerPrintBtn" class="text-sm px-3 py-1.5 rounded-lg border flex items-center gap-1 ml-auto"><i data-lucide="printer" class="w-4 h-4"></i>Print Statement</button>
+    </div>
+    <div id="ledgerContent"></div>
+  </div>`;
+}
+function renderLedgerContent(accountId){
+  const rows = getLedgerEntries(accountId, ledgerFrom, ledgerTo);
+  const bal = getAccountBalance(accountId, ledgerFrom, ledgerTo);
+  const html = `
+    <div class="mb-3 text-sm text-slate-600">Closing Balance: <span class="font-bold ${bal.net>=0?'text-emerald-600':'text-red-600'}">${fmt(Math.abs(bal.net))} ${bal.net>=0?'Dr':'Cr'}</span></div>
+    <div class="table-scroll"><table class="w-full text-sm">
+      <thead><tr class="text-left text-slate-500 border-b"><th class="py-2">Date</th><th>Ref</th><th>Type</th><th>Narration</th><th class="text-right">Debit</th><th class="text-right">Credit</th><th class="text-right">Balance</th></tr></thead>
+      <tbody>
+      ${rows.length? rows.map(r=>`
+        <tr class="border-b">
+          <td class="py-2">${r.date}</td><td>${r.billNo}</td><td>${r.type}</td><td>${r.narration}</td>
+          <td class="text-right">${r.debit?fmt(r.debit):''}</td>
+          <td class="text-right">${r.credit?fmt(r.credit):''}</td>
+          <td class="text-right font-medium">${fmt(Math.abs(r.balance))} ${r.balance>=0?'Dr':'Cr'}</td>
+        </tr>`).join('') : '<tr><td colspan="7" class="text-center py-6 text-slate-400">No transactions in this account</td></tr>'}
+      </tbody>
+    </table></div>`;
+  document.getElementById('ledgerContent').innerHTML = html;
+}
+
+/* ================= INVENTORY ================= */
+function renderInventory(){
+  return `
+  <div class="bg-white rounded-xl shadow-sm border p-4">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-semibold">Inventory Items</h3>
+      <button id="addItemBtn" class="btn-primary px-3 py-2 rounded-lg text-sm flex items-center gap-1"><i data-lucide="plus" class="w-4 h-4"></i>Add Item</button>
+    </div>
+    <div class="table-scroll"><table class="w-full text-sm">
+      <thead><tr class="text-left text-slate-500 border-b"><th class="py-2">Item Name</th><th>Unit</th><th>Qty</th><th>Rate</th><th>Value</th><th>Status</th></tr></thead>
+      <tbody>
+      ${DB.items.length? DB.items.map(i=>`
+        <tr class="border-b">
+          <td class="py-2">${i.name}</td><td>${i.unit}</td><td>${i.qty}</td><td>${fmt(i.rate)}</td><td>${fmt(i.qty*i.rate)}</td>
+          <td>${i.qty<10? '<span class="px-2 py-0.5 bg-red-50 text-red-600 rounded text-xs">Low Stock</span>' : '<span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs">In Stock</span>'}</td>
+        </tr>`).join('') : '<tr><td colspan="6" class="text-center py-6 text-slate-400">No items yet. Click "Add Item" to get started.</td></tr>'}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+/* ================= RECEIPTS & PAYMENTS REGISTER ================= */
+function getReceiptsPayments(){
+  return DB.vouchers.filter(v=>v.type==='Receipt' || v.type==='Payment').map(v=>{
+    const cashEntry = v.entries.find(e=>e.account==='CASH' || e.account==='BANK');
+    const partyEntry = v.entries.find(e=>e.party);
+    let partyLabel = '—';
+    if(partyEntry){
+      const list = v.type==='Receipt' ? DB.customers : DB.vendors;
+      const p = list.find(x=>x.id===partyEntry.party);
+      partyLabel = p ? p.name : 'Unknown';
+    }
+    return {
+      id: v.id, date: v.date, type: v.type, billNo: v.billNo||v.id,
+      party: partyLabel, amount: v.type==='Receipt' ? (cashEntry?cashEntry.debit:0) : (cashEntry?cashEntry.credit:0),
+      mode: cashEntry ? accountName(cashEntry.account) : '', narration: v.narration||''
+    };
+  }).sort((a,b)=> b.date.localeCompare(a.date));
+}
+function filterReceiptsPayments(list, search, from, to){
+  const q = (search||'').trim().toLowerCase();
+  return list.filter(r=>{
+    if(from && r.date < from) return false;
+    if(to && r.date > to) return false;
+    if(q && !r.party.toLowerCase().includes(q) && !r.billNo.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function renderReceiptsPayments(){
+  const filtered = filterReceiptsPayments(getReceiptsPayments(), rpSearch, rpFrom, rpTo);
+  return `
+  <div class="bg-white rounded-xl shadow-sm border p-4">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <h3 class="font-semibold">Receipts & Payments Register</h3>
+      <button id="rpPrintBtn" class="text-sm px-3 py-1.5 rounded-lg border flex items-center gap-1"><i data-lucide="printer" class="w-4 h-4"></i>Print</button>
+    </div>
+    <div class="mb-3 space-y-2">
+      <input id="rpSearchInput" value="${rpSearch}" placeholder="Search by party or reference..." class="w-full sm:max-w-md border rounded-lg px-3 py-2 text-sm">
+      <div class="flex items-center gap-2 flex-wrap">
+        <label class="text-xs text-slate-500">From:</label><input type="date" id="rpFromDate" value="${rpFrom}" class="border rounded px-2 py-1 text-xs">
+        <label class="text-xs text-slate-500">To:</label><input type="date" id="rpToDate" value="${rpTo}" class="border rounded px-2 py-1 text-xs">
+        <button id="rpFilterResetBtn" class="text-xs px-2 py-1 rounded border">Reset</button>
+      </div>
+    </div>
+    <div id="rpTotalsBar" class="text-sm mb-3 font-medium">${rpTotalsHtml(filtered)}</div>
+    <div class="table-scroll">
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-slate-500 border-b"><th class="py-2">Date</th><th>Type</th><th>Party</th><th>Mode</th><th>Reference/Narration</th><th class="text-right">Amount</th></tr></thead>
+      <tbody id="rpTableBody">${rpRowsHtml(filtered)}</tbody>
+    </table>
+    </div>
+  </div>`;
+}
+function rpTotalsHtml(list){
+  const totalReceipts = list.filter(r=>r.type==='Receipt').reduce((s,r)=>s+r.amount,0);
+  const totalPayments = list.filter(r=>r.type==='Payment').reduce((s,r)=>s+r.amount,0);
+  return `<span class="text-emerald-600">Total Receipts: ${fmt(totalReceipts)}</span> &nbsp;·&nbsp; <span class="text-red-600">Total Payments: ${fmt(totalPayments)}</span>`;
+}
+function rpRowsHtml(list){
+  return list.length ? list.map(r=>`
+    <tr class="border-b">
+      <td class="py-2">${r.date}</td>
+      <td><span class="px-2 py-0.5 rounded text-xs ${r.type==='Receipt'?'bg-emerald-50 text-emerald-600':'bg-red-50 text-red-600'}">${r.type}</span></td>
+      <td>${r.party}</td><td>${r.mode}</td><td>${r.billNo}${r.narration?' — '+r.narration:''}</td>
+      <td class="text-right font-medium ${r.type==='Receipt'?'text-emerald-600':'text-red-600'}">${fmt(r.amount)}</td>
+    </tr>`).join('') : '<tr><td colspan="6" class="text-center py-6 text-slate-400">No receipts or payments match your filters</td></tr>';
+}
+function bindReceiptsPaymentsHandlers(){
+  function apply(){
+    rpSearch = document.getElementById('rpSearchInput').value;
+    rpFrom = document.getElementById('rpFromDate').value;
+    rpTo = document.getElementById('rpToDate').value;
+    const filtered = filterReceiptsPayments(getReceiptsPayments(), rpSearch, rpFrom, rpTo);
+    document.getElementById('rpTableBody').innerHTML = rpRowsHtml(filtered);
+    document.getElementById('rpTotalsBar').innerHTML = rpTotalsHtml(filtered);
+  }
+  document.getElementById('rpSearchInput').addEventListener('input', apply);
+  document.getElementById('rpFromDate').addEventListener('change', apply);
+  document.getElementById('rpToDate').addEventListener('change', apply);
+  document.getElementById('rpFilterResetBtn').addEventListener('click', ()=>{ rpSearch=''; rpFrom=''; rpTo=''; render(); });
+  document.getElementById('rpPrintBtn').addEventListener('click', ()=>{
+    const filtered = filterReceiptsPayments(getReceiptsPayments(), rpSearch, rpFrom, rpTo);
+    printReceiptsPayments(filtered);
+  });
+}
+function printReceiptsPayments(list){
+  const rows = list.map(r=>`
+    <tr><td style="padding:5px;border:1px solid #ccc;">${r.date}</td><td style="padding:5px;border:1px solid #ccc;">${r.type}</td>
+    <td style="padding:5px;border:1px solid #ccc;">${r.party}</td><td style="padding:5px;border:1px solid #ccc;">${r.mode}</td>
+    <td style="padding:5px;border:1px solid #ccc;">${r.billNo}${r.narration?' — '+r.narration:''}</td>
+    <td style="padding:5px;border:1px solid #ccc;text-align:right;">${fmt(r.amount)}</td></tr>`).join('');
+  document.getElementById('print-area').innerHTML = `
+    <div style="font-family:Arial,sans-serif;max-width:850px;margin:0 auto;padding:20px;color:#111;">
+      <div style="text-align:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:15px;">
+        <h1 style="margin:0;font-size:20px;">${DB.company.name}</h1>
+        <div style="font-size:16px;font-weight:bold;margin-top:8px;">RECEIPTS &amp; PAYMENTS REGISTER</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#eee;"><th style="padding:5px;border:1px solid #ccc;">Date</th><th style="padding:5px;border:1px solid #ccc;">Type</th><th style="padding:5px;border:1px solid #ccc;">Party</th><th style="padding:5px;border:1px solid #ccc;">Mode</th><th style="padding:5px;border:1px solid #ccc;">Reference</th><th style="padding:5px;border:1px solid #ccc;">Amount</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="6" style="padding:10px;text-align:center;">No records</td></tr>'}</tbody>
+      </table>
+      <div style="margin-top:10px;font-size:13px;font-weight:bold;">${rpTotalsHtml(list).replace(/<[^>]+>/g,'')}</div>
+    </div>`;
+  window.print();
+}
+
+/* ================= BUDGETING ================= */
+function renderBudget(){
+  const expAccounts = DB.accounts.filter(a=>a.type==='Expense');
+  const now = new Date();
+  const curMonth = now.toISOString().slice(0,7);
+  const curYear = String(now.getFullYear());
+
+  const rows = DB.budgets.map(b=>{
+    let actual = 0;
+    if(b.period==='monthly'){
+      actual = getAccountBalance(b.account, b.month+'-01', b.month+'-31').debit;
+    } else {
+      actual = getAccountBalance(b.account, b.year+'-01-01', b.year+'-12-31').debit;
+    }
+    const pct = b.amount>0 ? Math.min(200, (actual/b.amount*100)) : 0;
+    let barColor = 'bg-emerald-500';
+    if(pct>=100) barColor='bg-red-600'; else if(pct>=80) barColor='bg-amber-500';
+    return {...b, actual, pct, barColor};
+  });
+
+  return `
+  <div class="bg-white rounded-xl shadow-sm border p-4 mb-4">
+    <h3 class="font-semibold mb-4">Set a Budget Target</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 items-end">
+      <div><label class="text-xs text-slate-500">Expense Account</label>
+        <select id="budgetAccount" class="w-full border rounded-lg px-3 py-2 text-sm">${expAccounts.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select>
+      </div>
+      <div><label class="text-xs text-slate-500">Period</label>
+        <select id="budgetPeriod" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="monthly">Monthly</option><option value="yearly">Yearly</option>
+        </select>
+      </div>
+      <div><label class="text-xs text-slate-500">Month</label><input id="budgetMonth" type="month" value="${curMonth}" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+      <div><label class="text-xs text-slate-500">Target Amount</label><input id="budgetAmount" type="number" min="0" step="0.01" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+      <button id="addBudgetBtn" class="btn-primary px-3 py-2 rounded-lg text-sm">Add Budget</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    ${rows.length? rows.map(b=>`
+      <div class="bg-white rounded-xl shadow-sm border p-4">
+        <div class="flex justify-between text-sm mb-2">
+          <span class="font-medium">${accountName(b.account)} <span class="text-xs text-slate-400">(${b.period==='monthly'?b.month:b.year})</span></span>
+          <span>${fmt(b.actual)} / ${fmt(b.amount)}</span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-2.5 mb-1">
+          <div class="${b.barColor} h-2.5 rounded-full" style="width:${Math.min(100,b.pct)}%"></div>
+        </div>
+        <div class="text-xs ${b.pct>=100?'text-red-600':b.pct>=80?'text-amber-600':'text-slate-500'}">${b.pct.toFixed(0)}% used ${b.pct>=100?'— Over budget!':b.pct>=80?'— Approaching limit':''}</div>
+        <button data-id="${b.id}" class="removeBudgetBtn text-xs text-red-500 mt-2">Remove</button>
+      </div>`).join('') : '<p class="text-slate-400 text-sm col-span-full">No budgets set yet.</p>'}
+  </div>`;
+}
+
+/* ================= REPORTS ================= */
+let reportFrom = '', reportTo = '';
+function renderReports(){
+  return `
+  <div class="space-y-4">
+    <div class="flex gap-2 bg-white rounded-xl shadow-sm border p-2 w-fit flex-wrap">
+      <button data-r="daybook" class="reportTab px-3 py-1.5 rounded-lg text-sm btn-primary">Daybook</button>
+      <button data-r="trial" class="reportTab px-3 py-1.5 rounded-lg text-sm">Trial Balance</button>
+      <button data-r="pnl" class="reportTab px-3 py-1.5 rounded-lg text-sm">Profit & Loss</button>
+      <button data-r="balancesheet" class="reportTab px-3 py-1.5 rounded-lg text-sm">Balance Sheet</button>
+      <button data-r="monthly" class="reportTab px-3 py-1.5 rounded-lg text-sm">Monthly Report</button>
+    </div>
+    <div id="reportBody" class="bg-white rounded-xl shadow-sm border p-4"></div>
+  </div>`;
+}
+function renderReportBody(type){
+  const body = document.getElementById('reportBody');
+  document.querySelectorAll('.reportTab').forEach(b=>{
+    b.classList.toggle('btn-primary', b.dataset.r===type);
+  });
+  const dateFilterBar = (idPrefix)=>`
+    <div class="flex items-center gap-2 mb-3 flex-wrap">
+      <label class="text-sm">From:</label><input type="date" id="${idPrefix}From" value="${reportFrom}" class="border rounded px-2 py-1 text-sm">
+      <label class="text-sm">To:</label><input type="date" id="${idPrefix}To" value="${reportTo}" class="border rounded px-2 py-1 text-sm">
+      <button id="${idPrefix}FilterBtn" class="bg-slate-800 text-white text-sm px-3 py-1.5 rounded-lg">Filter</button>
+      <button id="${idPrefix}ResetBtn" class="text-sm px-3 py-1.5 rounded-lg border">Reset</button>
+    </div>`;
+
+  if(type==='daybook'){
+    const rows = filterVouchers(reportFrom, reportTo).sort((a,b)=>a.date.localeCompare(b.date));
+    body.innerHTML = dateFilterBar('daybook') + `
+      <div class="table-scroll"><table class="w-full text-sm"><thead><tr class="text-left text-slate-500 border-b"><th class="py-2">Date</th><th>Ref</th><th>Type</th><th>Narration</th><th class="text-right">Amount</th></tr></thead>
+      <tbody>
+      ${rows.map(v=>{
+        const amt = v.entries.reduce((s,e)=>s+(e.debit||0),0);
+        return `<tr class="border-b"><td class="py-2">${v.date}</td><td>${v.billNo||v.id}</td><td><span class="px-2 py-0.5 rounded text-xs bg-slate-100">${v.type}</span></td><td>${v.narration||partyName(v)}</td><td class="text-right">${fmt(amt)}</td></tr>`;
+      }).join('') || '<tr><td colspan="5" class="text-center py-6 text-slate-400">No vouchers</td></tr>'}
+      </tbody></table></div>`;
+    bindReportDateFilter('daybook');
+  }
+  else if(type==='trial'){
+    let totalD=0, totalC=0;
+    const rows = DB.accounts.map(a=>{
+      const b = getAccountBalance(a.id, reportFrom, reportTo);
+      totalD += b.debit; totalC += b.credit;
+      return {name:a.name, type:a.type, debit:b.debit, credit:b.credit};
+    });
+    body.innerHTML = dateFilterBar('trial') + `
+      <div class="table-scroll"><table class="w-full text-sm"><thead><tr class="text-left text-slate-500 border-b"><th class="py-2">Account</th><th>Type</th><th class="text-right">Debit</th><th class="text-right">Credit</th></tr></thead>
+      <tbody>
+      ${rows.map(r=>`<tr class="border-b"><td class="py-2">${r.name}</td><td class="text-xs text-slate-500">${r.type}</td><td class="text-right">${r.debit?fmt(r.debit):'-'}</td><td class="text-right">${r.credit?fmt(r.credit):'-'}</td></tr>`).join('')}
+      </tbody>
+      <tfoot><tr class="font-bold border-t"><td class="py-2" colspan="2">Total</td><td class="text-right">${fmt(totalD)}</td><td class="text-right">${fmt(totalC)}</td></tr></tfoot>
+      </table></div>
+      <div class="mt-3 text-sm ${Math.abs(totalD-totalC)<0.01?'text-emerald-600':'text-red-600'} font-medium flex items-center gap-1">
+        <i data-lucide="${Math.abs(totalD-totalC)<0.01?'check-circle':'alert-triangle'}" class="w-4 h-4"></i>
+        ${Math.abs(totalD-totalC)<0.01?'Trial Balance is balanced.':'Trial Balance mismatch!'}
+      </div>`;
+    bindReportDateFilter('trial');
+    lucide.createIcons();
+  }
+  else if(type==='pnl'){
+    const revenue = getAccountBalance('SALES', reportFrom, reportTo).credit;
+    const purchases = getAccountBalance('PURCH', reportFrom, reportTo).debit;
+    const expenses = getAccountBalance('EXP', reportFrom, reportTo).debit;
+    const net = revenue - purchases - expenses;
+    body.innerHTML = dateFilterBar('pnl') + `
+      <div class="table-scroll"><table class="w-full text-sm max-w-lg">
+        <tr class="border-b"><td class="py-2">Revenue — Sales</td><td class="text-right font-medium">${fmt(revenue)}</td></tr>
+        <tr class="border-b"><td class="py-2">Less: Cost of Goods (Purchases)</td><td class="text-right font-medium">(${fmt(purchases)})</td></tr>
+        <tr class="border-b"><td class="py-2">Less: General Expenses</td><td class="text-right font-medium">(${fmt(expenses)})</td></tr>
+        <tr class="font-bold text-base border-t"><td class="py-3">Net ${net>=0?'Profit':'Loss'}</td><td class="text-right ${net>=0?'text-emerald-600':'text-red-600'}">${fmt(Math.abs(net))}</td></tr>
+      </table></div>`;
+    bindReportDateFilter('pnl');
+  }
+  else if(type==='balancesheet'){
+    const asOf = reportTo || todayISO();
+    const groups = {Asset:[], Liability:[], Equity:[]};
+    DB.accounts.forEach(a=>{
+      if(!groups[a.type]) return; // Revenue/Expense accounts aren't part of the balance sheet
+      const bal = getAccountBalance(a.id, '', asOf).net;
+      groups[a.type].push({name:a.name, bal});
+    });
+    // Retained earnings (current period P&L) rolled into Equity so the sheet balances.
+    const revenue = getAccountBalance('SALES', '', asOf).credit;
+    const purchases = getAccountBalance('PURCH', '', asOf).debit;
+    const expenses = getAccountBalance('EXP', '', asOf).debit;
+    const retainedEarnings = revenue - purchases - expenses;
+    groups.Equity.push({name:'Retained Earnings (Net Profit/Loss to date)', bal: retainedEarnings});
+
+    const totalAssets = groups.Asset.reduce((s,a)=>s+a.bal, 0);
+    const totalLiabilities = groups.Liability.reduce((s,a)=>s+a.bal, 0);
+    const totalEquity = groups.Equity.reduce((s,a)=>s+a.bal, 0);
+    const balanced = Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.01;
+
+    const groupTable = (label, rows, total)=> `
+      <div class="mb-4">
+        <div class="font-semibold text-sm mb-1">${label}</div>
+        <div class="table-scroll"><table class="w-full text-sm">
+          <tbody>
+          ${rows.length ? rows.map(r=>`<tr class="border-b"><td class="py-1.5">${r.name}</td><td class="text-right py-1.5">${fmt(Math.abs(r.bal))}</td></tr>`).join('') : '<tr><td class="py-1.5 text-slate-400" colspan="2">No accounts</td></tr>'}
+          </tbody>
+          <tfoot><tr class="font-semibold border-t"><td class="py-2">Total ${label}</td><td class="text-right">${fmt(Math.abs(total))}</td></tr></tfoot>
+        </table></div>
+      </div>`;
+
+    body.innerHTML = `
+      <div class="flex items-center gap-2 mb-3 flex-wrap">
+        <label class="text-sm">As of:</label><input type="date" id="bsAsOfDate" value="${asOf}" class="border rounded px-2 py-1 text-sm">
+        <button id="bsFilterBtn" class="bg-slate-800 text-white text-sm px-3 py-1.5 rounded-lg">Apply</button>
+        <button id="bsResetBtn" class="text-sm px-3 py-1.5 rounded-lg border">Reset</button>
+        <button id="bsPrintBtn" class="text-sm px-3 py-1.5 rounded-lg border flex items-center gap-1 ml-auto"><i data-lucide="printer" class="w-4 h-4"></i>Print</button>
+      </div>
+      <div id="balanceSheetBody">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            ${groupTable('Assets', groups.Asset, totalAssets)}
+          </div>
+          <div>
+            ${groupTable('Liabilities', groups.Liability, totalLiabilities)}
+            ${groupTable('Equity', groups.Equity, totalEquity)}
+          </div>
+        </div>
+        <div class="mt-2 text-sm ${balanced?'text-emerald-600':'text-red-600'} font-medium flex items-center gap-1">
+          <i data-lucide="${balanced?'check-circle':'alert-triangle'}" class="w-4 h-4"></i>
+          ${balanced ? `Balanced: Assets (${fmt(totalAssets)}) = Liabilities + Equity (${fmt(totalLiabilities+totalEquity)})` : `Mismatch: Assets (${fmt(totalAssets)}) ≠ Liabilities + Equity (${fmt(totalLiabilities+totalEquity)})`}
+        </div>
+      </div>`;
+    document.getElementById('bsFilterBtn').addEventListener('click', ()=>{ reportTo = document.getElementById('bsAsOfDate').value; renderReportBody('balancesheet'); });
+    document.getElementById('bsResetBtn').addEventListener('click', ()=>{ reportTo=''; renderReportBody('balancesheet'); });
+    document.getElementById('bsPrintBtn').addEventListener('click', ()=> printBalanceSheet(asOf, groups, totalAssets, totalLiabilities, totalEquity, balanced));
+    lucide.createIcons();
+  }
+  else if(type==='monthly'){
+    const months = {};
+    DB.vouchers.forEach(v=>{
+      const m = v.date.slice(0,7);
+      if(!months[m]) months[m] = {sales:0, purchases:0, expenses:0};
+    });
+    Object.keys(months).forEach(m=>{
+      months[m].sales = getAccountBalance('SALES', m+'-01', m+'-31').credit;
+      months[m].purchases = getAccountBalance('PURCH', m+'-01', m+'-31').debit;
+      months[m].expenses = getAccountBalance('EXP', m+'-01', m+'-31').debit;
+    });
+    const sortedMonths = Object.keys(months).sort();
+    body.innerHTML = `
+      <div class="table-scroll"><table class="w-full text-sm">
+        <thead><tr class="text-left text-slate-500 border-b"><th class="py-2">Month</th><th class="text-right">Sales</th><th class="text-right">Purchases</th><th class="text-right">Expenses</th><th class="text-right">Net Profit</th></tr></thead>
+        <tbody>
+        ${sortedMonths.length? sortedMonths.map(m=>{
+          const net = months[m].sales - months[m].purchases - months[m].expenses;
+          return `<tr class="border-b"><td class="py-2">${m}</td><td class="text-right">${fmt(months[m].sales)}</td><td class="text-right">${fmt(months[m].purchases)}</td><td class="text-right">${fmt(months[m].expenses)}</td><td class="text-right font-medium ${net>=0?'text-emerald-600':'text-red-600'}">${fmt(net)}</td></tr>`;
+        }).join('') : '<tr><td colspan="5" class="text-center py-6 text-slate-400">No data yet</td></tr>'}
+        </tbody>
+      </table></div>`;
+  }
+}
+function bindReportDateFilter(prefix){
+  const filterBtn = document.getElementById(prefix+'FilterBtn');
+  const resetBtn = document.getElementById(prefix+'ResetBtn');
+  if(filterBtn) filterBtn.addEventListener('click', ()=>{
+    reportFrom = document.getElementById(prefix+'From').value;
+    reportTo = document.getElementById(prefix+'To').value;
+    renderReportBody(prefix);
+  });
+  if(resetBtn) resetBtn.addEventListener('click', ()=>{ reportFrom=''; reportTo=''; renderReportBody(prefix); });
+}
+
+/* ================= SETTINGS ================= */
+function renderSettings(){
+  return `
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-white rounded-xl shadow-sm border p-4">
+      <h3 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="building-2" class="w-4 h-4"></i>Company Profile</h3>
+      <div class="space-y-2 text-sm">
+        <div><label class="text-xs text-slate-500">Company Name</label><input id="companyName" class="w-full border rounded-lg px-3 py-2" value="${DB.company.name}"></div>
+        <div><label class="text-xs text-slate-500">PAN Number</label><input id="companyPan" class="w-full border rounded-lg px-3 py-2" value="${DB.company.pan}"></div>
+        <div><label class="text-xs text-slate-500">Address</label><input id="companyAddress" class="w-full border rounded-lg px-3 py-2" value="${DB.company.address}"></div>
+        <div><label class="text-xs text-slate-500">Fiscal Year (B.S.)</label><input id="companyFY" class="w-full border rounded-lg px-3 py-2" value="${DB.company.fiscalYear}"></div>
+        <button id="saveCompany" class="btn-primary px-4 py-2 rounded-lg text-sm mt-2">Save Company Info</button>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border p-4">
+      <h3 class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="database" class="w-4 h-4"></i>Data Backup &amp; Restore</h3>
+      <p class="text-sm text-slate-500 mb-3">Export your complete database or restore from a previous backup file.</p>
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button id="exportBtn" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i>Export Backup (.json)</button>
+        <label class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer">
+          <i data-lucide="upload" class="w-4 h-4"></i>Import Backup
+          <input id="importFile" type="file" accept=".json" class="hidden">
+        </label>
+      </div>
+      <div class="border-t pt-4">
+        <h4 class="font-medium text-red-600 mb-2 flex items-center gap-2"><i data-lucide="triangle-alert" class="w-4 h-4"></i>Danger Zone</h4>
+        <button id="resetBtn" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm">Hard Reset System</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ================= EVENT HANDLERS ================= */
+function attachTabHandlers(){
+  if(currentTab==='dashboard') bindDashboardHandlers();
+  if(currentTab==='sales') bindSalesHandlers();
+  if(currentTab==='purchases') bindPurchaseHandlers();
+  if(currentTab==='journal') bindJournalHandlers();
+  if(currentTab==='transfer') bindTransferHandlers();
+  if(currentTab==='parties') currentPartyView ? bindPartyDetailHandlers() : bindPartiesHandlers();
+  if(currentTab==='ledgers') bindLedgerHandlers();
+  if(currentTab==='inventory') bindInventoryHandlers();
+  if(currentTab==='receiptspayments') bindReceiptsPaymentsHandlers();
+  if(currentTab==='budget') bindBudgetHandlers();
+  if(currentTab==='reports') bindReportHandlers();
+  if(currentTab==='settings') bindSettingsHandlers();
+}
+
+/* ---- DASHBOARD ---- */
+function bindDashboardHandlers(){
+  document.querySelectorAll('.topPartyLink').forEach(btn=>btn.addEventListener('click', ()=>{
+    currentTab='parties'; partyTypeTab = btn.dataset.ptype;
+    currentPartyView = {id: btn.dataset.pid, type: btn.dataset.ptype};
+    partyFrom=''; partyTo=''; partySelectedTx=[];
+    render();
+  }));
+}
+
+/* ---- SALES ---- */
+let saleCustomerCombo = null, saleItemCombo = null;
+function bindSalesHandlers(){
+  if(DB.items.length===0) return;
+
+  const activeCustomers = DB.customers.filter(c=>c.active!==false);
+  saleCustomerCombo = mountSearchCombo(document.getElementById('saleCustomerCombo'), {
+    options: [{id:'WALKIN', name:'Walk-in Cash Customer', pan:''}, ...activeCustomers],
+    value: 'WALKIN',
+    placeholder: 'Type to search customer...',
+    getLabel: o=>o.name,
+    getSub: o=>o.pan,
+    onChange: ()=>{}
+  });
+
+  const rateInput = document.getElementById('saleRate');
+  function syncRate(itemId){ const it = DB.items.find(i=>i.id===itemId); if(it) rateInput.value = it.rate; }
+  saleItemCombo = mountSearchCombo(document.getElementById('saleItemCombo'), {
+    options: DB.items,
+    value: DB.items[0] ? DB.items[0].id : '',
+    placeholder: 'Type to search item...',
+    getLabel: o=>o.name,
+    getSub: o=>`stock: ${o.qty}`,
+    onChange: (id)=>{ if(id) syncRate(id); }
+  });
+  if(DB.items[0]) syncRate(DB.items[0].id);
+
+  document.getElementById('addSaleLine').addEventListener('click', ()=>{
+    const itemId = saleItemCombo.getValue();
+    const item = DB.items.find(i=>i.id===itemId);
+    if(!item){ toast('Select an item first','warning'); return; }
+    const qty = Number(document.getElementById('saleQty').value);
+    const rate = Number(document.getElementById('saleRate').value);
+    const discount = Number(document.getElementById('saleDiscount').value)||0;
+    if(!qty || qty<=0){ toast('Enter a valid quantity','warning'); return; }
+    const alreadyInCart = currentSaleCart.filter(l=>l.itemId===itemId).reduce((s,l)=>s+l.qty,0);
+    if(qty + alreadyInCart > item.qty){ toast(`Insufficient stock for ${item.name}. Available: ${item.qty}`,'error'); return; }
+    currentSaleCart.push({itemId, name:item.name, qty, rate, discount});
+    render();
+  });
+  document.querySelectorAll('.removeSaleLine').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ currentSaleCart.splice(Number(btn.dataset.idx),1); render(); });
+  });
+  document.getElementById('clearSale').addEventListener('click', ()=>{ currentSaleCart=[]; render(); });
+  document.getElementById('vatToggle').addEventListener('change', (e)=>{
+    const sub = currentSaleCart.reduce((s,l)=>s+l.qty*l.rate-(l.discount||0),0);
+    const vat = e.target.checked ? +(sub*0.13).toFixed(2) : 0;
+    document.getElementById('vatLine').style.display = e.target.checked ? '' : 'none';
+    document.getElementById('saleGrandTotal').textContent = fmt(sub+vat);
+  });
+
+  document.getElementById('saveSale').addEventListener('click', ()=>{
+    if(currentSaleCart.length===0){ toast('Add at least one item to the invoice','warning'); return; }
+    const custId = saleCustomerCombo.getValue() || 'WALKIN';
+    const date = document.getElementById('saleDate').value || todayISO();
+    const dueDate = document.getElementById('saleDueDate').value || null;
+    const applyVat = document.getElementById('vatToggle').checked;
+    const sub = currentSaleCart.reduce((s,l)=>s+l.qty*l.rate-(l.discount||0),0);
+    const vat = applyVat ? +(sub*0.13).toFixed(2) : 0;
+    const total = +(sub+vat).toFixed(2);
+
+    for(const l of currentSaleCart){
+      const item = DB.items.find(i=>i.id===l.itemId);
+      if(l.qty > item.qty){ toast(`Insufficient stock for ${item.name}`,'error'); return; }
+    }
+
+    const entries = [];
+    if(custId==='WALKIN'){
+      entries.push({account:'CASH', debit:total, credit:0});
+    } else {
+      entries.push({account:'AR', debit:total, credit:0, party:custId});
+    }
+    entries.push({account:'SALES', debit:0, credit:sub});
+    if(vat>0) entries.push({account:'VAT', debit:0, credit:vat});
+
+    DB.billCounter++;
+    const voucher = {
+      id: uid('V'), type:'Sale', date, dueDate, billNo:'INV-'+DB.billCounter,
+      partyId:custId, partyType:'customer',
+      items: currentSaleCart.map(l=>({itemId:l.itemId, name:l.name, qty:l.qty, rate:l.rate, discount:l.discount, amount:l.qty*l.rate-(l.discount||0)})),
+      subtotal:sub, vat, total, vatApplied:applyVat,
+      entries, narration:'Sales invoice'
+    };
+    try{
+      postVoucher(voucher);
+      currentSaleCart.forEach(l=>{ const item = DB.items.find(i=>i.id===l.itemId); item.qty -= l.qty; });
+      saveDB();
+      toast('Invoice '+voucher.billNo+' posted successfully','success');
+      currentSaleCart = [];
+      render();
+      printInvoice(voucher);
+    }catch(err){ toast(err.message,'error'); }
+  });
+
+  document.querySelectorAll('.printSaleBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const v = DB.vouchers.find(x=>x.id===btn.dataset.vid);
+      printInvoice(v);
+    });
+  });
+
+  bindHistoryFilterBar('sales',
+    (s,f,t)=>{ salesSearch=s; salesFrom=f; salesTo=t; refreshSalesHistoryPanel(); },
+    ()=>{ salesSearch=''; salesFrom=''; salesTo=''; render(); }
+  );
+}
+function refreshSalesHistoryPanel(){
+  // Update only the history list (not the whole form) so typing in the search box keeps focus.
+  const filtered = filterVoucherList(DB.vouchers.filter(v=>v.type==='Sale'), salesSearch, salesFrom, salesTo);
+  const list = document.getElementById('salesHistoryList');
+  if(!list) return;
+  list.innerHTML = filtered.slice().reverse().map(v=>`
+    <div class="border rounded-lg p-3 text-sm flex justify-between items-center gap-2">
+      <div class="min-w-0">
+        <div class="font-medium truncate">${v.billNo}</div>
+        <div class="text-xs text-slate-500 truncate">${v.date} · ${partyName(v)}</div>
+      </div>
+      <div class="text-right flex-shrink-0">
+        <div class="font-bold">${fmt(v.total)}</div>
+        <button data-vid="${v.id}" class="printSaleBtn text-sm mt-1 py-1 px-1" style="color:var(--accent)"><i data-lucide="printer" class="w-3 h-3 inline"></i> Print</button>
+      </div>
+    </div>`).join('') || '<p class="text-slate-400 text-sm">No sales match your filters.</p>';
+  lucide.createIcons();
+  list.querySelectorAll('.printSaleBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ printInvoice(DB.vouchers.find(x=>x.id===btn.dataset.vid)); });
+  });
+}
+
+/* ---- PURCHASES ---- */
+let purchVendorCombo = null, purchItemCombo = null;
+function bindPurchaseHandlers(){
+  const comboHost = document.getElementById('purchItemCombo');
+  if(!comboHost) return;
+
+  const activeVendors = DB.vendors.filter(v=>v.active!==false);
+  purchVendorCombo = mountSearchCombo(document.getElementById('purchVendorCombo'), {
+    options: activeVendors,
+    value: activeVendors[0] ? activeVendors[0].id : '',
+    placeholder: 'Type to search vendor...',
+    getLabel: o=>o.name,
+    getSub: o=>o.pan,
+    onChange: ()=>{}
+  });
+
+  const rateInput = document.getElementById('purchRate');
+  function syncRate(itemId){ const it = DB.items.find(i=>i.id===itemId); if(it) rateInput.value = it.rate; }
+  purchItemCombo = mountSearchCombo(comboHost, {
+    options: DB.items,
+    value: DB.items[0] ? DB.items[0].id : '',
+    placeholder: 'Type to search item...',
+    getLabel: o=>o.name,
+    getSub: o=>`stock: ${o.qty}`,
+    onChange: (id)=>{ if(id) syncRate(id); }
+  });
+  if(DB.items[0]) syncRate(DB.items[0].id);
+
+  document.getElementById('addPurchLine').addEventListener('click', ()=>{
+    const itemId = purchItemCombo.getValue();
+    const item = DB.items.find(i=>i.id===itemId);
+    if(!item){ toast('Select an item first','warning'); return; }
+    const qty = Number(document.getElementById('purchQty').value);
+    const rate = Number(document.getElementById('purchRate').value);
+    if(!qty || qty<=0){ toast('Enter a valid quantity','warning'); return; }
+    currentPurchaseCart.push({itemId, name:item.name, qty, rate});
+    render();
+  });
+  document.querySelectorAll('.removePurchLine').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ currentPurchaseCart.splice(Number(btn.dataset.idx),1); render(); });
+  });
+  document.getElementById('clearPurchase').addEventListener('click', ()=>{ currentPurchaseCart=[]; render(); });
+
+  document.getElementById('savePurchase').addEventListener('click', ()=>{
+    if(currentPurchaseCart.length===0){ toast('Add at least one item','warning'); return; }
+    const vendId = purchVendorCombo.getValue();
+    if(!vendId){ toast('Select a vendor','warning'); return; }
+    const date = document.getElementById('purchDate').value || todayISO();
+    const applyVat = document.getElementById('purchVatToggle').checked;
+    const sub = currentPurchaseCart.reduce((s,l)=>s+l.qty*l.rate,0);
+    const vat = applyVat ? +(sub*0.13).toFixed(2) : 0;
+    const total = +(sub+vat).toFixed(2);
+
+    const entries = [ {account:'PURCH', debit:sub, credit:0} ];
+    if(vat>0) entries.push({account:'VAT', debit:vat, credit:0});
+    entries.push({account:'AP', debit:0, credit:total, party:vendId});
+
+    DB.billCounter++;
+    const voucher = {
+      id: uid('V'), type:'Purchase', date, billNo:'PUR-'+DB.billCounter,
+      partyId:vendId, partyType:'vendor',
+      items: currentPurchaseCart.map(l=>({itemId:l.itemId, name:l.name, qty:l.qty, rate:l.rate, amount:l.qty*l.rate})),
+      subtotal:sub, vat, total, vatApplied:applyVat,
+      entries, narration:'Purchase entry'
+    };
+    try{
+      postVoucher(voucher);
+      currentPurchaseCart.forEach(l=>{ const item = DB.items.find(i=>i.id===l.itemId); item.qty += l.qty; });
+      saveDB();
+      toast('Purchase '+voucher.billNo+' posted successfully','success');
+      currentPurchaseCart = [];
+      render();
+    }catch(err){ toast(err.message,'error'); }
+  });
+
+  bindHistoryFilterBar('purch',
+    (s,f,t)=>{ purchSearch=s; purchFrom=f; purchTo=t; refreshPurchHistoryPanel(); },
+    ()=>{ purchSearch=''; purchFrom=''; purchTo=''; render(); }
+  );
+}
+function refreshPurchHistoryPanel(){
+  const filtered = filterVoucherList(DB.vouchers.filter(v=>v.type==='Purchase'), purchSearch, purchFrom, purchTo);
+  const list = document.getElementById('purchHistoryList');
+  if(!list) return;
+  list.innerHTML = filtered.slice().reverse().map(v=>`
+    <div class="border rounded-lg p-3 text-sm flex justify-between items-center gap-2">
+      <div class="min-w-0"><div class="font-medium truncate">${v.billNo}</div><div class="text-xs text-slate-500 truncate">${v.date} · ${partyName(v)}</div></div>
+      <div class="font-bold flex-shrink-0">${fmt(v.total)}</div>
+    </div>`).join('') || '<p class="text-slate-400 text-sm">No purchases match your filters.</p>';
+}
+
+/* ---- JOURNAL ---- */
+function bindJournalHandlers(){
+  document.querySelectorAll('.jvAccountCombo').forEach(host=>{
+    const idx = Number(host.dataset.idx);
+    mountSearchCombo(host, {
+      options: DB.accounts,
+      value: jvLines[idx].account,
+      placeholder: 'Type to search account...',
+      getLabel: o=>o.name,
+      getSub: o=>o.type,
+      onChange: (id)=>{ jvLines[idx].account = id; }
+    });
+  });
+  document.querySelectorAll('.jvDebit').forEach(el=>el.addEventListener('input', e=>{ jvLines[e.target.dataset.idx].debit = Number(e.target.value)||0; if(Number(e.target.value)>0) jvLines[e.target.dataset.idx].credit=0; render(); }));
+  document.querySelectorAll('.jvCredit').forEach(el=>el.addEventListener('input', e=>{ jvLines[e.target.dataset.idx].credit = Number(e.target.value)||0; if(Number(e.target.value)>0) jvLines[e.target.dataset.idx].debit=0; render(); }));
+  document.querySelectorAll('.jvRemoveRow').forEach(el=>el.addEventListener('click', e=>{
+    const idx = Number(e.currentTarget.dataset.idx);
+    if(jvLines.length<=2){ toast('A journal voucher needs at least 2 lines','warning'); return; }
+    jvLines.splice(idx,1); render();
+  }));
+  document.getElementById('jvAddRow').addEventListener('click', ()=>{ jvLines.push({account:'',debit:0,credit:0}); render(); });
+
+  const postBtn = document.getElementById('postJV');
+  if(postBtn) postBtn.addEventListener('click', ()=>{
+    const date = document.getElementById('jvDate').value || todayISO();
+    const narration = document.getElementById('jvNarration').value || 'Manual Journal Entry';
+    const cleanLines = jvLines.filter(l=>l.account && (l.debit>0 || l.credit>0));
+    if(cleanLines.length<2){ toast('Add at least two valid account lines','warning'); return; }
+    const totalD = cleanLines.reduce((s,l)=>s+(l.debit||0),0);
+    const totalC = cleanLines.reduce((s,l)=>s+(l.credit||0),0);
+    if(Math.abs(totalD-totalC)>0.005){ toast('Debits and Credits must be equal','error'); return; }
+    DB.jvCounter++;
+    const voucher = { id: uid('V'), type:'Journal', date, billNo:'JV-'+DB.jvCounter, entries: cleanLines.map(l=>({account:l.account, debit:l.debit||0, credit:l.credit||0})), narration };
+    try{
+      postVoucher(voucher);
+      toast('Journal voucher '+voucher.billNo+' posted','success');
+      jvLines = [{account:'',debit:0,credit:0},{account:'',debit:0,credit:0}];
+      render();
+    }catch(err){ toast(err.message,'error'); }
+  });
+}
+
+/* ---- TRANSFER ---- */
+let transferFromCombo = null, transferToCombo = null;
+function bindTransferHandlers(){
+  const fromList = DB.accounts.filter(a=> a.id!=='SALES' && a.id!=='PURCH');
+  const toList = DB.accounts.filter(a=> a.id!=='SALES' && a.id!=='PURCH');
+  transferFromCombo = mountSearchCombo(document.getElementById('transferFromCombo'), {
+    options: fromList, value: transferFromAcc, placeholder: 'Type to search...',
+    getLabel: o=>o.name, getSub: o=>o.type, onChange: (id)=>{ transferFromAcc = id; }
+  });
+  transferToCombo = mountSearchCombo(document.getElementById('transferToCombo'), {
+    options: toList, value: transferToAcc, placeholder: 'Type to search...',
+    getLabel: o=>o.name, getSub: o=>o.type, onChange: (id)=>{ transferToAcc = id; }
+  });
+
+  document.getElementById('postTransfer').addEventListener('click', ()=>{
+    const fromAcc = transferFromCombo.getValue();
+    const toAcc = transferToCombo.getValue();
+    const amount = Number(document.getElementById('transferAmount').value);
+    const date = document.getElementById('transferDate').value || todayISO();
+    const note = document.getElementById('transferNote').value || 'Fund transfer';
+    if(!fromAcc || !toAcc){ toast('Select both From and To accounts','warning'); return; }
+    if(fromAcc===toAcc){ toast('From and To accounts must be different','warning'); return; }
+    if(!amount || amount<=0){ toast('Enter a valid amount','warning'); return; }
+    DB.trCounter++;
+    const voucher = {
+      id: uid('V'), type:'Transfer', date, billNo:'TR-'+DB.trCounter,
+      entries: [ {account:toAcc, debit:amount, credit:0}, {account:fromAcc, debit:0, credit:amount} ],
+      narration: note
+    };
+    try{
+      postVoucher(voucher);
+      toast('Transfer posted successfully','success');
+      transferFromAcc=''; transferToAcc='';
+      render();
+    }catch(err){ toast(err.message,'error'); }
+  });
+}
+
+/* ---- PARTIES ---- */
+function bindPartiesHandlers(){
+  document.querySelectorAll('.partyTypeTab').forEach(btn=>btn.addEventListener('click', ()=>{ partyTypeTab = btn.dataset.pt; render(); }));
+  document.querySelectorAll('.openPartyBtn').forEach(btn=>btn.addEventListener('click', ()=>{
+    currentPartyView = {id: btn.dataset.id, type: partyTypeTab}; partyFrom=''; partyTo=''; partySelectedTx=[]; render();
+  }));
+  document.querySelectorAll('.partyActiveToggle').forEach(chk=>chk.addEventListener('change', (e)=>{
+    const list = partyTypeTab==='customer'?DB.customers:DB.vendors;
+    const p = list.find(x=>x.id===e.target.dataset.id);
+    p.active = e.target.checked;
+    saveDB(); render();
+  }));
+  document.getElementById('addPartyBtn').addEventListener('click', ()=>{
+    const isCust = partyTypeTab==='customer';
+    openModal(`
+      <div class="p-5">
+        <h3 class="font-semibold text-lg mb-4">Add ${isCust?'Customer':'Vendor'}</h3>
+        <div class="space-y-3">
+          <div><label class="text-xs text-slate-500">Name</label><input id="newPartyName" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div><label class="text-xs text-slate-500">PAN Number</label><input id="newPartyPan" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500">Phone (for WhatsApp)</label><input id="newPartyPhone" placeholder="98XXXXXXXX" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+          </div>
+          <div><label class="text-xs text-slate-500">Address</label><input id="newPartyAddress" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+        </div>
+        <div class="flex gap-2 mt-5">
+          <button id="saveNewParty" class="btn-primary px-4 py-2 rounded-lg text-sm flex-1">Save</button>
+          <button id="cancelNewParty" class="bg-slate-200 px-4 py-2 rounded-lg text-sm">Cancel</button>
+        </div>
+      </div>`);
+    document.getElementById('cancelNewParty').addEventListener('click', closeModal);
+    document.getElementById('saveNewParty').addEventListener('click', ()=>{
+      const name = document.getElementById('newPartyName').value.trim();
+      if(!name){ toast('Name is required','warning'); return; }
+      const rec = {id: uid(isCust?'CUST':'VEND'), name, pan:document.getElementById('newPartyPan').value, phone:document.getElementById('newPartyPhone').value, address:document.getElementById('newPartyAddress').value, active:true};
+      if(isCust) DB.customers.push(rec); else DB.vendors.push(rec);
+      saveDB(); closeModal(); toast(`${isCust?'Customer':'Vendor'} added`,'success'); render();
+    });
+  });
+}
+
+function bindPartyDetailHandlers(){
+  document.getElementById('backToParties').addEventListener('click', ()=>{ currentPartyView=null; partySelectedTx=[]; render(); });
+
+  const {id, type} = currentPartyView;
+  const list = type==='customer'?DB.customers:DB.vendors;
+  const p = list.find(x=>x.id===id);
+
+  document.getElementById('partyFilterBtn').addEventListener('click', ()=>{
+    partyFrom = document.getElementById('partyFromDate').value;
+    partyTo = document.getElementById('partyToDate').value;
+    render();
+  });
+  document.getElementById('partyResetBtn').addEventListener('click', ()=>{ partyFrom=''; partyTo=''; render(); });
+
+  document.querySelectorAll('.txCheckbox').forEach(cb=>cb.addEventListener('change', e=>{
+    if(e.target.checked) partySelectedTx.push(e.target.value);
+    else partySelectedTx = partySelectedTx.filter(x=>x!==e.target.value);
+    render();
+  }));
+  const selectAll = document.getElementById('selectAllTx');
+  if(selectAll) selectAll.addEventListener('change', e=>{
+    const boxes = document.querySelectorAll('.txCheckbox');
+    partySelectedTx = e.target.checked ? Array.from(boxes).map(b=>b.value) : [];
+    render();
+  });
+  const bulkDel = document.getElementById('bulkDeleteTx');
+  if(bulkDel) bulkDel.addEventListener('click', ()=>{
+    openModal(`
+      <div class="p-5">
+        <h3 class="font-semibold text-lg mb-2 text-red-600 flex items-center gap-2"><i data-lucide="triangle-alert" class="w-5 h-5"></i>Delete Selected Transactions</h3>
+        <p class="text-sm text-slate-600 mb-4">This will permanently delete ${partySelectedTx.length} voucher(s) and automatically reverse their double-entry & inventory impact. This cannot be undone.</p>
+        <div class="flex gap-2">
+          <button id="confirmBulkDelete" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm flex-1">Delete</button>
+          <button id="cancelBulkDelete" class="bg-slate-200 px-4 py-2 rounded-lg text-sm">Cancel</button>
+        </div>
+      </div>`);
+    document.getElementById('cancelBulkDelete').addEventListener('click', closeModal);
+    document.getElementById('confirmBulkDelete').addEventListener('click', ()=>{
+      deleteVouchers(partySelectedTx);
+      partySelectedTx=[];
+      closeModal();
+      toast('Selected transactions deleted and reversed','success');
+      render();
+    });
+  });
+
+  document.getElementById('recordPaymentBtn').addEventListener('click', ()=>{
+    openModal(`
+      <div class="p-5">
+        <h3 class="font-semibold text-lg mb-4">Record ${type==='customer'?'Payment Received from':'Payment Made to'} ${p.name}</h3>
+        <div class="space-y-3">
+          <div><label class="text-xs text-slate-500">Amount</label><input id="payAmount" type="number" min="0" step="0.01" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+          <div><label class="text-xs text-slate-500">Date</label><input id="payDate" type="date" value="${todayISO()}" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+          <div><label class="text-xs text-slate-500">Via Account</label>
+            <select id="payAccount" class="w-full border rounded-lg px-3 py-2 text-sm">
+              <option value="CASH">Cash in Hand</option><option value="BANK">Bank Account</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-5">
+          <button id="savePayment" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm flex-1">Save Payment</button>
+          <button id="cancelPayment" class="bg-slate-200 px-4 py-2 rounded-lg text-sm">Cancel</button>
+        </div>
+      </div>`);
+    document.getElementById('cancelPayment').addEventListener('click', closeModal);
+    document.getElementById('savePayment').addEventListener('click', ()=>{
+      const amount = Number(document.getElementById('payAmount').value);
+      const date = document.getElementById('payDate').value || todayISO();
+      const cashAccount = document.getElementById('payAccount').value;
+      if(!amount || amount<=0){ toast('Enter a valid amount','warning'); return; }
+      DB.payCounter++;
+      let voucher;
+      if(type==='customer'){
+        voucher = { id:uid('V'), type:'Receipt', date, billNo:'RCPT-'+DB.payCounter,
+          entries:[ {account:cashAccount, debit:amount, credit:0}, {account:'AR', debit:0, credit:amount, party:id} ],
+          narration:'Payment received from '+p.name };
+      } else {
+        voucher = { id:uid('V'), type:'Payment', date, billNo:'PAY-'+DB.payCounter,
+          entries:[ {account:'AP', debit:amount, credit:0, party:id}, {account:cashAccount, debit:0, credit:amount} ],
+          narration:'Payment made to '+p.name };
+      }
+      try{
+        postVoucher(voucher);
+        toast('Payment recorded','success');
+        closeModal(); render();
+      }catch(err){ toast(err.message,'error'); }
+    });
+  });
+
+  const waBtn = document.getElementById('whatsappBtn');
+  if(waBtn) waBtn.addEventListener('click', ()=>{
+    const bal = customerBalance(id);
+    if(bal<=0){ toast('This customer has no outstanding due','info'); return; }
+    const phone = (p.phone||'').replace(/\D/g,'');
+    const fullPhone = phone.length===10 ? '977'+phone : phone;
+    const msg = `Dear ${p.name}, your outstanding balance of ${fmt(bal)} is pending at ${DB.company.name}. Kindly settle at your earliest.`;
+    window.open(`https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+  });
+
+  document.getElementById('printStatementBtn').addEventListener('click', ()=> printPartyStatement(p, type));
+}
+
+/* ---- LEDGERS ---- */
+function bindLedgerHandlers(){
+  const sel = document.getElementById('ledgerSelect');
+  renderLedgerContent(sel.value);
+  sel.addEventListener('change', ()=> renderLedgerContent(sel.value));
+  document.getElementById('ledgerFilterBtn').addEventListener('click', ()=>{
+    ledgerFrom = document.getElementById('ledgerFromDate').value;
+    ledgerTo = document.getElementById('ledgerToDate').value;
+    renderLedgerContent(sel.value);
+  });
+  document.getElementById('ledgerResetBtn').addEventListener('click', ()=>{
+    ledgerFrom=''; ledgerTo=''; document.getElementById('ledgerFromDate').value=''; document.getElementById('ledgerToDate').value='';
+    renderLedgerContent(sel.value);
+  });
+  document.getElementById('ledgerPrintBtn').addEventListener('click', ()=>{
+    printAccountStatement(sel.value, sel.options[sel.selectedIndex].text);
+  });
+}
+
+/* ---- INVENTORY ---- */
+function bindInventoryHandlers(){
+  document.getElementById('addItemBtn').addEventListener('click', ()=>{
+    openModal(`
+      <div class="p-5">
+        <h3 class="font-semibold text-lg mb-4">Add Inventory Item</h3>
+        <div class="space-y-3">
+          <div><label class="text-xs text-slate-500">Item Name</label><input id="newItemName" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div><label class="text-xs text-slate-500">Unit</label><input id="newItemUnit" value="pcs" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500">Qty</label><input id="newItemQty" type="number" min="0" value="0" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500">Rate</label><input id="newItemRate" type="number" min="0" step="0.01" value="0" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-5">
+          <button id="saveNewItem" class="btn-primary px-4 py-2 rounded-lg text-sm flex-1">Save Item</button>
+          <button id="cancelNewItem" class="bg-slate-200 px-4 py-2 rounded-lg text-sm">Cancel</button>
+        </div>
+      </div>`);
+    document.getElementById('cancelNewItem').addEventListener('click', closeModal);
+    document.getElementById('saveNewItem').addEventListener('click', ()=>{
+      const name = document.getElementById('newItemName').value.trim();
+      if(!name){ toast('Item name is required','warning'); return; }
+      DB.items.push({id: uid('ITEM'), name, unit: document.getElementById('newItemUnit').value||'pcs', qty:Number(document.getElementById('newItemQty').value)||0, rate:Number(document.getElementById('newItemRate').value)||0});
+      saveDB(); closeModal(); toast('Item added','success'); render();
+    });
+  });
+}
+
+/* ---- BUDGET ---- */
+function bindBudgetHandlers(){
+  const periodSel = document.getElementById('budgetPeriod');
+  periodSel.addEventListener('change', ()=>{
+    document.getElementById('budgetMonth').style.display = periodSel.value==='monthly' ? '' : 'none';
+  });
+  document.getElementById('addBudgetBtn').addEventListener('click', ()=>{
+    const account = document.getElementById('budgetAccount').value;
+    const period = periodSel.value;
+    const month = document.getElementById('budgetMonth').value;
+    const amount = Number(document.getElementById('budgetAmount').value);
+    if(!amount || amount<=0){ toast('Enter a valid target amount','warning'); return; }
+    DB.budgets.push({id: uid('BUD'), account, period, month, year: month.slice(0,4), amount});
+    saveDB(); toast('Budget added','success'); render();
+  });
+  document.querySelectorAll('.removeBudgetBtn').forEach(btn=>btn.addEventListener('click', ()=>{
+    DB.budgets = DB.budgets.filter(b=>b.id!==btn.dataset.id);
+    saveDB(); render();
+  }));
+}
+
+/* ---- REPORTS ---- */
+function bindReportHandlers(){
+  renderReportBody('daybook');
+  document.querySelectorAll('.reportTab').forEach(btn=>{
+    btn.addEventListener('click', ()=> { reportFrom=''; reportTo=''; renderReportBody(btn.dataset.r); });
+  });
+}
+
+/* ---- SETTINGS ---- */
+function bindSettingsHandlers(){
+  document.getElementById('saveCompany').addEventListener('click', ()=>{
+    DB.company.name = document.getElementById('companyName').value;
+    DB.company.pan = document.getElementById('companyPan').value;
+    DB.company.address = document.getElementById('companyAddress').value;
+    DB.company.fiscalYear = document.getElementById('companyFY').value;
+    saveDB(); toast('Company info saved','success');
+  });
+  document.getElementById('exportBtn').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(DB,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='accounting_backup.json'; a.click();
+    URL.revokeObjectURL(url);
+    toast('Backup exported','success');
+  });
+  document.getElementById('importFile').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      try{
+        const parsed = JSON.parse(ev.target.result);
+        if(!parsed.accounts || !parsed.vouchers || !parsed.items){ throw new Error('Invalid backup file structure'); }
+        DB = parsed; if(!DB.budgets) DB.budgets=[]; saveDB(); toast('Backup restored successfully','success'); render();
+      }catch(err){ toast('Import failed: '+err.message,'error'); }
+    };
+    reader.readAsText(file);
+  });
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    openModal(`
+      <div class="p-5">
+        <h3 class="font-semibold text-lg mb-2 text-red-600 flex items-center gap-2"><i data-lucide="triangle-alert" class="w-5 h-5"></i>Confirm Hard Reset</h3>
+        <p class="text-sm text-slate-600 mb-4">This will permanently delete ALL data (accounts, vouchers, inventory, customers, vendors) and start clean. This action cannot be undone.</p>
+        <div class="flex gap-2">
+          <button id="confirmReset" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm flex-1">Yes, Reset Everything</button>
+          <button id="cancelReset" class="bg-slate-200 px-4 py-2 rounded-lg text-sm">Cancel</button>
+        </div>
+      </div>`);
+    document.getElementById('cancelReset').addEventListener('click', closeModal);
+    document.getElementById('confirmReset').addEventListener('click', ()=>{
+      localStorage.removeItem(DB_KEY);
+      loadDB(); closeModal(); toast('System reset complete','success'); currentTab='dashboard'; render();
+    });
+  });
+}
+
+/* ================= PRINT INVOICE ================= */
+function printInvoice(v){
+  const cust = v.partyId==='WALKIN' ? {name:'Walk-in Cash Customer', pan:'-'} : (DB.customers.find(c=>c.id===v.partyId)||{name:'Unknown',pan:'-'});
+  const rows = v.items.map(it=>`
+    <tr>
+      <td style="padding:6px;border:1px solid #ccc;">${it.name}</td>
+      <td style="padding:6px;border:1px solid #ccc;text-align:center;">${it.qty}</td>
+      <td style="padding:6px;border:1px solid #ccc;text-align:right;">${fmt(it.rate)}</td>
+      <td style="padding:6px;border:1px solid #ccc;text-align:right;">${fmt(it.discount||0)}</td>
+      <td style="padding:6px;border:1px solid #ccc;text-align:right;">${fmt(it.amount)}</td>
+    </tr>`).join('');
+
+  document.getElementById('print-area').innerHTML = `
+    <div style="font-family:Arial,sans-serif;max-width:750px;margin:0 auto;padding:20px;color:#111;">
+      <div style="text-align:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:15px;">
+        <h1 style="margin:0;font-size:22px;">${DB.company.name}</h1>
+        <div style="font-size:13px;">${DB.company.address}</div>
+        <div style="font-size:13px;">PAN: ${DB.company.pan} &nbsp;|&nbsp; Fiscal Year: ${DB.company.fiscalYear}</div>
+        <div style="font-size:16px;font-weight:bold;margin-top:8px;">TAX INVOICE</div>
+      </div>
+      <table style="width:100%;font-size:13px;margin-bottom:12px;">
+        <tr>
+          <td>Bill No: <b>${v.billNo}</b></td>
+          <td style="text-align:right;">Date (A.D.): <b>${v.date}</b></td>
+        </tr>
+        <tr>
+          <td>Customer: <b>${cust.name}</b></td>
+          <td style="text-align:right;">Date (B.S.): <b>${adToBsApprox(v.date)}</b></td>
+        </tr>
+        <tr><td colspan="2">Customer PAN: <b>${cust.pan||'-'}</b> ${v.dueDate?(' &nbsp;|&nbsp; Due Date: <b>'+v.dueDate+'</b>'):''}</td></tr>
+      </table>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#eee;">
+          <th style="padding:6px;border:1px solid #ccc;text-align:left;">Item</th>
+          <th style="padding:6px;border:1px solid #ccc;">Qty</th>
+          <th style="padding:6px;border:1px solid #ccc;">Rate</th>
+          <th style="padding:6px;border:1px solid #ccc;">Discount</th>
+          <th style="padding:6px;border:1px solid #ccc;">Amount</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <table style="width:280px;margin-left:auto;margin-top:10px;font-size:13px;">
+        <tr><td style="padding:3px;">Subtotal</td><td style="text-align:right;">${fmt(v.subtotal)}</td></tr>
+        <tr><td style="padding:3px;">VAT (13%)</td><td style="text-align:right;">${fmt(v.vat)}</td></tr>
+        <tr style="font-weight:bold;font-size:15px;border-top:1px solid #333;"><td style="padding:5px 3px;">Grand Total</td><td style="text-align:right;">${fmt(v.total)}</td></tr>
+      </table>
+      <div style="margin-top:60px;display:flex;justify-content:space-between;font-size:13px;">
+        <div>_______________________<br>Customer Signature</div>
+        <div>_______________________<br>Authorized Signature</div>
+      </div>
+      <div style="text-align:center;margin-top:20px;font-size:11px;color:#666;">Thank you for your business!</div>
+    </div>`;
+  window.print();
+}
+
+/* ================= PRINT PARTY STATEMENT ================= */
+function printPartyStatement(p, type){
+  const account = type==='customer'?'AR':'AP';
+  const rows = getPartyEntries(p.id, account, partyFrom, partyTo);
+  const openingRows = getPartyEntries(p.id, account, '', partyFrom || '1900-01-01');
+  const opening = openingRows.length ? openingRows[openingRows.length-1].balance : 0;
+  let running = opening;
+  const bodyRows = rows.map(r=>{ running = r.balance; return `
+    <tr><td style="padding:6px;border:1px solid #ccc;">${r.date}</td><td style="padding:6px;border:1px solid #ccc;">${r.billNo}</td><td style="padding:6px;border:1px solid #ccc;">${r.type}</td>
+    <td style="padding:6px;border:1px solid #ccc;text-align:right;">${r.debit?fmt(r.debit):''}</td>
+    <td style="padding:6px;border:1px solid #ccc;text-align:right;">${r.credit?fmt(r.credit):''}</td>
+    <td style="padding:6px;border:1px solid #ccc;text-align:right;">${fmt(Math.abs(r.balance))} ${r.balance>=0?'Dr':'Cr'}</td></tr>`;
+  }).join('');
+  const closing = rows.length ? rows[rows.length-1].balance : opening;
+
+  document.getElementById('print-area').innerHTML = `
+    <div style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#111;">
+      <div style="text-align:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:15px;">
+        <h1 style="margin:0;font-size:20px;">${DB.company.name}</h1>
+        <div style="font-size:16px;font-weight:bold;margin-top:8px;">ACCOUNT STATEMENT</div>
+      </div>
+      <table style="width:100%;font-size:13px;margin-bottom:12px;">
+        <tr><td>Party: <b>${p.name}</b></td><td style="text-align:right;">Period: <b>${partyFrom||'Beginning'} to ${partyTo||'Today'}</b></td></tr>
+        <tr><td>PAN: <b>${p.pan||'-'}</b></td><td style="text-align:right;">Opening Balance: <b>${fmt(Math.abs(opening))} ${opening>=0?'Dr':'Cr'}</b></td></tr>
+      </table>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#eee;">
+          <th style="padding:6px;border:1px solid #ccc;">Date</th><th style="padding:6px;border:1px solid #ccc;">Ref</th><th style="padding:6px;border:1px solid #ccc;">Type</th>
+          <th style="padding:6px;border:1px solid #ccc;">Debit</th><th style="padding:6px;border:1px solid #ccc;">Credit</th><th style="padding:6px;border:1px solid #ccc;">Balance</th>
+        </tr></thead>
+        <tbody>${bodyRows || '<tr><td colspan="6" style="padding:10px;text-align:center;">No transactions in this period</td></tr>'}</tbody>
+      </table>
+      <table style="width:280px;margin-left:auto;margin-top:10px;font-size:14px;font-weight:bold;border-top:2px solid #333;">
+        <tr><td style="padding:6px;">Closing Balance</td><td style="text-align:right;">${fmt(Math.abs(closing))} ${closing>=0?'Dr':'Cr'}</td></tr>
+      </table>
+    </div>`;
+  window.print();
+}
+
+function printAccountStatement(accountId, accountLabel){
+  const rows = getLedgerEntries(accountId, ledgerFrom, ledgerTo);
+  const bal = getAccountBalance(accountId, ledgerFrom, ledgerTo);
+  const bodyRows = rows.map(r=>`
+    <tr><td style="padding:6px;border:1px solid #ccc;">${r.date}</td><td style="padding:6px;border:1px solid #ccc;">${r.billNo}</td><td style="padding:6px;border:1px solid #ccc;">${r.type}</td>
+    <td style="padding:6px;border:1px solid #ccc;text-align:right;">${r.debit?fmt(r.debit):''}</td>
+    <td style="padding:6px;border:1px solid #ccc;text-align:right;">${r.credit?fmt(r.credit):''}</td>
+    <td style="padding:6px;border:1px solid #ccc;text-align:right;">${fmt(Math.abs(r.balance))} ${r.balance>=0?'Dr':'Cr'}</td></tr>`).join('');
+  document.getElementById('print-area').innerHTML = `
+    <div style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#111;">
+      <div style="text-align:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:15px;">
+        <h1 style="margin:0;font-size:20px;">${DB.company.name}</h1>
+        <div style="font-size:16px;font-weight:bold;margin-top:8px;">${accountLabel.toUpperCase()} — LEDGER STATEMENT</div>
+        <div style="font-size:12px;">Period: ${ledgerFrom||'Beginning'} to ${ledgerTo||'Today'}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="background:#eee;"><th style="padding:6px;border:1px solid #ccc;">Date</th><th style="padding:6px;border:1px solid #ccc;">Ref</th><th style="padding:6px;border:1px solid #ccc;">Type</th><th style="padding:6px;border:1px solid #ccc;">Debit</th><th style="padding:6px;border:1px solid #ccc;">Credit</th><th style="padding:6px;border:1px solid #ccc;">Balance</th></tr></thead>
+        <tbody>${bodyRows || '<tr><td colspan="6" style="padding:10px;text-align:center;">No transactions</td></tr>'}</tbody>
+      </table>
+      <table style="width:280px;margin-left:auto;margin-top:10px;font-size:14px;font-weight:bold;border-top:2px solid #333;">
+        <tr><td style="padding:6px;">Closing Balance</td><td style="text-align:right;">${fmt(Math.abs(bal.net))} ${bal.net>=0?'Dr':'Cr'}</td></tr>
+      </table>
+    </div>`;
+  window.print();
+}
+
+/* ================= PRINT BALANCE SHEET ================= */
+function printBalanceSheet(asOf, groups, totalAssets, totalLiabilities, totalEquity, balanced){
+  const rowsHtml = (rows)=> rows.map(r=>`<tr><td style="padding:5px;border:1px solid #ccc;">${r.name}</td><td style="padding:5px;border:1px solid #ccc;text-align:right;">${fmt(Math.abs(r.bal))}</td></tr>`).join('');
+  document.getElementById('print-area').innerHTML = `
+    <div style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#111;">
+      <div style="text-align:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:15px;">
+        <h1 style="margin:0;font-size:20px;">${DB.company.name}</h1>
+        <div style="font-size:16px;font-weight:bold;margin-top:8px;">BALANCE SHEET</div>
+        <div style="font-size:12px;">As of ${asOf}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px;">
+        <thead><tr style="background:#eee;"><th style="padding:5px;border:1px solid #ccc;text-align:left;" colspan="2">Assets</th></tr></thead>
+        <tbody>${rowsHtml(groups.Asset)}</tbody>
+        <tfoot><tr style="font-weight:bold;border-top:2px solid #333;"><td style="padding:6px;">Total Assets</td><td style="padding:6px;text-align:right;">${fmt(Math.abs(totalAssets))}</td></tr></tfoot>
+      </table>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px;">
+        <thead><tr style="background:#eee;"><th style="padding:5px;border:1px solid #ccc;text-align:left;" colspan="2">Liabilities</th></tr></thead>
+        <tbody>${rowsHtml(groups.Liability)}</tbody>
+        <tfoot><tr style="font-weight:bold;border-top:2px solid #333;"><td style="padding:6px;">Total Liabilities</td><td style="padding:6px;text-align:right;">${fmt(Math.abs(totalLiabilities))}</td></tr></tfoot>
+      </table>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px;">
+        <thead><tr style="background:#eee;"><th style="padding:5px;border:1px solid #ccc;text-align:left;" colspan="2">Equity</th></tr></thead>
+        <tbody>${rowsHtml(groups.Equity)}</tbody>
+        <tfoot><tr style="font-weight:bold;border-top:2px solid #333;"><td style="padding:6px;">Total Equity</td><td style="padding:6px;text-align:right;">${fmt(Math.abs(totalEquity))}</td></tr></tfoot>
+      </table>
+      <div style="font-size:13px;font-weight:bold;color:${balanced?'#059669':'#dc2626'};">
+        ${balanced ? `Balanced: Assets = Liabilities + Equity (${fmt(Math.abs(totalLiabilities+totalEquity))})` : `Mismatch: Assets (${fmt(Math.abs(totalAssets))}) vs Liabilities + Equity (${fmt(Math.abs(totalLiabilities+totalEquity))})`}
+      </div>
+    </div>`;
+  window.print();
+}
+
+/* ================= INIT ================= */
+const LICENSE_KEY = 'shree_erp_unlocked';
+function startApp(){
+  document.getElementById('gateScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  loadDB();
+  render();
+  lucide.createIcons();
+  document.getElementById('hamburgerBtn').addEventListener('click', openSidebar);
+  document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  lucide.createIcons();
+  if(localStorage.getItem(LICENSE_KEY)==='true'){
+    startApp();
+    return;
+  }
+  const pwInput = document.getElementById('gatePassword');
+  const gateError = document.getElementById('gateError');
+  function tryUnlock(){
+    // MOCK CHECK ONLY — hardcoded client-side password for prototyping.
+    // Replace with real server-side license verification before production use.
+    if(pwInput.value === '123456'){
+      localStorage.setItem(LICENSE_KEY, 'true');
+      gateError.classList.add('hidden');
+      startApp();
+    } else {
+      gateError.classList.remove('hidden');
+    }
+  }
+  document.getElementById('gateSubmit').addEventListener('click', tryUnlock);
+  pwInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryUnlock(); });
+});
+</script>
+</body>
+</html>

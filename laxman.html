@@ -432,9 +432,9 @@
         <label for="forShipping">For Shipping</label>
       </div>
       <div class="row2">
-        <div class="field readonly">
+        <div class="field">
           <label>Invoice No.</label>
-          <input type="text" id="invNo" readonly>
+          <input type="text" id="invNo">
         </div>
         <div class="field">
           <label>Date</label>
@@ -788,7 +788,7 @@
     var mm = String(d.getMonth()+1).padStart(2,'0');
     var dd = String(d.getDate()).padStart(2,'0');
     var hh = String(d.getHours()).padStart(2,'0'); // 24hr
-    var hourKey = '' + yyyy + mm + dd + hh;
+    var hourKey = '' + mm + dd + hh;
 
     var seq = 1;
     try{
@@ -981,6 +981,8 @@
     state.items.push(newItem(preset));
     renderAll();
   });
+
+ el.invNo.addEventListener('input', function(){ state.invNo = el.invNo.value; renderPreview(); });
 
   /* ---------------- Item description datalist ---------------- */
   function renderItemDatalist(){

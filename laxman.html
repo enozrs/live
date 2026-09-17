@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Invoice / Packing List Generator</title>
-  <!-- V2.1 Shipping Invoice, OCR Feature, AutoFill HSN, Items localstorage, Detailed To and from section  -->
+  <!-- V2.2 JSON Auto Filler, Shipping Invoice, OCR Feature, AutoFill HSN, Items localstorage, Detailed To and from section  -->
 <style>
   :root{
     --navy:#16294a;
@@ -583,6 +583,15 @@
     </div>
 
     <div class="panel-section">
+      <h2>Bulk Import (JSON)</h2>
+      <div class="section-note">Paste JSON like: {"items":[{"description":"...","hsn":"","qty":41,"unit":"Pcs","rate":67,"ctn":1}]}. Works the same for Commercial Invoice and Packing List — every item just carries all six fields.</div>
+      <div class="field">
+        <textarea id="jsonImportArea" style="min-height:110px;font-family:monospace;font-size:11.5px;" placeholder='{"items":[{"description":"LADIES SWEATER MP-1A","hsn":"","qty":41,"unit":"Pcs","rate":67,"ctn":1}]}'></textarea>
+      </div>
+      <button class="btn-add" id="jsonImportBtn" type="button" style="width:100%;">+ Import JSON Items</button>
+    </div>
+
+    <div class="panel-section">
       <h2>Scan Text From Image (OCR)</h2>
       <div class="field">
         <label>Upload or photograph a supplier note / label / packing list</label>
@@ -1154,7 +1163,8 @@
    'showOrigin','staticNotePreview',
     'ocrFileInput','ocrStatus','ocrResultWrap','ocrResultText','ocrCopyAllBtn','ocrCopyCommaBtn',
    'printBtn','newInvoiceBtn','exportExcelBtn','tabInvoice','tabPacking',
-   'recentBtn','recentModalOverlay','recentModalClose','recentModalBody','recentModalFoot'
+   'recentBtn','recentModalOverlay','recentModalClose','recentModalBody','recentModalFoot',
+   'jsonImportArea','jsonImportBtn'
   ].forEach(function(id){ el[id] = document.getElementById(id); });
 
   var pv = {};
@@ -1275,12 +1285,12 @@
             '<input type="text" data-field="hsn" data-id="' + item.id + '" value="' + escapeAttr(item.hsn) + '" placeholder="61171090">' +
           '</div>' +
           '<div class="field">' +
-            '<label>Unit</label>' +
-            unitControlHtml(item) +
-          '</div>' +
-          '<div class="field">' +
             '<label>Quantity</label>' +
             '<input type="number" step="any" data-field="qty" data-id="' + item.id + '" value="' + escapeAttr(item.qty) + '" placeholder="0">' +
+          '</div>' +
+          '<div class="field">' +
+            '<label>Rate/Unit (USD)</label>' +
+            '<input type="number" step="any" data-field="rate" data-id="' + item.id + '" value="' + escapeAttr(item.rate) + '" placeholder="0.00">' +
           '</div>' +
           (state.forShipping ?
           '<div class="field">' +
@@ -1288,8 +1298,8 @@
             '<input type="number" step="any" data-field="ctn" data-id="' + item.id + '" value="' + escapeAttr(item.ctn) + '" placeholder="0">' +
           '</div>' : '') +
           '<div class="field">' +
-            '<label>Rate/Unit (USD)</label>' +
-            '<input type="number" step="any" data-field="rate" data-id="' + item.id + '" value="' + escapeAttr(item.rate) + '" placeholder="0.00">' +
+            '<label>Unit</label>' +
+            unitControlHtml(item) +
           '</div>' +
         '</div>' +
         '<div class="item-total-preview">Row Total: <b>$' + total.toFixed(2) + '</b></div>';
@@ -1465,7 +1475,6 @@
     pv['pv-companyAddress1'].textContent = addrLines[0] || '';
     pv['pv-companyAddress2'].textContent = addrLines.slice(1).join(', ');
 
-    var isPackingNow = state.docType === 'packing';
     var consigneeLabel = state.forShipping ? 'Consignee' : 'Bill To';
     var shipperLabel = state.forShipping ? 'Shipper' : 'From';
 
@@ -1493,7 +1502,7 @@
       csRow('Mail:', profile.mail, true) +
       csRow('Invoice No.:', state.invNo, true) +
       csRow('Date:', formatDisplayDate(state.invDate), true);
-    if(!isPackingNow && state.showTerms){
+    if(state.showTerms){
       shipperHtml += csRow('Terms:', state.terms || 'CIF', true);
     }
     pv['pv-shipperCol'].innerHTML = shipperHtml;
@@ -1523,8 +1532,8 @@
   }
 
   /* ---------------- Tabs ---------------- */
-  el.tabInvoice.addEventListener('click', function(){ state.docType = 'invoice'; applyDocType(); renderItemsTable(); });
-  el.tabPacking.addEventListener('click', function(){ state.docType = 'packing'; applyDocType(); renderItemsTable(); });
+  el.tabInvoice.addEventListener('click', function(){ state.docType = 'invoice'; renderAll(); });
+  el.tabPacking.addEventListener('click', function(){ state.docType = 'packing'; renderAll(); });
 
   /* ---------------- Event handlers ---------------- */
   el.invDate.addEventListener('input', function(){ state.invDate = el.invDate.value; renderPreview(); });
@@ -1707,6 +1716,35 @@
     renderAll();
   });
 
+  /* JSON bulk import */
+  el.jsonImportBtn.addEventListener('click', function(){
+    var raw = el.jsonImportArea.value.trim();
+    if(!raw) return;
+    var parsed;
+    try{ parsed = JSON.parse(raw); }
+    catch(e){ alert('Invalid JSON: ' + e.message); return; }
+
+    var arr = Array.isArray(parsed) ? parsed : parsed.items;
+    if(!Array.isArray(arr) || arr.length === 0){ alert('No "items" array found in JSON.'); return; }
+
+    var replaceExisting = state.items.length === 1 && !state.items[0].description && !state.items[0].qty;
+    var newItems = arr.map(function(o){
+      var it = newItem();
+      it.description = o.description || '';
+      it.hsn = o.hsn || '';
+      it.qty = (o.qty !== undefined && o.qty !== null) ? String(o.qty) : '';
+      it.unit = o.unit || 'Dz';
+      it.rate = (o.rate !== undefined && o.rate !== null) ? String(o.rate) : '';
+      it.ctn = (o.ctn !== undefined && o.ctn !== null) ? String(o.ctn) : '';
+      return it;
+    });
+
+    state.items = replaceExisting ? newItems : state.items.concat(newItems);
+    el.jsonImportArea.value = '';
+    renderAll();
+    alert('Imported ' + newItems.length + ' item(s).');
+  });
+
   /* Print */
   el.printBtn.addEventListener('click', function(){
     rememberCustomer(state.toName, state.toAddress, state.toPhone, state.toPan, state.toGst, state.toIec, state.toMail);
@@ -1798,7 +1836,7 @@
         ['Invoice No.:', state.invNo],
         ['Date:', formatDisplayDate(state.invDate)]
       ];
-      if(!isPacking && state.showTerms) shipperLines.push(['Terms:', state.terms || 'CIF']);
+      if(state.showTerms) shipperLines.push(['Terms:', state.terms || 'CIF']);
 
       var maxLines = Math.max(consigneeLines.length, shipperLines.length);
       for(var li = 0; li < maxLines; li++){
@@ -2142,6 +2180,5 @@
 })();
 </script>
 
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"f9ce74e751c741188510d9c6f0170667","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>

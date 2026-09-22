@@ -274,6 +274,18 @@
     border-color:var(--steel);
     background:#fff;
   }
+  table.item-entry-table td.col-sl{
+    width:26px;
+    text-align:center;
+    color:var(--steel);
+    font-weight:700;
+    padding-top:8px;
+    vertical-align:top;
+  }
+  table.item-entry-table th.col-sl{
+    width:26px;
+    text-align:center;
+  }
   table.item-entry-table td.col-desc{min-width:150px;}
   table.item-entry-table td.col-hsn{min-width:80px;}
   table.item-entry-table td.col-qty, table.item-entry-table td.col-ctn{min-width:56px;}
@@ -282,6 +294,15 @@
   table.item-entry-table td.col-total{min-width:64px;font-size:11.5px;color:#5b6472;text-align:right;white-space:nowrap;padding-top:8px;}
   table.item-entry-table td.col-remove{min-width:34px;text-align:center;}
   table.item-entry-table .unit-custom{margin-top:4px;}
+
+  table.item-entry-table input[type="number"]::-webkit-outer-spin-button,
+  table.item-entry-table input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  table.item-entry-table input[type="number"] {
+    -moz-appearance: textfield;
+  }
 
   .quick-add-wrap{margin-bottom:10px;}
   .quick-add-label{font-size:11px;font-weight:700;color:var(--steel);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block;}
@@ -643,7 +664,7 @@
 
     <div class="panel-section">
       <h2>Bulk Import (TSV)</h2>
-      <div class="section-note">Paste tab-separated rows, one item per line: description&#9;hsn&#9;qty&#9;rate&#9;ctn&#9;unit. Leave hsn/rate/ctn/unit blank if unknown (keep the tabs). Unit defaults to "Dz" if omitted. An optional header row is auto-detected and skipped. Works the same for Commercial Invoice and Packing List.</div>
+      <div class="section-note">Strictly format the data into tab-separated rows format, one item per line: description&#9;hsn&#9;qty&#9;rate&#9;ctn&#9;unit. Leave hsn/rate/ctn/unit blank if unknown (keep the tabs). Unit defaults to "Dz" if omitted. Header row is auto-detected and skipped.</div>
       <div class="field">
         <textarea id="jsonImportArea" style="min-height:110px;font-family:monospace;font-size:11.5px;white-space:pre;" placeholder="LADIES SWEATER MP-1A		41	67		Pcs"></textarea>
       </div>
@@ -679,6 +700,7 @@
         <table class="item-entry-table" id="itemsTable">
           <thead>
             <tr>
+              <th class="col-sl">SL</th>
               <th class="col-desc">Description</th>
               <th class="col-hsn">HSN</th>
               <th class="col-qty">Qty</th>
@@ -842,7 +864,9 @@
     lines.push([bank.accountLabel || 'Account:', bank.account]);
     lines.push(['Swift Code:', bank.swift]);
     if(bank.bankName) lines.push(['Bank Name:', bank.bankName]);
-    if(bank.correspondentBank) lines.push(['Correspondent Bank (For USD Remittance):', bank.correspondentBank]);
+    if(bank.correspondentBank){
+      lines.push(['Correspondent Bank (For USD Remittance):', bank.correspondentBank]);
+    }
     if(bank.correspondentSwift) lines.push(['Correspondent Swift:', bank.correspondentSwift]);
     return lines;
   }
@@ -1386,11 +1410,12 @@
     renderItemDatalist();
     if(el.ctnHeadCell) el.ctnHeadCell.style.display = state.forShipping ? '' : 'none';
     el.itemsList.innerHTML = '';
-    state.items.forEach(function(item){
+    state.items.forEach(function(item, idx){
       var tr = document.createElement('tr');
       var total = (parseFloat(item.qty)||0) * (parseFloat(item.rate)||0);
 
       tr.innerHTML =
+        '<td class="col-sl">' + (idx + 1) + '</td>' +
         '<td class="col-desc"><input type="text" data-field="description" data-id="' + item.id + '" value="' + escapeAttr(item.description) + '" placeholder="e.g. BABY EARMUFF" list="itemDescList" autocomplete="off"></td>' +
         '<td class="col-hsn"><input type="text" data-field="hsn" data-id="' + item.id + '" value="' + escapeAttr(item.hsn) + '" placeholder="61171090"></td>' +
         '<td class="col-qty"><input type="number" step="any" data-field="qty" data-id="' + item.id + '" value="' + escapeAttr(item.qty) + '" placeholder="0"></td>' +
@@ -2301,6 +2326,5 @@
 })();
 </script>
 
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"f9ce74e751c741188510d9c6f0170667","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>

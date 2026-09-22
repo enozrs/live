@@ -258,7 +258,6 @@
   }
   table.item-entry-table tr:last-child td{border-bottom:none;}
   table.item-entry-table input[type="text"],
-  table.item-entry-table input[type="number"],
   table.item-entry-table select{
     width:100%;
     padding:6px 6px;
@@ -294,15 +293,6 @@
   table.item-entry-table td.col-total{min-width:64px;font-size:11.5px;color:#5b6472;text-align:right;white-space:nowrap;padding-top:8px;}
   table.item-entry-table td.col-remove{min-width:34px;text-align:center;}
   table.item-entry-table .unit-custom{margin-top:4px;}
-
-  table.item-entry-table input[type="number"]::-webkit-outer-spin-button,
-  table.item-entry-table input[type="number"]::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-  table.item-entry-table input[type="number"] {
-    -moz-appearance: textfield;
-  }
 
   .quick-add-wrap{margin-bottom:10px;}
   .quick-add-label{font-size:11px;font-weight:700;color:var(--steel);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block;}
@@ -517,7 +507,6 @@
     table.item-entry-table{font-size:11px;min-width:560px;}
     table.item-entry-table th, table.item-entry-table td{padding:3px 4px;}
     table.item-entry-table input[type="text"],
-    table.item-entry-table input[type="number"],
     table.item-entry-table select{padding:5px 4px;font-size:11px;}
     .invoice-page{padding:8mm 6mm;}
     .inv-header h1{font-size:19px;}
@@ -664,7 +653,7 @@
 
     <div class="panel-section">
       <h2>Bulk Import (TSV)</h2>
-      <div class="section-note">Strictly format the data into tab-separated rows format, one item per line: description&#9;hsn&#9;qty&#9;rate&#9;ctn&#9;unit. Leave hsn/rate/ctn/unit blank if unknown (keep the tabs). Unit defaults to "Dz" if omitted. Header row is auto-detected and skipped.</div>
+      <div class="section-note">Paste tab-separated rows, one item per line: description&#9;hsn&#9;qty&#9;rate&#9;ctn&#9;unit. Leave hsn/rate/ctn/unit blank if unknown (keep the tabs). Unit defaults to "Dz" if omitted. An optional header row is auto-detected and skipped. Works the same for Commercial Invoice and Packing List.</div>
       <div class="field">
         <textarea id="jsonImportArea" style="min-height:110px;font-family:monospace;font-size:11.5px;white-space:pre;" placeholder="LADIES SWEATER MP-1A		41	67		Pcs"></textarea>
       </div>
@@ -1418,9 +1407,9 @@
         '<td class="col-sl">' + (idx + 1) + '</td>' +
         '<td class="col-desc"><input type="text" data-field="description" data-id="' + item.id + '" value="' + escapeAttr(item.description) + '" placeholder="e.g. BABY EARMUFF" list="itemDescList" autocomplete="off"></td>' +
         '<td class="col-hsn"><input type="text" data-field="hsn" data-id="' + item.id + '" value="' + escapeAttr(item.hsn) + '" placeholder="61171090"></td>' +
-        '<td class="col-qty"><input type="number" step="any" data-field="qty" data-id="' + item.id + '" value="' + escapeAttr(item.qty) + '" placeholder="0"></td>' +
-        '<td class="col-rate"><input type="number" step="any" data-field="rate" data-id="' + item.id + '" value="' + escapeAttr(item.rate) + '" placeholder="0.00"></td>' +
-        '<td class="col-ctn" style="' + (state.forShipping ? '' : 'display:none;') + '"><input type="number" step="any" data-field="ctn" data-id="' + item.id + '" value="' + escapeAttr(item.ctn) + '" placeholder="0"></td>' +
+        '<td class="col-qty"><input type="text" inputmode="decimal" data-field="qty" data-id="' + item.id + '" value="' + escapeAttr(item.qty) + '" placeholder="0"></td>' +
+        '<td class="col-rate"><input type="text" inputmode="decimal" data-field="rate" data-id="' + item.id + '" value="' + escapeAttr(item.rate) + '" placeholder="0.00"></td>' +
+        '<td class="col-ctn" style="' + (state.forShipping ? '' : 'display:none;') + '"><input type="text" inputmode="decimal" data-field="ctn" data-id="' + item.id + '" value="' + escapeAttr(item.ctn) + '" placeholder="0"></td>' +
         '<td class="col-unit">' + unitControlHtml(item) + '</td>' +
         '<td class="col-total">$<span class="row-total-val">' + total.toFixed(2) + '</span></td>' +
         '<td class="col-remove"><button type="button" class="btn-remove" data-remove="' + item.id + '" title="Remove">&times;</button></td>';

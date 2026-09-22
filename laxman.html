@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Invoice / Packing List Generator</title>
-  <!-- V2.2 JSON Auto Filler, Shipping Invoice, OCR Feature, AutoFill HSN, Items localstorage, Detailed To and from section  -->
-<style>
+  <!-- V3.0 JSON to TSV Auto Filler for token efficiency, Excel style rapid item entry, Shipping Invoice, OCR Feature, AutoFill HSN, Items localstorage, Detailed To and from section  -->
+  <style>
   :root{
     --navy:#16294a;
     --steel:#3d5a80;
@@ -229,6 +229,52 @@
 
   #addItemBtn{width:100%;margin-top:4px;}
 
+  .items-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px;}
+  table.item-entry-table{border-collapse:collapse;width:100%;min-width:640px;font-size:12px;}
+  table.item-entry-table th{
+    background:#eef1f5;
+    color:var(--steel);
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+    font-weight:700;
+    text-align:left;
+    padding:6px 6px;
+    border-bottom:1px solid var(--line);
+    white-space:nowrap;
+  }
+  table.item-entry-table td{
+    padding:4px 5px;
+    border-bottom:1px solid var(--line);
+    vertical-align:top;
+  }
+  table.item-entry-table tr:last-child td{border-bottom:none;}
+  table.item-entry-table input[type="text"],
+  table.item-entry-table input[type="number"],
+  table.item-entry-table select{
+    width:100%;
+    padding:6px 6px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    font-size:12px;
+    font-family:inherit;
+    color:var(--ink);
+    background:#fbfcfd;
+  }
+  table.item-entry-table input:focus, table.item-entry-table select:focus{
+    outline:none;
+    border-color:var(--steel);
+    background:#fff;
+  }
+  table.item-entry-table td.col-desc{min-width:150px;}
+  table.item-entry-table td.col-hsn{min-width:80px;}
+  table.item-entry-table td.col-qty, table.item-entry-table td.col-ctn{min-width:56px;}
+  table.item-entry-table td.col-rate{min-width:70px;}
+  table.item-entry-table td.col-unit{min-width:90px;}
+  table.item-entry-table td.col-total{min-width:64px;font-size:11.5px;color:#5b6472;text-align:right;white-space:nowrap;padding-top:8px;}
+  table.item-entry-table td.col-remove{min-width:34px;text-align:center;}
+  table.item-entry-table .unit-custom{margin-top:4px;}
+
   .quick-add-wrap{margin-bottom:10px;}
   .quick-add-label{font-size:11px;font-weight:700;color:var(--steel);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block;}
   .chip-row{display:flex;flex-wrap:wrap;gap:6px;}
@@ -439,6 +485,11 @@
     .form-panel{padding:16px;gap:18px;}
     .row2{grid-template-columns:1fr;}
     .item-grid{grid-template-columns:1fr;}
+    table.item-entry-table{font-size:11px;min-width:560px;}
+    table.item-entry-table th, table.item-entry-table td{padding:3px 4px;}
+    table.item-entry-table input[type="text"],
+    table.item-entry-table input[type="number"],
+    table.item-entry-table select{padding:5px 4px;font-size:11px;}
     .invoice-page{padding:8mm 6mm;}
     .inv-header h1{font-size:19px;}
     .inv-title-box{font-size:17px;padding:8px;}
@@ -461,7 +512,7 @@
 
 <div class="topbar no-print">
   <div>
-    <h1>SHREE Document Generator</h1>
+    <h1>SR Document Generator</h1>
     <div class="sub">Laxman International Co., Limited</div>
   </div>
   <div class="topbar-actions">
@@ -583,12 +634,12 @@
     </div>
 
     <div class="panel-section">
-      <h2>Bulk Import (JSON)</h2>
-      <div class="section-note">Paste JSON like: {"items":[{"description":"...","hsn":"","qty":41,"unit":"Pcs","rate":67,"ctn":1}]}. Works the same for Commercial Invoice and Packing List — every item just carries all six fields.</div>
+      <h2>Bulk Import (TSV)</h2>
+      <div class="section-note">Paste tab-separated rows, one item per line: description&#9;hsn&#9;qty&#9;rate&#9;ctn&#9;unit. Leave hsn/rate/ctn/unit blank if unknown (keep the tabs). Unit defaults to "Dz" if omitted. An optional header row is auto-detected and skipped. Works the same for Commercial Invoice and Packing List.</div>
       <div class="field">
-        <textarea id="jsonImportArea" style="min-height:110px;font-family:monospace;font-size:11.5px;" placeholder='{"items":[{"description":"LADIES SWEATER MP-1A","hsn":"","qty":41,"unit":"Pcs","rate":67,"ctn":1}]}'></textarea>
+        <textarea id="jsonImportArea" style="min-height:110px;font-family:monospace;font-size:11.5px;white-space:pre;" placeholder="LADIES SWEATER MP-1A		41	67		Pcs"></textarea>
       </div>
-      <button class="btn-add" id="jsonImportBtn" type="button" style="width:100%;">+ Import JSON Items</button>
+      <button class="btn-add" id="jsonImportBtn" type="button" style="width:100%;">+ Import TSV Items</button>
     </div>
 
     <div class="panel-section">
@@ -616,7 +667,24 @@
         <span class="quick-add-label">Quick Add</span>
         <div class="chip-row" id="quickAddChips"></div>
       </div>
-      <div id="itemsList"></div>
+      <div class="items-table-wrap">
+        <table class="item-entry-table" id="itemsTable">
+          <thead>
+            <tr>
+              <th class="col-desc">Description</th>
+              <th class="col-hsn">HSN</th>
+              <th class="col-qty">Qty</th>
+              <th class="col-rate">Rate</th>
+              <th class="col-ctn" id="ctnHeadCell">CTN</th>
+              <th class="col-unit">Unit</th>
+              <th class="col-total">Total</th>
+              <th class="col-remove"></th>
+            </tr>
+          </thead>
+          <tbody id="itemsList"></tbody>
+        </table>
+      </div>
+      <div class="section-note" style="margin-top:6px;">Tip: paste multi-line, tab-separated rows into the Description cell to add several items at once.</div>
       <datalist id="itemDescList"></datalist>
       <button class="btn-add" id="addItemBtn" type="button">+ Add Item</button>
     </div>
@@ -1246,6 +1314,50 @@
     }).join('');
   }
 
+  /* ---------------- TSV parsing (shared by Bulk Import panel and in-grid paste) ---------------- */
+  var TSV_HEADER_WORDS = ['description','desc','hsn','hsn no','hsn code','qty','quantity','rate','rate/unit','ctn','carton','cartons','unit'];
+
+  function looksLikeHeaderRow(firstCell){
+    var v = (firstCell || '').trim().toLowerCase();
+    return TSV_HEADER_WORDS.indexOf(v) !== -1;
+  }
+
+  /* Parses raw TSV text (description<TAB>hsn<TAB>qty<TAB>rate<TAB>ctn<TAB>unit per line)
+     into an array of plain objects: {description,hsn,qty,rate,ctn,unit}.
+     Skips blank lines and an optional header row. */
+  function parseTSVItems(raw){
+    if(!raw) return [];
+    var lines = raw.split(/\r\n|\r|\n/);
+    var rows = [];
+    lines.forEach(function(line, idx){
+      if(!line.trim()) return;
+      var cells = line.split('\t').map(function(c){ return c.trim(); });
+      if(rows.length === 0 && looksLikeHeaderRow(cells[0])) return;
+      rows.push({
+        description: cells[0] || '',
+        hsn: cells[1] || '',
+        qty: cells[2] || '',
+        rate: cells[3] || '',
+        ctn: cells[4] || '',
+        unit: cells[5] || 'Dz'
+      });
+    });
+    return rows;
+  }
+
+  function tsvRowsToItems(rows){
+    return rows.map(function(o){
+      var it = newItem();
+      it.description = o.description || '';
+      it.hsn = o.hsn || '';
+      it.qty = o.qty || '';
+      it.rate = o.rate || '';
+      it.ctn = o.ctn || '';
+      it.unit = o.unit || 'Dz';
+      return it;
+    });
+  }
+
   /* ---------------- Items rendering (form side) ---------------- */
   function unitControlHtml(item){
     var isPreset = UNIT_PRESETS.indexOf(item.unit) !== -1;
@@ -1264,47 +1376,23 @@
 
   function renderItemsForm(){
     renderItemDatalist();
+    if(el.ctnHeadCell) el.ctnHeadCell.style.display = state.forShipping ? '' : 'none';
     el.itemsList.innerHTML = '';
-    state.items.forEach(function(item, idx){
-      var card = document.createElement('div');
-      card.className = 'item-card';
+    state.items.forEach(function(item){
+      var tr = document.createElement('tr');
       var total = (parseFloat(item.qty)||0) * (parseFloat(item.rate)||0);
 
-      card.innerHTML =
-        '<div class="item-head">' +
-          '<span>Item ' + (idx+1) + '</span>' +
-          '<button type="button" class="btn-remove" data-remove="' + item.id + '">Remove</button>' +
-        '</div>' +
-        '<div class="item-grid">' +
-          '<div class="field full">' +
-            '<label>Description</label>' +
-            '<input type="text" data-field="description" data-id="' + item.id + '" value="' + escapeAttr(item.description) + '" placeholder="e.g. BABY EARMUFF" list="itemDescList" autocomplete="off">' +
-          '</div>' +
-          '<div class="field">' +
-            '<label>HSN</label>' +
-            '<input type="text" data-field="hsn" data-id="' + item.id + '" value="' + escapeAttr(item.hsn) + '" placeholder="61171090">' +
-          '</div>' +
-          '<div class="field">' +
-            '<label>Quantity</label>' +
-            '<input type="number" step="any" data-field="qty" data-id="' + item.id + '" value="' + escapeAttr(item.qty) + '" placeholder="0">' +
-          '</div>' +
-          '<div class="field">' +
-            '<label>Rate/Unit (USD)</label>' +
-            '<input type="number" step="any" data-field="rate" data-id="' + item.id + '" value="' + escapeAttr(item.rate) + '" placeholder="0.00">' +
-          '</div>' +
-          (state.forShipping ?
-          '<div class="field">' +
-            '<label>CTN (Cartons)</label>' +
-            '<input type="number" step="any" data-field="ctn" data-id="' + item.id + '" value="' + escapeAttr(item.ctn) + '" placeholder="0">' +
-          '</div>' : '') +
-          '<div class="field">' +
-            '<label>Unit</label>' +
-            unitControlHtml(item) +
-          '</div>' +
-        '</div>' +
-        '<div class="item-total-preview">Row Total: <b>$' + total.toFixed(2) + '</b></div>';
+      tr.innerHTML =
+        '<td class="col-desc"><input type="text" data-field="description" data-id="' + item.id + '" value="' + escapeAttr(item.description) + '" placeholder="e.g. BABY EARMUFF" list="itemDescList" autocomplete="off"></td>' +
+        '<td class="col-hsn"><input type="text" data-field="hsn" data-id="' + item.id + '" value="' + escapeAttr(item.hsn) + '" placeholder="61171090"></td>' +
+        '<td class="col-qty"><input type="number" step="any" data-field="qty" data-id="' + item.id + '" value="' + escapeAttr(item.qty) + '" placeholder="0"></td>' +
+        '<td class="col-rate"><input type="number" step="any" data-field="rate" data-id="' + item.id + '" value="' + escapeAttr(item.rate) + '" placeholder="0.00"></td>' +
+        '<td class="col-ctn" style="' + (state.forShipping ? '' : 'display:none;') + '"><input type="number" step="any" data-field="ctn" data-id="' + item.id + '" value="' + escapeAttr(item.ctn) + '" placeholder="0"></td>' +
+        '<td class="col-unit">' + unitControlHtml(item) + '</td>' +
+        '<td class="col-total">$<span class="row-total-val">' + total.toFixed(2) + '</span></td>' +
+        '<td class="col-remove"><button type="button" class="btn-remove" data-remove="' + item.id + '" title="Remove">&times;</button></td>';
 
-      el.itemsList.appendChild(card);
+      el.itemsList.appendChild(tr);
     });
   }
 
@@ -1685,12 +1773,12 @@
 
     renderPreview();
     if(field !== 'unitPreset'){
-      var card = target.closest('.item-card');
-      if(card){
+      var row = target.closest('tr');
+      if(row){
         var qty = parseFloat(item.qty) || 0;
         var rate = parseFloat(item.rate) || 0;
-        var totalEl = card.querySelector('.item-total-preview b');
-        if(totalEl) totalEl.textContent = '$' + (qty*rate).toFixed(2);
+        var totalEl = row.querySelector('.row-total-val');
+        if(totalEl) totalEl.textContent = (qty*rate).toFixed(2);
       }
     }
   });
@@ -1716,33 +1804,58 @@
     renderAll();
   });
 
-  /* JSON bulk import */
+  /* TSV bulk import */
   el.jsonImportBtn.addEventListener('click', function(){
-    var raw = el.jsonImportArea.value.trim();
-    if(!raw) return;
-    var parsed;
-    try{ parsed = JSON.parse(raw); }
-    catch(e){ alert('Invalid JSON: ' + e.message); return; }
-
-    var arr = Array.isArray(parsed) ? parsed : parsed.items;
-    if(!Array.isArray(arr) || arr.length === 0){ alert('No "items" array found in JSON.'); return; }
+    var raw = el.jsonImportArea.value;
+    if(!raw || !raw.trim()) return;
+    var rows = parseTSVItems(raw);
+    if(rows.length === 0){ alert('No item rows found. Paste tab-separated rows (description, hsn, qty, rate, ctn, unit), one per line.'); return; }
 
     var replaceExisting = state.items.length === 1 && !state.items[0].description && !state.items[0].qty;
-    var newItems = arr.map(function(o){
-      var it = newItem();
-      it.description = o.description || '';
-      it.hsn = o.hsn || '';
-      it.qty = (o.qty !== undefined && o.qty !== null) ? String(o.qty) : '';
-      it.unit = o.unit || 'Dz';
-      it.rate = (o.rate !== undefined && o.rate !== null) ? String(o.rate) : '';
-      it.ctn = (o.ctn !== undefined && o.ctn !== null) ? String(o.ctn) : '';
-      return it;
-    });
+    var newItems = tsvRowsToItems(rows);
 
     state.items = replaceExisting ? newItems : state.items.concat(newItems);
     el.jsonImportArea.value = '';
     renderAll();
     alert('Imported ' + newItems.length + ' item(s).');
+  });
+
+  /* Paste-to-expand: pasting multi-line/tab-delimited TSV into any grid cell
+     turns it into multiple item rows instead of pasting raw text into one cell. */
+  el.itemsList.addEventListener('paste', function(e){
+    var target = e.target;
+    if(!target || !target.getAttribute) return;
+    var field = target.getAttribute('data-field');
+    if(!field) return;
+
+    var text = (e.clipboardData || window.clipboardData).getData('text');
+    if(!text) return;
+
+    // Only hijack genuinely multi-row/multi-column TSV data — let a plain
+    // single-cell paste behave normally.
+    if(text.indexOf('\t') === -1 && text.indexOf('\n') === -1 && text.indexOf('\r') === -1) return;
+
+    e.preventDefault();
+
+    var rows = parseTSVItems(text);
+    if(rows.length === 0) return;
+
+    var id = target.getAttribute('data-id');
+    var currentItem = state.items.find(function(it){ return String(it.id) === id; });
+    var currentIdx = state.items.findIndex(function(it){ return String(it.id) === id; });
+    var rowIsBlank = currentItem && !currentItem.description && !currentItem.hsn && !currentItem.qty && !currentItem.rate && !currentItem.ctn;
+
+    var newItems = tsvRowsToItems(rows);
+
+    if(rowIsBlank && currentIdx !== -1){
+      state.items.splice.apply(state.items, [currentIdx, 1].concat(newItems));
+    } else if(currentIdx !== -1){
+      state.items.splice.apply(state.items, [currentIdx + 1, 0].concat(newItems));
+    } else {
+      state.items = state.items.concat(newItems);
+    }
+
+    renderAll();
   });
 
   /* Print */
@@ -2180,5 +2293,6 @@
 })();
 </script>
 
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"f9ce74e751c741188510d9c6f0170667","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>

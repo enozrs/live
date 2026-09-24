@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Live Class</title>
+<meta name="theme-color" content="#020617" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { font-family: 'Inter', system-ui, sans-serif; }
+  html, body { height: 100%; overscroll-behavior: none; }
+  body { background: #020617; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+  @keyframes pulseRing { 0%{box-shadow:0 0 0 0 rgba(16,185,129,.55);} 100%{box-shadow:0 0 0 14px rgba(16,185,129,0);} }
+  .live-pulse{ animation: pulseRing 1.8s ease-out infinite; }
+
+  .chat-msg { animation: chatIn 0.22s ease-out; }
+  @keyframes chatIn { from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  @keyframes floatUp {
+    0% { transform: translateY(0) scale(0.8); opacity: 0; }
+    15% { opacity: 1; transform: translateY(-10px) scale(1); }
+    100% { transform: translateY(-140px) scale(1.1); opacity: 0; }
+  }
+  .float-emoji { position:absolute; bottom:70px; font-size:26px; animation: floatUp 1.5s ease-out forwards; pointer-events:none; }
+
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+</style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen w-screen flex flex-col overflow-hidden">
+
+  <!-- ============ ACCESS CODE GATE ============ -->
+  <div id="gate" class="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center gap-6 px-8 text-center">
+    <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center live-pulse">
+      <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+    </div>
+    <div>
+      <h1 class="text-xl font-bold tracking-tight">Enter Your Access Code</h1>
+      <p class="text-slate-400 text-sm mt-2 max-w-xs">The code was sent to you on WhatsApp after your payment was confirmed.</p>
+    </div>
+    <div class="w-full max-w-xs space-y-3">
+      <input id="code-input" autocomplete="off" autocapitalize="characters"
+        class="w-full min-h-[52px] bg-slate-900 border border-slate-800 rounded-xl px-4 text-center tracking-widest font-mono text-lg placeholder:text-slate-600 placeholder:tracking-normal placeholder:font-sans focus:outline-none focus:border-emerald-500/60"
+        placeholder="e.g. SPK-4Q7X-9K2M" />
+      <button id="join-btn" class="w-full min-h-[52px] rounded-xl bg-emerald-500 text-slate-950 font-semibold text-base active:scale-95 transition-transform">
+        Join Class
+      </button>
+      <p id="gate-error" class="hidden text-red-400 text-sm"></p>
+      <p id="gate-loading" class="hidden text-slate-500 text-sm">Checking your code…</p>
+    </div>
+  </div>
+
+  <!-- ============ CLASSROOM (hidden until code validated) ============ -->
+  <div id="classroom" class="hidden flex-1 flex flex-col min-h-0">
+
+    <header class="flex items-center justify-between px-4 py-3 border-b border-slate-800/80 shrink-0">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 live-pulse"></span>
+        <span class="text-sm font-semibold tracking-tight">LIVE</span>
+      </div>
+      <div id="batch-label" class="text-sm text-slate-400 truncate max-w-[50%]"></div>
+      <div id="presence-count" class="text-xs font-medium text-slate-400 bg-slate-900 border border-slate-800 rounded-full px-3 py-1">0 online</div>
+    </header>
+
+    <div class="flex-1 min-h-0 flex flex-col">
+      <div id="chat-box" class="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-2.5 flex flex-col-reverse relative"></div>
+
+      <div id="emoji-layer" class="pointer-events-none relative h-0"></div>
+
+      <div class="flex items-center justify-around px-3 py-2 border-t border-slate-800/80 shrink-0">
+        <button class="emoji-btn min-h-[48px] min-w-[48px] flex items-center justify-center text-2xl active:scale-90 transition-transform" data-emoji="🔥">🔥</button>
+        <button class="emoji-btn min-h-[48px] min-w-[48px] flex items-center justify-center text-2xl active:scale-90 transition-transform" data-emoji="💯">💯</button>
+        <button class="emoji-btn min-h-[48px] min-w-[48px] flex items-center justify-center text-2xl active:scale-90 transition-transform" data-emoji="👏">👏</button>
+        <button class="emoji-btn min-h-[48px] min-w-[48px] flex items-center justify-center text-2xl active:scale-90 transition-transform" data-emoji="😮">😮</button>
+        <button id="raise-hand-btn" class="min-h-[48px] px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform">
+          ✋ Raise Hand
+        </button>
+      </div>
+
+      <form id="chat-form" class="flex items-center gap-2 px-3 py-2.5 border-t border-slate-800/80 safe-bottom shrink-0">
+        <input id="chat-input" maxlength="300" autocomplete="off"
+          class="flex-1 min-h-[48px] bg-slate-900 border border-slate-800 rounded-xl px-4 text-sm placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/60"
+          placeholder="Ask a question…" />
+        <button type="submit" class="min-h-[48px] min-w-[48px] rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center active:scale-95 transition-transform">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M2.94 2.94a1.5 1.5 0 011.62-.33l12.5 5a1.5 1.5 0 010 2.78l-12.5 5a1.5 1.5 0 01-2.06-1.73L3.9 10 2.5 4.34a1.5 1.5 0 01.44-1.4z"/></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="reconnect-toast" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-800 border border-slate-700 text-slate-200 text-xs font-medium px-4 py-2 rounded-full shadow-lg">
+    Reconnecting…
+  </div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const SUPABASE_URL = "https://nldvmghrucwalqvrchfc.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sZHZtZ2hydWN3YWxxdnJjaGZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMzQ2NjUsImV4cCI6MjEwNTgxMDY2NX0.KMa3rVsvopQUGBE7IOUtdpKgMg2hahM_nJRmTqgs4aE";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ============================================================
+// ACCESS GATE
+// ============================================================
+let USERNAME = null;
+let sessionInfo = null; // { code, batch_name, end_date }
+
+function todayISO() { return new Date().toISOString().slice(0, 10); }
+
+function getSavedSession() {
+  try {
+    const raw = localStorage.getItem("lc_session");
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (s.end_date && todayISO() <= s.end_date) return s;
+    return null; // expired — force re-validation
+  } catch (_) { return null; }
+}
+
+function saveSession(s) { localStorage.setItem("lc_session", JSON.stringify(s)); }
+
+async function redeemCode(code) {
+  const errEl = document.getElementById("gate-error");
+  const loadingEl = document.getElementById("gate-loading");
+  errEl.classList.add("hidden");
+  loadingEl.classList.remove("hidden");
+
+  const { data, error } = await supabase.rpc("redeem_access_code", { input_code: code });
+  loadingEl.classList.add("hidden");
+
+  if (error) {
+    errEl.textContent = "Something went wrong. Please try again.";
+    errEl.classList.remove("hidden");
+    return;
+  }
+  if (!data.valid) {
+    const messages = {
+      not_found: "That code doesn't match any record. Double-check with your teacher.",
+      revoked: "This code is no longer active. Message your teacher for help.",
+      not_started: `This code isn't active yet — your batch starts ${data.start_date}.`,
+      expired: `This code expired on ${data.end_date}. Message your teacher to renew.`,
+    };
+    errEl.textContent = messages[data.reason] || "This code isn't valid.";
+    errEl.classList.remove("hidden");
+    return;
+  }
+
+  sessionInfo = { code: code.toUpperCase(), batch_name: data.batch_name, end_date: data.end_date };
+  USERNAME = data.student_name;
+  saveSession({ ...sessionInfo, student_name: USERNAME });
+  enterClassroom();
+}
+
+document.getElementById("join-btn").addEventListener("click", () => {
+  const code = document.getElementById("code-input").value.trim();
+  if (!code) return;
+  redeemCode(code);
+});
+document.getElementById("code-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("join-btn").click();
+});
+
+function enterClassroom() {
+  document.getElementById("gate").classList.add("hidden");
+  document.getElementById("classroom").classList.remove("hidden");
+  document.getElementById("batch-label").textContent = sessionInfo.batch_name;
+  loadRecentChat();
+  connectRoomChannel();
+}
+
+// Auto-fill code from a shared link like index.html?code=SPK-4Q7X-9K2M
+const urlCode = new URLSearchParams(location.search).get("code");
+const saved = getSavedSession();
+if (saved) {
+  sessionInfo = saved;
+  USERNAME = saved.student_name;
+  enterClassroom();
+} else if (urlCode) {
+  document.getElementById("code-input").value = urlCode.toUpperCase();
+  redeemCode(urlCode);
+}
+
+// ============================================================
+// CHAT — DOM-pruned live log
+// ============================================================
+const chatBox = document.getElementById("chat-box");
+const MAX_CHAT_NODES = 40;
+
+function appendChatMessage(username, message) {
+  const row = document.createElement("div");
+  row.className = "chat-msg text-sm leading-snug";
+  row.innerHTML = `<span class="font-semibold text-emerald-400">${escapeHtml(username)}</span>
+     <span class="text-slate-200">${escapeHtml(message)}</span>`;
+  chatBox.insertBefore(row, chatBox.firstChild);
+  while (chatBox.children.length > MAX_CHAT_NODES) chatBox.removeChild(chatBox.lastChild);
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+document.getElementById("chat-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const input = document.getElementById("chat-input");
+  const message = input.value.trim();
+  if (!message) return;
+  input.value = "";
+  const { error } = await supabase.from("chat_messages").insert({
+    username: USERNAME, message: message.slice(0, 300),
+  });
+  if (error) console.error("chat insert error:", error);
+});
+
+async function loadRecentChat() {
+  const { data, error } = await supabase
+    .from("chat_messages").select("*")
+    .order("created_at", { ascending: false }).limit(MAX_CHAT_NODES);
+  if (error) return console.error(error);
+  data.reverse().forEach(row => appendChatMessage(row.username, row.message));
+}
+
+// ============================================================
+// EMOJI REACTIONS
+// ============================================================
+document.querySelectorAll(".emoji-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    spawnFloatingEmoji(btn.dataset.emoji);
+    roomChannel?.send({ type: "broadcast", event: "reaction", payload: { emoji: btn.dataset.emoji } });
+  });
+});
+
+function spawnFloatingEmoji(emoji) {
+  const layer = document.getElementById("emoji-layer");
+  const el = document.createElement("div");
+  el.className = "float-emoji";
+  el.textContent = emoji;
+  el.style.left = (10 + Math.random() * 80) + "%";
+  layer.appendChild(el);
+  setTimeout(() => el.remove(), 1600);
+}
+
+// ============================================================
+// RAISE HAND
+// ============================================================
+document.getElementById("raise-hand-btn").addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
+  btn.disabled = true;
+  btn.textContent = "✋ Raised";
+  const { error } = await supabase.from("hand_raises").insert({ username: USERNAME, status: "pending" });
+  if (error) console.error(error);
+  setTimeout(() => { btn.disabled = false; btn.innerHTML = "✋ Raise Hand"; }, 15000);
+});
+
+// ============================================================
+// REALTIME — chat, reactions, presence
+// ============================================================
+let roomChannel = null;
+let reconnectAttempt = 0;
+
+function connectRoomChannel() {
+  roomChannel = supabase.channel("room_sync", { config: { presence: { key: USERNAME + "-" + Math.random().toString(36).slice(2,6) } } });
+
+  roomChannel
+    .on("broadcast", { event: "reaction" }, ({ payload }) => spawnFloatingEmoji(payload.emoji))
+    .on("presence", { event: "sync" }, () => {
+      const state = roomChannel.presenceState();
+      document.getElementById("presence-count").textContent = `${Object.keys(state).length} online`;
+    })
+    .subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        reconnectAttempt = 0;
+        document.getElementById("reconnect-toast").classList.add("hidden");
+        await roomChannel.track({ username: USERNAME, joined_at: Date.now() });
+      }
+      if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) scheduleReconnect();
+    });
+
+  supabase.channel("chat_stream")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => {
+      appendChatMessage(payload.new.username, payload.new.message);
+    })
+    .subscribe();
+}
+
+function scheduleReconnect() {
+  document.getElementById("reconnect-toast").classList.remove("hidden");
+  const delay = Math.min(1000 * 2 ** reconnectAttempt, 15000);
+  reconnectAttempt++;
+  setTimeout(() => { try { roomChannel?.unsubscribe(); } catch (_) {} connectRoomChannel(); }, delay);
+}
+</script>
+</body>
+</html>

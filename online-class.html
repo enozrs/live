@@ -105,7 +105,7 @@
 const SUPABASE_URL = "https://nldvmghrucwalqvrchfc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sZHZtZ2hydWN3YWxxdnJjaGZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMzQ2NjUsImV4cCI6MjEwNTgxMDY2NX0.KMa3rVsvopQUGBE7IOUtdpKgMg2hahM_nJRmTqgs4aE";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ============================================================
 // ACCESS GATE
@@ -133,7 +133,7 @@ async function redeemCode(code) {
   errEl.classList.add("hidden");
   loadingEl.classList.remove("hidden");
 
-  const { data, error } = await supabase.rpc("redeem_access_code", { input_code: code });
+  const { data, error } = await supabaseClient.rpc("redeem_access_code", { input_code: code });
   loadingEl.classList.add("hidden");
 
   if (error) {
@@ -215,14 +215,14 @@ document.getElementById("chat-form").addEventListener("submit", async (e) => {
   const message = input.value.trim();
   if (!message) return;
   input.value = "";
-  const { error } = await supabase.from("chat_messages").insert({
+  const { error } = await supabaseClient.from("chat_messages").insert({
     username: USERNAME, message: message.slice(0, 300),
   });
   if (error) console.error("chat insert error:", error);
 });
 
 async function loadRecentChat() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from("chat_messages").select("*")
     .order("created_at", { ascending: false }).limit(MAX_CHAT_NODES);
   if (error) return console.error(error);
@@ -256,7 +256,7 @@ document.getElementById("raise-hand-btn").addEventListener("click", async (e) =>
   const btn = e.currentTarget;
   btn.disabled = true;
   btn.textContent = "✋ Raised";
-  const { error } = await supabase.from("hand_raises").insert({ username: USERNAME, status: "pending" });
+  const { error } = await supabaseClient.from("hand_raises").insert({ username: USERNAME, status: "pending" });
   if (error) console.error(error);
   setTimeout(() => { btn.disabled = false; btn.innerHTML = "✋ Raise Hand"; }, 15000);
 });
@@ -268,7 +268,7 @@ let roomChannel = null;
 let reconnectAttempt = 0;
 
 function connectRoomChannel() {
-  roomChannel = supabase.channel("room_sync", { config: { presence: { key: USERNAME + "-" + Math.random().toString(36).slice(2,6) } } });
+  roomChannel = supabaseClient.channel("room_sync", { config: { presence: { key: USERNAME + "-" + Math.random().toString(36).slice(2,6) } } });
 
   roomChannel
     .on("broadcast", { event: "reaction" }, ({ payload }) => spawnFloatingEmoji(payload.emoji))
@@ -285,7 +285,7 @@ function connectRoomChannel() {
       if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) scheduleReconnect();
     });
 
-  supabase.channel("chat_stream")
+  supabaseClient.channel("chat_stream")
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => {
       appendChatMessage(payload.new.username, payload.new.message);
     })

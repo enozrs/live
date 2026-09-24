@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Class Admin</title>
+<meta name="theme-color" content="#020617" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { font-family: 'Inter', system-ui, sans-serif; }
+  body { background:#020617; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  @keyframes pulseRing { 0%{box-shadow:0 0 0 0 rgba(16,185,129,.55);} 100%{box-shadow:0 0 0 14px rgba(16,185,129,0);} }
+  .live-pulse{ animation: pulseRing 1.8s ease-out infinite; }
+</style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+<!-- ============ LOGIN ============ -->
+<div id="auth-gate" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center px-6">
+  <div class="w-full max-w-xs">
+    <h1 class="text-lg font-bold mb-1">Admin Login</h1>
+    <p class="text-slate-500 text-sm mb-4">Sign in with your Supabase admin account.</p>
+    <input id="admin-email" type="email" autocomplete="username"
+      class="w-full min-h-[48px] bg-slate-900 border border-slate-800 rounded-xl px-4 text-sm mb-2 focus:outline-none focus:border-emerald-500/60"
+      placeholder="Email" />
+    <input id="admin-password" type="password" autocomplete="current-password"
+      class="w-full min-h-[48px] bg-slate-900 border border-slate-800 rounded-xl px-4 text-sm mb-3 focus:outline-none focus:border-emerald-500/60"
+      placeholder="Password" />
+    <button id="auth-submit" class="w-full min-h-[48px] rounded-xl bg-emerald-500 text-slate-950 font-semibold text-sm active:scale-95 transition-transform">
+      Sign In
+    </button>
+    <p id="auth-error" class="hidden text-red-400 text-xs mt-2"></p>
+    <p class="text-slate-600 text-xs mt-4">No account yet? Create one in Supabase → Authentication → Users → Add User.</p>
+  </div>
+</div>
+
+<!-- ============ DASHBOARD ============ -->
+<div id="dashboard" class="hidden max-w-3xl mx-auto px-4 py-5 pb-16 space-y-5">
+
+  <header class="flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-500 live-pulse"></span>
+      <h1 class="font-bold tracking-tight">Class Admin</h1>
+    </div>
+    <button id="signout-btn" class="text-xs text-slate-500">Sign out</button>
+  </header>
+
+  <!-- APPROVE & GENERATE -->
+  <section class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3">
+    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Approve Payment &amp; Generate Access</label>
+    <p class="text-xs text-slate-500 -mt-2">Fill this in after you've checked the eSewa/bank screenshot on WhatsApp.</p>
+
+    <div class="grid grid-cols-2 gap-3">
+      <input id="f-name" class="col-span-2 min-h-[48px] bg-slate-950 border border-slate-800 rounded-xl px-3 text-sm focus:outline-none focus:border-emerald-500/60" placeholder="Student name" />
+      <input id="f-whatsapp" class="col-span-2 min-h-[48px] bg-slate-950 border border-slate-800 rounded-xl px-3 text-sm focus:outline-none focus:border-emerald-500/60" placeholder="WhatsApp number (optional)" />
+      <select id="f-method" class="min-h-[48px] bg-slate-950 border border-slate-800 rounded-xl px-3 text-sm focus:outline-none focus:border-emerald-500/60">
+        <option value="esewa">eSewa</option>
+        <option value="bank">Bank transfer</option>
+        <option value="other">Other</option>
+      </select>
+      <input id="f-amount" type="number" class="min-h-[48px] bg-slate-950 border border-slate-800 rounded-xl px-3 text-sm focus:outline-none focus:border-emerald-500/60" placeholder="Amount (optional)" />
+      <input id="f-batch" class="col-span-2 min-h-[48px] bg-slate-950 border border-slate-800 rounded-xl px-3 text-sm focus:outline-none focus:border-emerald-500/60" placeholder="Batch name (e.g. Sept Speaking Batch)" />
+      <div>
+        <label class="text-[11px] text-slate-500">Start date</label>
+        <input id="f-start" type="date" class="w-full min-h-[48px] bg-slate-950 border border-slate-800 rounded-xl px-3 text-sm focus:outline-none focus:border-emerald-500/60" />
+      </div>
+      <div>
+        <label class="text-[11px] text-slate-500">End date</label>
+        <input id="f-end" type="date" class="w-full min-h-[48px] bg-slate-950 border border-slate-800 rounded-xl px-3 text-sm focus:outline-none focus:border-emerald-500/60" />
+      </div>
+    </div>
+
+    <button id="generate-btn" class="w-full min-h-[48px] rounded-xl bg-emerald-500 text-slate-950 font-semibold text-sm active:scale-95 transition-transform">
+      ✅ Approve &amp; Generate Code
+    </button>
+    <p id="generate-status" class="text-xs text-center h-4"></p>
+
+    <div id="message-box" class="hidden space-y-2">
+      <label class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Message to send on WhatsApp</label>
+      <textarea id="message-text" rows="12" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm font-mono leading-relaxed focus:outline-none"></textarea>
+      <button id="copy-btn" class="w-full min-h-[44px] rounded-xl bg-slate-800 text-slate-100 text-sm font-semibold active:scale-95 transition-transform">
+        📋 Copy Message
+      </button>
+    </div>
+  </section>
+
+  <!-- ISSUED CODES -->
+  <section class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3">
+    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Issued Codes</label>
+    <div id="codes-list" class="space-y-2 text-sm"></div>
+  </section>
+
+  <!-- HAND-RAISE QUEUE -->
+  <section class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3">
+    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Raised Hands</label>
+    <div id="hand-queue" class="space-y-2">
+      <p class="text-slate-600 text-sm">No hands raised.</p>
+    </div>
+  </section>
+
+  <!-- CHAT MODERATION -->
+  <section class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3">
+    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Chat</label>
+    <div id="mod-chat-log" class="max-h-64 overflow-y-auto space-y-2 text-sm"></div>
+  </section>
+
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const SUPABASE_URL = "https://nldvmghrucwalqvrchfc.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sZHZtZ2hydWN3YWxxdnJjaGZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMzQ2NjUsImV4cCI6MjEwNTgxMDY2NX0.KMa3rVsvopQUGBE7IOUtdpKgMg2hahM_nJRmTqgs4aE";
+const CLASS_JOIN_BASE_URL = "https://live.thesrzone.com/online-class.html"; // where index.html is hosted
+
+// Edit this template freely — {{placeholders}} are filled in automatically.
+const MESSAGE_TEMPLATE = `🎓 Welcome to {{batch_name}}, {{name}}!
+
+Your access code: {{code}}
+
+📅 Valid: {{start_date}} to {{end_date}}
+🕒 Class time: [fill in your daily class time here]
+
+👉 How to join:
+1. Tap this link: {{join_link}}
+2. Your code will already be filled in — just tap "Join Class".
+3. That's it — no app to install, works right in your browser.
+
+✅ What you need:
+Just your phone or laptop with internet. Nothing to download.
+
+📜 A few ground rules:
+- Be respectful in the chat, no spam.
+- This code is just for you — please don't share it.
+- Type your questions anytime during class, I'll answer live.
+
+Message me here on WhatsApp if you run into any issues. See you in class! 🙌`;
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ============================================================
+// AUTH
+// ============================================================
+document.getElementById("auth-submit").addEventListener("click", signIn);
+document.getElementById("admin-password").addEventListener("keydown", (e) => { if (e.key === "Enter") signIn(); });
+
+async function signIn() {
+  const email = document.getElementById("admin-email").value.trim();
+  const password = document.getElementById("admin-password").value;
+  const errEl = document.getElementById("auth-error");
+  errEl.classList.add("hidden");
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    errEl.textContent = error.message;
+    errEl.classList.remove("hidden");
+    return;
+  }
+  showDashboard();
+}
+
+document.getElementById("signout-btn").addEventListener("click", async () => {
+  await supabase.auth.signOut();
+  location.reload();
+});
+
+async function checkExistingSession() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) showDashboard();
+}
+
+function showDashboard() {
+  document.getElementById("auth-gate").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
+  boot();
+}
+
+// ============================================================
+// CODE GENERATION
+// ============================================================
+const CODE_CHARS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"; // no 0/O/1/I/L ambiguity
+
+function generateCode() {
+  const seg = () => Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("");
+  return `SPK-${seg()}-${seg()}`;
+}
+
+function fillTemplate(tpl, vars) {
+  return tpl.replace(/{{(\w+)}}/g, (_, key) => vars[key] ?? "");
+}
+
+document.getElementById("generate-btn").addEventListener("click", async () => {
+  const name = document.getElementById("f-name").value.trim();
+  const whatsapp = document.getElementById("f-whatsapp").value.trim();
+  const method = document.getElementById("f-method").value;
+  const amount = document.getElementById("f-amount").value;
+  const batch = document.getElementById("f-batch").value.trim();
+  const start = document.getElementById("f-start").value;
+  const end = document.getElementById("f-end").value;
+  const statusEl = document.getElementById("generate-status");
+
+  if (!name || !batch || !start || !end) {
+    statusEl.textContent = "Please fill in name, batch, start and end date.";
+    statusEl.className = "text-xs text-center h-4 text-red-400";
+    return;
+  }
+
+  statusEl.textContent = "Generating…";
+  statusEl.className = "text-xs text-center h-4 text-slate-400";
+
+  const { data: student, error: studentErr } = await supabase
+    .from("students")
+    .insert({ name, whatsapp, payment_method: method, amount: amount || null })
+    .select().single();
+
+  if (studentErr) {
+    statusEl.textContent = "Error saving student: " + studentErr.message;
+    statusEl.className = "text-xs text-center h-4 text-red-400";
+    return;
+  }
+
+  const code = generateCode();
+  const { error: codeErr } = await supabase.from("access_codes").insert({
+    code, student_id: student.id, student_name: name,
+    batch_name: batch, start_date: start, end_date: end,
+  });
+
+  if (codeErr) {
+    statusEl.textContent = "Error creating code: " + codeErr.message;
+    statusEl.className = "text-xs text-center h-4 text-red-400";
+    return;
+  }
+
+  const joinLink = `${CLASS_JOIN_BASE_URL}?code=${encodeURIComponent(code)}`;
+  const message = fillTemplate(MESSAGE_TEMPLATE, {
+    name, code, batch_name: batch, start_date: start, end_date: end, join_link: joinLink,
+  });
+
+  document.getElementById("message-text").value = message;
+  document.getElementById("message-box").classList.remove("hidden");
+  statusEl.textContent = `Code ${code} created ✅`;
+  statusEl.className = "text-xs text-center h-4 text-emerald-400";
+
+  ["f-name", "f-whatsapp", "f-amount"].forEach(id => document.getElementById(id).value = "");
+  loadCodesList();
+});
+
+document.getElementById("copy-btn").addEventListener("click", () => {
+  const text = document.getElementById("message-text");
+  text.select();
+  navigator.clipboard.writeText(text.value).then(() => {
+    const btn = document.getElementById("copy-btn");
+    const original = btn.textContent;
+    btn.textContent = "✅ Copied!";
+    setTimeout(() => (btn.textContent = original), 1500);
+  });
+});
+
+// ============================================================
+// ISSUED CODES LIST
+// ============================================================
+async function loadCodesList() {
+  const { data, error } = await supabase
+    .from("access_codes")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) return console.error(error);
+
+  const container = document.getElementById("codes-list");
+  if (!data.length) { container.innerHTML = `<p class="text-slate-600 text-sm">No codes issued yet.</p>`; return; }
+
+  container.innerHTML = data.map(row => {
+    const expired = todayISO() > row.end_date;
+    const statusLabel = row.status === "revoked" ? "Revoked" : expired ? "Expired" : "Active";
+    const statusColor = row.status === "revoked" || expired ? "text-slate-500" : "text-emerald-400";
+    return `
+      <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5">
+        <div class="min-w-0">
+          <div class="text-sm font-semibold truncate">${escapeHtml(row.student_name)} <span class="font-mono text-emerald-400 text-xs">${row.code}</span></div>
+          <div class="text-[11px] text-slate-500">${escapeHtml(row.batch_name)} · ${row.start_date} → ${row.end_date}</div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="text-[11px] font-semibold ${statusColor}">${statusLabel}</span>
+          ${row.status === "active" ? `<button data-id="${row.id}" class="revoke-btn text-[11px] font-semibold text-red-400 bg-red-500/10 rounded-lg px-2 py-1.5">Revoke</button>` : ""}
+        </div>
+      </div>`;
+  }).join("");
+
+  container.querySelectorAll(".revoke-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      await supabase.from("access_codes").update({ status: "revoked" }).eq("id", btn.dataset.id);
+      loadCodesList();
+    });
+  });
+}
+
+function todayISO() { return new Date().toISOString().slice(0, 10); }
+
+// ============================================================
+// HAND-RAISE QUEUE + CHAT MODERATION (realtime)
+// ============================================================
+function connectAdminRealtime() {
+  supabase.channel("hand_raise_stream")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "hand_raises" }, (payload) => addHandRaiseRow(payload.new))
+    .subscribe();
+
+  supabase.channel("mod_chat_stream")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => addModChatRow(payload.new))
+    .subscribe();
+}
+
+function addHandRaiseRow(row) {
+  const container = document.getElementById("hand-queue");
+  if (container.children.length === 1 && container.children[0].tagName === "P") container.innerHTML = "";
+  const el = document.createElement("div");
+  el.className = "flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5";
+  el.innerHTML = `<span class="text-sm font-medium">✋ ${escapeHtml(row.username)}</span>
+    <button class="text-xs font-semibold text-slate-400 bg-slate-800 rounded-lg px-3 py-1.5 min-h-[36px]">Dismiss</button>`;
+  el.querySelector("button").addEventListener("click", async () => {
+    await supabase.from("hand_raises").update({ status: "dismissed" }).eq("id", row.id);
+    el.remove();
+    if (!container.children.length) container.innerHTML = `<p class="text-slate-600 text-sm">No hands raised.</p>`;
+  });
+  container.prepend(el);
+}
+
+function addModChatRow(row) {
+  const log = document.getElementById("mod-chat-log");
+  const el = document.createElement("div");
+  el.innerHTML = `<span class="font-semibold text-emerald-400">${escapeHtml(row.username)}</span> <span class="text-slate-300">${escapeHtml(row.message)}</span>`;
+  log.prepend(el);
+  while (log.children.length > 50) log.removeChild(log.lastChild);
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+function defaultDates() {
+  const start = new Date();
+  const end = new Date();
+  end.setDate(end.getDate() + 30);
+  document.getElementById("f-start").value = start.toISOString().slice(0, 10);
+  document.getElementById("f-end").value = end.toISOString().slice(0, 10);
+}
+
+function boot() {
+  defaultDates();
+  loadCodesList();
+  connectAdminRealtime();
+}
+
+checkExistingSession();
+</script>
+</body>
+</html>

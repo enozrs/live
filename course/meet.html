@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SR Zone — Live Class</title>
+<link rel="preconnect" href="https://www.youtube.com">
+<link rel="preconnect" href="https://i.ytimg.com">
+<link rel="dns-prefetch" href="https://www.youtube.com">
+
+
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+<!--
+  V2 RELIABILITY PATTERN:
+  onlineclass.ktlin file security system, whatsapp, ui redesigned, fullscreen, less clutter, preconnect, fast performance, robust security, chat doesnot show up in landscape mode to avoid showing broken chat ui - new font
+  YouTube API loads unconditionally in <head>.
+  By the time any user passes the gate AND waits for a timer,
+  YT is already fully ready in memory. Zero race condition possible.
+  DO NOT lazy-load this script. The reliability is worth the ~11KB cost.
+-->
+<script src="https://www.youtube.com/iframe_api"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg:     #0f1011; /* Deeper, more premium dark */
+  --bg2:    #1a1b1e;
+  --bg3:    #2b2d31;
+  --border: #313338;
+  --text:   #f2f3f5;
+  --text2:  #b5bac1;
+  --accent: #0866ff; /* Your vivid blue */
+  --accent-hover: #0056d6;
+  --red:    #ef4444;
+  --amber:  #f59e0b;
+  --radius: 12px;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg); color: var(--text);
+  height: 100dvh; overflow: hidden;
+  display: flex; flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══ GATE ══ */
+#gate {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; z-index: 9999;
+}
+.gate-card {
+  background: rgba(26, 27, 30, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  padding: 3rem 2rem;
+  width: 360px; max-width: 92vw;
+  display: flex; flex-direction: column; gap: 1.5rem; text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+.gate-logo { font-size: 32px; font-weight: 700; letter-spacing: -1px; }
+.gate-sub { font-size: 14px; color: var(--text2); font-weight: 500; }
+.gate-input {
+  width: 100%; background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 999px; color: var(--text); font-family: inherit;
+  font-size: 16px; padding: 14px 20px; outline: none;
+  text-align: center; letter-spacing: 2px; font-weight: 600;
+  transition: all 0.2s;
+}
+.gate-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(8, 102, 255, 0.15); }
+.gate-input::placeholder { letter-spacing: 0; color: var(--text2); font-size: 14px; font-weight: 400; }
+.gate-btn {
+  width: 100%; background: var(--accent); color: #fff; border: none;
+  border-radius: 999px; padding: 16px; font-family: inherit;
+  font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.gate-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.gate-btn:active { transform: translateY(1px); }
+.gate-error { font-size: 13px; color: var(--red); display: none; }
+.gate-note { font-size: 11px; color: var(--text2); }
+
+/* ══ STATUS SCREEN ══ */
+#status-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center; gap: 20px; z-index: 500;
+}
+.status-emoji { font-size: 52px; }
+.status-title { font-size: 24px; font-weight: 500; }
+.status-sub { font-size: 15px; color: var(--text2); text-align: center; max-width: 320px; line-height: 1.6; }
+.countdown-pill {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 99px;
+  padding: 10px 24px; display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--text2);
+}
+#countdown-val {
+  font-size: 20px; font-weight: 600; color: var(--accent);
+  font-variant-numeric: tabular-nums; letter-spacing: 1px;
+}
+/*
+  Sync/Rejoin button — shown ~15s before countdown hits zero.
+  On slow 2G, the page reload may still be in progress.
+  Giving students a tap target feels like Google Meet's "Rejoin" button.
+*/
+#sync-btn {
+  display: none;
+  background: var(--accent); color: #fff; border: none;
+  border-radius: 999px; padding: 14px 36px;
+  font-family: inherit; font-size: 16px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; margin-top: 8px;
+  box-shadow: 0 4px 15px rgba(8, 102, 255, 0.4);
+}
+#sync-btn:hover { background: var(--accent-hover); transform: translateY(-2px); }
+
+/* Show floating fullscreen button ONLY on small screens */
+@media (max-width: 768px) {
+  #mobile-fs-btn { display: flex !important; }
+}
+/* Hide it when actually in fullscreen */
+#video-col:fullscreen #mobile-fs-btn,
+#video-col:-webkit-full-screen #mobile-fs-btn {
+  display: none !important;
+}
+#sync-btn:hover { background: #1765cc; }
+
+/* Student count shown on waiting screen */
+#student-count-status { font-size: 13px; color: var(--text2); display: none; }
+
+/* ══ TOP BAR ══ */
+#topbar {
+  height: 52px; flex-shrink: 0; background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 16px; gap: 12px; z-index: 10;
+}
+.tb-title { font-size: 15px; font-weight: 500; }
+.tb-sep { flex: 1; }
+.tb-chip {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; padding: 4px 10px; border-radius: 99px; font-weight: 500;
+}
+.chip-live { background: rgba(234,67,53,0.15); border: 1px solid rgba(234,67,53,0.35); color: #f28b82; }
+.live-dot { width: 7px; height: 7px; background: var(--red); border-radius: 50%; animation: blink 1.4s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+
+/* ══ MAIN ══ */
+#main { flex: 1; display: flex; height: calc(100dvh - 52px); overflow: hidden; }
+#video-col { flex: 1; display: flex; flex-direction: column; position: relative; background: #000; }
+#video-wrap { flex: 1; height: 100%; position: relative; }
+#yt-player { position: absolute; width: 100%; height: 100%; pointer-events: none; }
+#tap-zone { position: absolute; inset: 0; z-index: 5; display: none; }
+#click-shield { position: absolute; inset: 0; z-index: 4; cursor: default; }
+
+/* Teacher PiP tile */
+#teacher-tile {
+  position: absolute; top: 12px; right: 12px; width: 130px; height: 78px;
+  background: #1a1a2e; border: 2px solid var(--border); border-radius: var(--radius);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; z-index: 6;
+}
+.tile-avatar {
+  width: 32px; height: 32px; border-radius: 50%; background: #1a73e8;
+  display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600;
+}
+.tile-name { font-size: 10px; color: var(--text2); background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 99px; }
+
+#hand-notif {
+  position: absolute; bottom: 96px; left: 16px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 14px;
+  font-size: 13px; color: var(--text2); z-index: 6; display: none;
+}
+
+/* Autoplay blocked prompt */
+#play-prompt {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; z-index: 10; cursor: pointer;
+}
+#play-prompt-inner {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 28px 36px; text-align: center;
+  display: flex; flex-direction: column; gap: 12px; align-items: center;
+}
+.play-icon {
+  width: 64px; height: 64px; background: #1a73e8;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+.play-icon .material-symbols-outlined { font-size: 32px; }
+
+/* ══ BOTTOM BAR ══ */
+#bottom-bar {
+  height: 80px; 
+  flex-shrink: 0; 
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  display: none;
+  align-items: center; 
+  justify-content: center;
+  gap: 12px; 
+  padding: 0 24px; 
+  z-index: 20; 
+}
+  
+.ctrl-circle {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: none; background: #3c4043; color: white;
+}
+.cc-off { background: #ea4335 !important; }
+.cc-hand-on { background: var(--amber) !important; color: #000 !important; }
+.cc-chat-on { background: var(--accent) !important; color: #000 !important; }
+.cc-leave { background: #ea4335; width: 64px; border-radius: 32px; }
+.material-symbols-outlined { font-size: 22px; font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+
+/* ══ CHAT PANEL ══ */
+#chat-panel {
+  width: 320px; flex-shrink: 0; background: var(--bg2);
+  border-left: 1px solid var(--border);
+  display: none; flex-direction: column; overflow: hidden;
+}
+#chat-panel.open { display: flex; }
+.chat-head {
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.chat-head-title { font-size: 13px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+.chat-close { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 2px 6px; }
+.chat-loader { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text2); font-size: 13px; }
+#yt-chat-frame { flex: 1; border: none; background: transparent; min-height: 0; display: none; }
+
+/* ══ TOAST ══ */
+#toast {
+  position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 9px 16px;
+  font-size: 13px; color: var(--text2);
+  opacity: 0; transition: opacity 0.25s;
+  z-index: 9999; pointer-events: none; white-space: nowrap;
+}
+#toast.show { opacity: 1; }
+
+/* ══ MODALS ══ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10000; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
+.modal-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 24px; width: 340px; max-width: 90vw;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  transform: translateY(20px); transition: transform 0.2s;
+}
+.modal-overlay.active .modal-box { transform: translateY(0); }
+
+/* ══ RESPONSIVE ══ */
+@media (max-width: 640px) {
+  #chat-panel {
+    position: fixed; bottom: 0; left: 0; width: 100%; height: 90%; z-index: 100;
+    border: none; border-radius: 16px 16px 0 0; box-shadow: 0 -10px 25px rgba(0,0,0,0.8);
+  }
+  #teacher-tile { width: 90px; height: 56px; top: 8px; right: 8px; }
+  .ctrl-circle { width: 42px; height: 42px; }
+  #bottom-bar { gap: 8px; padding: 0 12px; z-index: 110; }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  #topbar, #teacher-tile { display: none !important; }
+  #main { height: 100dvh !important; }
+
+  #chat-panel { 
+    position: fixed !important;
+    top: 0 !important; 
+    bottom: 0 !important; /* Locks to bottom edge of visual viewport */
+    left: 0 !important;
+    width: 100% !important;
+    height: auto !important; /* Overrides the 100dvh */
+    border-radius: 0; 
+    z-index: 200; 
+    /* The display: flex !important was removed from here */
+    padding-bottom: env(safe-area-inset-bottom, 15px) !important; /* Protects against gesture bars */
+  }
+
+  .chat-head {
+    padding: 4px 12px !important;
+    height: 32px !important;
+    flex-shrink: 0 !important; /* Prevents header from shrinking */
+    background: var(--bg);
+  }
+  
+  .chat-head-title { font-size: 11px !important; }
+  .chat-close { font-size: 14px !important; }
+
+  #yt-chat-frame {
+    height: auto !important;
+    flex: 1 1 auto !important; /* Fills remaining space mathematically */
+    min-height: 0 !important; /* Allows flex item to shrink smaller than content */
+    display: block; 
+  }
+
+  #bottom-bar {
+    position: fixed; 
+    bottom: 10px; 
+    left: 50%;
+    transform: translateX(-50%);
+    height: 52px; 
+    width: auto;
+    background: rgba(32, 33, 36, 0.95); 
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    padding: 0 12px;
+    z-index: 210; 
+    display: none; 
+    align-items: center;
+  }
+
+  .ctrl-circle { 
+    width: 38px !important; 
+    height: 38px !important; 
+    background: rgba(255,255,255,0.1) !important; 
+  }
+  
+  #hand-notif { 
+    bottom: 70px !important; 
+  }
+}
+  
+</style>
+</head>
+<body>
+
+<!-- ══ GATE ══ -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-logo">SR <span>Zone</span></div>
+    <div class="gate-sub">Enter your personal license key</div>
+    <input id="code-input" class="gate-input" type="text"
+      maxlength="16" placeholder="License Key" autocomplete="off" spellcheck="false" />
+    <div id="gate-error" class="gate-error">Invalid license key. Please check and try again.</div>
+    <button class="gate-btn" onclick="checkCode()">Submit Key</button>
+    <div class="gate-note">License is linked to this device. Enter once, access forever.</div>
+  </div>
+</div>
+
+<!-- ══ STATUS SCREEN ══ -->
+<div id="status-screen">
+  <div class="status-emoji" id="s-emoji" style="color: var(--accent);">
+    <span class="material-symbols-outlined" style="font-size: 64px;">schedule</span>
+  </div>
+  <div class="status-title" id="s-title">Loading...</div>
+  <div class="status-sub" id="s-sub"></div>
+  <div class="countdown-pill" id="s-countdown" style="display:none">
+    Class starts in &nbsp;<span id="countdown-val">00:00:00</span>
+  </div>
+  <button id="sync-btn" onclick="manualSync()" style="align-items:center; justify-content:center; gap:8px;">
+    <span class="material-symbols-outlined" style="font-size:20px;">login</span> Enter Classroom
+  </button>
+  <div id="student-count-status"></div>
+</div>
+
+<!-- ══ TOP BAR ══ -->
+<div id="topbar" style="display:none">
+  <div class="tb-title" id="tb-title">SR Zone</div>
+  <div class="tb-sep"></div>
+  <div class="tb-chip chip-live">
+    <div class="live-dot"></div>
+    <span id="live-count"> --</span>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div id="main" style="display:none">
+  <div id="video-col">
+    <div id="video-wrap">
+      <div id="yt-player"></div>
+      <div id="tap-zone"></div>
+      <div id="click-shield"></div>
+
+      <div id="play-prompt" onclick="userInitiatedPlay()">
+        <div id="play-prompt-inner">
+          <div class="play-icon">
+            <span class="material-symbols-outlined">play_arrow</span>
+          </div>
+          <p style="font-size:15px; color:var(--text2)">Tap to join the live class</p>
+        </div>
+      </div>
+
+      <button id="sound-pill" onclick="enableSound()" style="
+        position:absolute; bottom:16px; left:50%; transform:translateX(-50%); z-index:12;
+        background:var(--accent); color:#fff; border:none;
+        padding:10px 24px; border-radius:99px;
+        font-family:'Inter', system-ui, sans-serif; font-size:14px; font-weight:600; line-height:1;
+        display:none; cursor:pointer;
+        box-shadow:0 4px 15px rgba(8, 102, 255, 0.4);
+        align-items:center; justify-content:center; gap:8px;
+        white-space:nowrap;
+      ">
+        <span class="material-symbols-outlined" style="font-size:22px; display:flex; align-items:center;">volume_up</span>
+        <span>Tap for sound</span>
+      </button>
+
+      <button id="mobile-fs-btn" onclick="toggleFullscreen()" style="
+        position: absolute; bottom: 16px; right: 16px; z-index: 12;
+        background: #ef4444; color: white; border: none;
+        padding: 8px 14px; border-radius: 99px;
+        font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 600;
+        display: none; cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        align-items: center; gap: 6px;
+      ">
+        <span class="material-symbols-outlined" style="font-size: 18px;">fullscreen</span> Fullscreen
+      </button>
+      <div id="teacher-tile">
+        <div class="tile-avatar">SR</div>
+        <div class="tile-name">Teacher</div>
+      </div>
+
+      <div id="hand-notif"></div>
+    </div>
+
+    <div id="bottom-bar">
+      <button class="ctrl-circle cc-off" id="mic-btn" onclick="toggleMic()">
+        <span class="material-symbols-outlined">mic_off</span>
+      </button>
+      <button class="ctrl-circle cc-off" id="cam-btn" onclick="toggleCam()">
+        <span class="material-symbols-outlined">videocam_off</span>
+      </button>
+      <button class="ctrl-circle" id="hand-btn" onclick="toggleHand()">
+        <span class="material-symbols-outlined">pan_tool</span>
+      </button>
+      <button class="ctrl-circle" id="chat-btn" onclick="openChatChoice()">
+        <span class="material-symbols-outlined">chat</span>
+      </button>
+      <button class="ctrl-circle" id="fs-btn" onclick="toggleFullscreen()">
+        <span class="material-symbols-outlined">fullscreen</span>
+      </button>
+      <button class="ctrl-circle cc-leave" onclick="leaveClass()">
+        <span class="material-symbols-outlined">call_end</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="chat-panel">
+    <div class="chat-head">
+      <span class="chat-head-title">Class Chat</span>
+      <button class="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+    <div id="chat-loader" class="chat-loader">Connecting to chat...</div>
+    <iframe id="yt-chat-frame" src="" allow="autoplay"
+      sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ── Chat Choice Modal ── -->
+<div id="chat-choice" class="modal-overlay">
+  <div class="modal-box" style="text-align:center;">
+    <h3 style="font-size:20px; margin-bottom:20px;">Who do you want to talk to?</h3>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <button onclick="openYouTubeChat()" style="padding:16px; border-radius:12px; border:none; background:var(--bg3); color:white; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:0.2s;">
+        <span class="material-symbols-outlined" style="color:var(--accent);">forum</span> Chat with Friends
+      </button>
+      <button onclick="openAskTeacher()" style="padding:16px; border-radius:12px; border:none; background:var(--accent); color:white; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:0.2s;">
+        <span class="material-symbols-outlined">support_agent</span> Ask Teacher a Question
+      </button>
+    </div>
+    <button onclick="document.getElementById('chat-choice').classList.remove('active')" style="margin-top:20px; background:none; border:none; color:var(--text2); font-size:13px; cursor:pointer;">Cancel</button>
+  </div>
+</div>
+
+<!-- ── Ask Teacher Form Modal ── -->
+<div id="ask-teacher-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3 style="font-size:18px; margin-bottom:8px;">Ask your Teacher</h3>
+    <p style="font-size:13px; color:var(--text2); margin-bottom:16px;">Type your question below. It will open in WhatsApp so you can send it privately.</p>
+    
+    <textarea id="teacher-question" placeholder="Type your doubt here..." style="width:100%; height:120px; background:var(--bg); border:2px solid var(--border); border-radius:12px; color:var(--text); font-family:inherit; font-size:15px; padding:12px; resize:none; outline:none; transition:0.2s; box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    
+    <div style="display:flex; gap:10px; margin-top:16px;">
+      <button onclick="document.getElementById('ask-teacher-modal').classList.remove('active')" style="flex:1; padding:12px; border-radius:999px; border:1px solid var(--border); background:var(--bg3); color:white; font-weight:600; cursor:pointer;">Cancel</button>
+      <button onclick="sendWhatsAppQuestion()" style="flex:2; padding:12px; border-radius:999px; border:none; background:#25D366; color:white; font-weight:700; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:8px;">
+        <span class="material-symbols-outlined" style="font-size:18px;">send</span> Send via WhatsApp
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// zzzCONFIG — edit these values
+// ══════════════════════════════════════════════════════
+const CONFIG = {
+  ytChatStreamId:  "iTDZ5cqHYF4",
+  domain:          "live.thesrzone.com",
+  sessionMs:       6 * 60 * 60 * 1000,
+  studentCountBase: 55, // tweak to match your real expected class size
+};
+// ══════════════════════════════════════════════════════
+
+// ── State (kept minimal — V0.5 lesson: fewer flags = fewer bugs) ──
+let player       = null;
+let currentClass = null;
+let statusTick   = null;
+/*
+  videoStarted: set to TRUE exactly once per page load, never reset during session.
+  If anything goes wrong, manualSync() calls location.reload() for guaranteed clean state.
+  This is the V0.5 pattern. V2 reset this flag in multiple places which caused reinit chaos.
+*/
+let videoStarted = false;
+let playerReady  = false;
+let chatLoaded   = false;
+let micOn = false, camOn = false, handUp = false, chatOpen = false;
+let controlsVisible = false, controlsTimeout = null;
+let studentCountInterval = null;
+
+const isMobile = () => ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+// ── Controls visibility ───────────────────────────────────────
+function showControls() {
+  if (!videoStarted) return;
+  if (isMobile() && chatOpen) return;
+  controlsVisible = true;
+  document.getElementById('bottom-bar').style.display = 'flex';
+  document.getElementById('tap-zone').style.display = 'none';
+  clearTimeout(controlsTimeout);
+  controlsTimeout = setTimeout(hideControls, 5000);
+}
+
+function hideControls() {
+  if (chatOpen && !isMobile()) return;
+  controlsVisible = false;
+  document.getElementById('bottom-bar').style.display = 'none';
+  
+  // Bring back the tap-zone so mobile users can tap to show controls again
+  if (isMobile()) {
+    document.getElementById('tap-zone').style.display = 'block';
+  }
+}
+
+document.addEventListener('mousemove', e => {
+  if (e.target.closest('#video-col') || e.target.closest('#bottom-bar')) showControls();
+});
+document.addEventListener('DOMContentLoaded', () => {
+  const bar = document.getElementById('bottom-bar');
+  if (bar) bar.addEventListener('mouseenter', () => clearTimeout(controlsTimeout));
+  const tz = document.getElementById('tap-zone');
+  if (tz) tz.addEventListener('touchend', e => { e.preventDefault(); showControls(); }, { passive: false });});
+
+// ── Gate ─────────────────────────────────────────────────────
+document.getElementById('code-input')
+  .addEventListener('keydown', e => { if (e.key === 'Enter') checkCode(); });
+
+window.addEventListener('load', () => {
+  try {
+    const session = JSON.parse(localStorage.getItem('srzone_v2'));
+    if (session && session.code && session.classData) {
+      
+      // 1. Local expiry check
+      const nowStr = getCurrentDateStr();
+      if (nowStr > session.expires) {
+        localStorage.removeItem('srzone_v2');
+        return; 
+      }
+
+      // 2. Launch immediately using cache
+      currentClass = session.classData;
+      launchApp();
+
+      // 3. The 12-Hour Remote Check
+      const verificationInterval = 12 * 60 * 60 * 1000; // 12 hours
+      if (Date.now() - (session.lastVerified || 0) >= verificationInterval) {
+        verifyLicenseRemotely(session.code);
+      }
+    }
+  } catch (e) {}
+});
+
+async function checkCode() {
+  const input = document.getElementById('code-input').value.trim();
+  if (!input) return;
+
+  const btn = document.querySelector('.gate-btn');
+  const originalText = btn.textContent;
+  btn.textContent = "Verifying...";
+  btn.disabled = true;
+
+  try {
+    const manifest = await fetchAndDecryptManifest();
+    let validLicense = null;
+    
+    // Find the code in the JSON
+    for (let lic of manifest.keys) {
+      if (lic.code === input) {
+        validLicense = lic;
+        break;
+      }
+    }
+
+    if (!validLicense) {
+      showGateError("Invalid license code.");
+      return;
+    }
+
+    // 🛡️ SECURE TIME WINDOW CHECK (Uses GitHub Server Time)
+    const now = secureServerTime || new Date(); 
+    const windowStart = new Date(validLicense.window_start);
+    const windowEnd = new Date(validLicense.window_end);
+
+    if (now < windowStart || now > windowEnd) {
+      showGateError("Registration window is closed. Please contact support.");
+      return;
+    }
+
+    // Check expiry
+    const currentDate = getCurrentDateStr();
+    if (currentDate > validLicense.expires) {
+      showGateError("This license has expired.");
+      return;
+    }
+
+    // ✅ ALL CHECKS PASSED - Save to Local Cache
+    const sessionData = {
+      code: input,
+      expires: validLicense.expires,
+      classData: manifest.classes["SRZONE"], // The course they unlocked
+      lastVerified: Date.now()
+    };
+    
+    localStorage.setItem('srzone_v2', JSON.stringify(sessionData));
+    currentClass = manifest.classes["SRZONE"];
+    
+    document.getElementById('gate').style.display = 'none';
+    launchApp();
+
+  } catch (err) {
+    console.error(err);
+    showGateError("Verification failed. Check your internet connection.");
+  }
+
+  btn.textContent = originalText;
+  btn.disabled = false;
+}
+// ── License Verification System ──────────────────────────────
+let secureServerTime = null;
+
+// Helper: Hex to Bytes
+function hexToBytes(hex) {
+    if (hex.length % 2 !== 0) throw new Error("Hex string must have an even length");
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+        bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+    }
+    return bytes;
+}
+
+// Helper: Base64 to Bytes
+function base64ToBytes(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+async function getEncryptionKey() {
+  const s1 = "fbee44";
+  const s2 = "dea634bc";
+    const s3 = "f199f39b8b";
+  const s4 = "688250c";
+    const s5 = "29d45d16b382c";
+  const s6 = "742f0820e";
+    const s7 = "34913d0ff17";
+  const s999 = s1 + s2 + s3 + s4 + s5 + s6 + s7; 
+  
+  return await crypto.subtle.importKey(
+    "raw",
+    hexToBytes(s999),
+    { name: "AES-GCM" },
+    false,
+    ["decrypt"] // We only need to decrypt on the frontend
+  );
+}
+
+// The Decryption Function (From your script!)
+async function decryptManifest(base64Payload) {
+    let key;
+    try {
+        key = await getEncryptionKey();
+    } catch (e) {
+        throw new Error("Decryption failed — invalid key format.");
+    }
+    
+    let payloadBytes;
+    try {
+        payloadBytes = base64ToBytes(base64Payload);
+    } catch (e) {
+        throw new Error("Decryption failed — corrupted base64 data.");
+    }
+    
+    if (payloadBytes.length < 12) {
+        throw new Error("Decryption failed — corrupted data (too short).");
+    }
+    
+    // Extract the 12-byte nonce and the ciphertext
+    const nonce = payloadBytes.slice(0, 12);
+    const ciphertextBytes = payloadBytes.slice(12);
+    
+    try {
+        const plaintextBuffer = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: nonce },
+            key,
+            ciphertextBytes
+        );
+        const dec = new TextDecoder("utf-8");
+        const jsonStr = dec.decode(plaintextBuffer);
+        return JSON.parse(jsonStr);
+    } catch (e) {
+        throw new Error("Decryption failed — wrong key or corrupted data.");
+    }
+}
+
+async function fetchAndDecryptManifest() {
+  // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RAW URL
+  const manifestUrl = "https://raw.githubusercontent.com/your-repo/main/manifest.json"; 
+  
+  const res = await fetch(manifestUrl, { cache: 'no-store' });
+  if (!res.ok) throw new Error("Manifest fetch failed");
+
+  // Grab the secure server time from GitHub
+  const serverDateHeader = res.headers.get('date');
+  if (serverDateHeader) {
+    secureServerTime = new Date(serverDateHeader);
+  }
+  
+  // Because we are using the single blob approach, the response is just a string, not a JSON object
+  const base64Blob = await res.text();
+  
+  // Decrypt the manifest and return the plain JSON object
+  return await decryptManifest(base64Blob);
+}
+
+async function verifyLicenseRemotely(savedCode) {
+  try {
+    const manifest = await fetchAndDecryptManifest();
+    let isValid = false;
+    let expiryDate = null;
+    const currentDate = getCurrentDateStr();
+
+    // Background check: ignore `used` flag, just check existence and expiry
+    for (let lic of manifest.keys) {
+      if (lic.code === savedCode) {
+        expiryDate = lic.expires;
+        if (currentDate <= expiryDate) {
+          isValid = true;
+        }
+        break;
+      }
+    }
+
+    if (isValid) {
+      const session = JSON.parse(localStorage.getItem('srzone_v2'));
+      if (session) {
+        session.expires = expiryDate;
+        session.lastVerified = Date.now();
+        localStorage.setItem('srzone_v2', JSON.stringify(session));
+      }
+    } else {
+      handleRevocation("Your premium access has expired or been revoked.");
+    }
+  } catch (e) {
+    // Network failure fallback: Do nothing, let them keep watching using cache
+    console.warn("Background verification failed, using local cache.");
+  }
+}
+
+function getCurrentDateStr() {
+  const d = secureServerTime || new Date(); 
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const h = String(d.getUTCHours()).padStart(2, '0');
+  const min = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${y}${m}${day}${h}${min}`;
+}
+
+function showGateError(msg) {
+  const errorEl = document.getElementById('gate-error');
+  errorEl.textContent = msg;
+  errorEl.style.display = 'block';
+  
+  const inp = document.getElementById('code-input');
+  inp.style.borderColor = '#ea4335';
+  setTimeout(() => { inp.style.borderColor = ''; }, 1500);
+}
+
+function handleRevocation(msg) {
+  localStorage.removeItem('srzone_v2');
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('topbar').style.display = 'none';
+  document.getElementById('gate').style.display = 'flex';
+  showGateError(msg);
+}
+
+// ── Schedule Engine ───────────────────────────────────────────
+let todayClass = null;
+
+async function fetchSchedule() {
+  let schedule = null;
+  
+  try {
+    // Try to fetch fresh schedule
+    const res = await fetch("https://raw.githubusercontent.com/your-repo/main/course.json", { cache: 'no-store' });
+    if (res.ok) {
+      schedule = await res.json();
+      // Cache it for offline use
+      localStorage.setItem('srzone_schedule', JSON.stringify(schedule));
+    }
+  } catch (err) {
+    console.warn("Network failed, trying offline cache for schedule", err);
+  }
+
+  // Fallback to cache if fetch failed
+  if (!schedule) {
+    const cached = localStorage.getItem('srzone_schedule');
+    if (cached) schedule = JSON.parse(cached);
+  }
+
+  if (schedule) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${y}-${m}-${d}`;
+    
+    todayClass = schedule.find(item => item.date === todayStr);
+    
+    if (todayClass) {
+      document.getElementById('tb-title').textContent = todayClass.title;
+    }
+  }
+}
+
+// ── App launch ────────────────────────────────────────────────
+function launchApp() {
+  document.getElementById('gate').style.display   = 'none';
+  document.getElementById('topbar').style.display = 'flex';
+  document.getElementById('main').style.display   = 'flex';
+  // Fetch schedule first, then start the time machine
+  fetchSchedule().then(() => {
+    checkState();
+    statusTick = setInterval(checkState, 1000);
+  });
+}
+
+
+
+// ── State machine ─────────────────────────────────────────────
+function checkState() {
+  const now = new Date();
+
+  // 1. If no class scheduled for today
+  if (!todayClass) {
+    showStatusScreen('event_busy', "No Class Today", 
+      "There are no scheduled sessions for today. See you next time!", false, 0);
+    document.getElementById('sync-btn').style.display = 'none';
+    document.getElementById('student-count-status').style.display = 'none';
+    return;
+  }
+
+  // 2. Parse today's start and end times (converted to integers)
+  const [startH, startM] = todayClass.startTime.split(':').map(Number);
+  const [endH, endM] = todayClass.endTime.split(':').map(Number);
+  
+  const start = new Date();
+  start.setHours(startH, startM, 0, 0);
+  
+  const end = new Date();
+  end.setHours(endH, endM, 0, 0);
+  
+  // Fix for classes that cross midnight (e.g., 11 PM to 1 AM)
+  if (end <= start) {
+    end.setDate(end.getDate() + 1); // Push end time to tomorrow
+  }
+
+  // 3. The Time Machine
+  if (now < start) {
+    const msLeft = start - now;
+    showStatusScreen('schedule', "Class hasn't started yet",
+      `Today's session begins at ${fmtTime(start)}.`, true, msLeft);
+
+    const countEl = document.getElementById('student-count-status');
+    countEl.style.display = 'block';
+    countEl.textContent = `👥 ${simulatedCount()} students are waiting`;
+    
+    document.getElementById('sync-btn').style.display = 'none';
+
+    if (msLeft > 0 && msLeft < 1000) {
+      setTimeout(() => location.reload(), msLeft);
+    }
+
+  } else if (now >= start && now < end) {
+    if (!videoStarted) {
+      showStatusScreen('rocket_launch', "Class is Live!", "The session has started.", false, 0);
+      document.getElementById('sync-btn').style.display = 'flex'; 
+      document.getElementById('sync-btn').textContent = "ENTER CLASSROOM";
+    }
+    startStudentCountUpdater();
+
+  } else {
+    showStatusScreen('check_circle', "Class has ended",
+      "Great session! See you tomorrow. 📚", false, 0);
+    document.getElementById('sync-btn').style.display = 'none';
+    document.getElementById('student-count-status').style.display = 'none';
+    stopStudentCountUpdater();
+  }
+}
+
+let lastStatusState = "";
+
+function showStatusScreen(iconName, title, sub, countdown, msLeft) {
+  document.getElementById('status-screen').style.display = 'flex';
+  
+  // Only update heavy DOM text if the state actually changed
+  const currentState = iconName + title + sub;
+  if (lastStatusState !== currentState) {
+    document.getElementById('s-emoji').innerHTML = `<span class="material-symbols-outlined" style="font-size: 64px;">${iconName}</span>`;
+    document.getElementById('s-title').textContent = title;
+    document.getElementById('s-sub').textContent   = sub;
+    lastStatusState = currentState;
+  }
+
+  const box = document.getElementById('s-countdown');
+  if (countdown && msLeft > 0) {
+    box.style.display = 'flex';
+    const timeStr = msToClock(msLeft);
+    const countdownEl = document.getElementById('countdown-val');
+    // Only update the countdown text if the time string actually changed (i.e., a second passed)
+    if (countdownEl.textContent !== timeStr) {
+      countdownEl.textContent = timeStr;
+    }
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function hideStatusScreen() {
+  document.getElementById('status-screen').style.display = 'none';
+}
+
+// Manual fallback — if reload didn't fire on time (very slow device/network)
+function manualSync() {
+    if (!todayClass) return;
+    
+    const [startH, startM] = todayClass.startTime.split(':').map(Number);
+    const start = new Date();
+    start.setHours(startH, startM, 0, 0);
+    
+    const now = new Date();
+    const elapsed = Math.max(0, Math.floor((now - start) / 1000));
+    
+    hideStatusScreen();
+    showClassroom(elapsed);
+}
+
+// ── Classroom ─────────────────────────────────────────────────
+function showClassroom(seekSecs) {
+  if (videoStarted) return;
+  if (!todayClass || !todayClass.videoId) {
+    showToast("Error: No video ID found for today.");
+    return;
+  }
+  videoStarted = true;
+  showControls();
+
+  player = new YT.Player('yt-player', {
+    videoId: todayClass.videoId,
+    playerVars: {
+      autoplay: 1, controls: 0, disablekb: 1,
+      modestbranding: 1, rel: 0, fs: 0,
+      playsinline: 1, start: seekSecs, mute: 1,
+    },
+    events: {
+      onReady:       onReady,
+      onStateChange: onStateChange,
+      onError:       onPlayerError,
+    }
+  });
+}
+
+function applyBestQuality(playerObj) {
+  if (!playerObj || typeof playerObj.getAvailableQualityLevels !== 'function') return;
+  try {
+    const levels = playerObj.getAvailableQualityLevels();
+    if (levels.indexOf('hd1080') !== -1) {
+      playerObj.setPlaybackQuality('hd1080');
+    } else if (levels.indexOf('hd720') !== -1) {
+      playerObj.setPlaybackQuality('hd720');
+    }
+  } catch (err) {}
+}
+
+function onReady(e) {
+  playerReady = true;
+  e.target.playVideo();
+  
+  // 1. Try immediately
+  applyBestQuality(e.target);
+  
+  // 2. Try again after 2 seconds (YouTube sometimes takes a moment to populate available qualities)
+  setTimeout(() => applyBestQuality(e.target), 2000);
+
+  setTimeout(() => {
+    try { e.target.unMute(); e.target.setVolume(100); } catch {}
+
+    showSoundPill();
+
+    setTimeout(() => {
+      if (typeof e.target.isMuted === 'function' && !e.target.isMuted()) {
+        hideSoundPill();
+      }
+    }, 6000);
+  }, 800);
+}
+
+function onStateChange(e) {
+  if (e.data === YT.PlayerState.PLAYING) {
+    document.getElementById('play-prompt').style.display = 'none';
+    applyBestQuality(e.target);
+  }
+  if (e.data === YT.PlayerState.PAUSED) {
+    setTimeout(() => { if (player && videoStarted) player.playVideo(); }, 150);
+  }
+  if (e.data === YT.PlayerState.ENDED) {
+    // With strict duration matching, ENDED = class is genuinely over.
+    // No looping needed, no reinit. Just show the ended screen.
+    clearInterval(statusTick);
+    stopStudentCountUpdater();
+    document.getElementById('main').style.display       = 'none';
+    document.getElementById('bottom-bar').style.display = 'none';
+    document.getElementById('sync-btn').style.display = 'none';
+    showStatusScreen('✅', "Class has ended!", "Great work today. See you next class! 📚", false, 0);
+  }
+}
+
+function onPlayerError(e) {
+  // Don't reset videoStarted — avoids checkState() hammering new YT.Player() every second.
+  // Student can tap "Join Class Now" (manualSync) if they see a problem.
+  console.warn('YT player error:', e.data);
+}
+
+function showSoundPill() {
+  document.getElementById('sound-pill').style.display = 'flex';
+}
+function hideSoundPill() {
+  document.getElementById('sound-pill').style.display = 'none';
+}
+function enableSound() {
+  if (player && playerReady) {
+    try { player.unMute(); player.setVolume(100); } catch {}
+    player.playVideo();
+  }
+  hideSoundPill();
+  document.getElementById('play-prompt').style.display = 'none';
+  showControls();
+}
+
+function userInitiatedPlay() {
+  document.getElementById('play-prompt').style.display = 'none';
+  hideSoundPill();
+  if (player && playerReady) {
+    player.unMute();
+    player.setVolume(100);
+    player.playVideo();
+  }
+  showControls();
+}
+
+// ── Controls ──────────────────────────────────────────────────
+function toggleMic() {
+  micOn = !micOn;
+  const btn = document.getElementById('mic-btn');
+  btn.classList.toggle('cc-off', !micOn);
+  btn.querySelector('span').textContent = micOn ? 'mic' : 'mic_off';
+  showToast(micOn ? 'Microphone is on' : 'Microphone is muted');
+}
+
+function toggleCam() {
+  camOn = !camOn;
+  const btn = document.getElementById('cam-btn');
+  btn.classList.toggle('cc-off', !camOn);
+  btn.querySelector('span').textContent = camOn ? 'videocam' : 'videocam_off';
+  showToast(camOn ? 'Video is on' : 'Video is off');
+}
+
+const handNames = ["Shobhit", "Aayusha", "Rohan", "Sneha", "Kiran", "Samir", "Pradip", "Smriti"];
+let handQueue = [];
+
+function toggleHand() {
+  handUp = !handUp;
+  document.getElementById('hand-btn').className = handUp ? 'ctrl-circle cc-hand-on' : 'ctrl-circle';
+  if (handUp) {
+    showToast('✋ Hand raised!');
+    showHandNotif('You');
+    simulateOtherHands();       // ← new line
+  } else {
+    document.getElementById('hand-notif').style.display = 'none';
+    handQueue = [];
+  }
+}
+
+function simulateOtherHands() {
+  const n = Math.floor(Math.random() * 3) + 1; // 1–3 other students
+  for (let i = 0; i < n; i++) {
+    setTimeout(() => {
+      if (!handUp) return; // user already lowered hand, don't add more
+      const name = handNames[Math.floor(Math.random() * handNames.length)];
+      showHandNotif(name);
+    }, (i + 1) * 2200); // staggered: 2.2s, 4.4s, 6.6s
+  }
+}
+
+function showHandNotif(name) {
+  handQueue.push(name);
+  const notif = document.getElementById('hand-notif');
+  const list  = handQueue.map(n => n === 'You' ? '<strong>You</strong>' : n).join(', ');
+  notif.innerHTML = `✋ ${list} raised hand${handQueue.length > 1 ? 's' : ''}`;
+  notif.style.display = 'block';
+}
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('chat-panel');
+  const btn   = document.getElementById('chat-btn');
+
+  if (chatOpen) {
+    panel.classList.add('open');
+    btn.className = 'ctrl-circle cc-chat-on';
+
+    // Lazy load iframe on first open — saves bandwidth for non-chat users
+    if (!chatLoaded) {
+      const src   = `https://www.youtube.com/live_chat?v=${CONFIG.ytChatStreamId}&embed_domain=${CONFIG.domain}&dark_theme=1`;
+      const frame = document.getElementById('yt-chat-frame');
+      frame.src   = src;
+      frame.onload = () => {
+        document.getElementById('chat-loader').style.display = 'none';
+        frame.style.display = 'block';
+      };
+      chatLoaded = true;
+    }
+
+    if (isMobile()) {
+      document.getElementById('bottom-bar').style.display = 'none';
+    } else {
+      clearTimeout(controlsTimeout);
+    }
+  } else {
+    panel.classList.remove('open');
+    btn.className = 'ctrl-circle';
+    panel.style.height = '';
+    if (isMobile()) {
+      showControls();
+    } else {
+      controlsTimeout = setTimeout(hideControls, 4000);
+    }
+  }
+}
+
+// ── Fullscreen & Orientation Lock ─────────────────────────────
+function toggleFullscreen() {
+  const container = document.getElementById('video-col');
+  
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    if (container.requestFullscreen) {
+      container.requestFullscreen().catch(() => {});
+    } else if (container.webkitRequestFullscreen) {
+      container.webkitRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+  }
+}
+
+document.addEventListener('fullscreenchange', handleFsChange);
+document.addEventListener('webkitfullscreenchange', handleFsChange);
+
+function handleFsChange() {
+  const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+  const icon = document.querySelector('#fs-btn span');
+  
+  if (isFs) {
+    if (icon) icon.textContent = 'fullscreen_exit';
+    showControls(); 
+    
+    // Hide Chat button in fullscreen
+    const chatBtn = document.getElementById('chat-btn');
+    if (chatBtn) chatBtn.style.display = 'none';
+    
+    // Close chat panel if it was open before fullscreen
+    if (chatOpen) toggleChat();
+
+    // Force Landscape on Mobile
+    try {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(() => {});
+      }
+    } catch (e) {}
+  } else {
+    if (icon) icon.textContent = 'fullscreen';
+    
+    // Restore Chat button when exiting fullscreen
+    const chatBtn = document.getElementById('chat-btn');
+    if (chatBtn) chatBtn.style.display = 'flex';
+
+    // Unlock Orientation
+    try {
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
+    } catch (e) {}
+  }
+}
+
+// ── WhatsApp Teacher Support ─────────────────────────────────
+function openChatChoice() {
+  document.getElementById('chat-choice').classList.add('active');
+  // Hide controls while modal is open so it doesn't distract
+  document.getElementById('bottom-bar').style.display = 'none';
+}
+
+function openYouTubeChat() {
+  document.getElementById('chat-choice').classList.remove('active');
+  showControls(); // Bring back UI
+  if (!chatOpen) toggleChat(); // Open the YT iframe panel
+}
+
+function openAskTeacher() {
+  document.getElementById('chat-choice').classList.remove('active');
+  document.getElementById('ask-teacher-modal').classList.add('active');
+  setTimeout(() => document.getElementById('teacher-question').focus(), 100);
+}
+
+function sendWhatsAppQuestion() {
+  const question = document.getElementById('teacher-question').value.trim();
+  if (!question) {
+    alert("Please type a question first.");
+    return;
+  }
+
+  // ⚠️ REPLACE WITH YOUR WHATSAPP NUMBER (country code, no + or spaces)
+  const myPhoneNumber = "1234567890"; 
+  
+  const message = `Hi Teacher, I have a question from the live class:\n\n"${question}"`;
+  const encodedMessage = encodeURIComponent(message);
+  
+  window.open(`https://wa.me/${myPhoneNumber}?text=${encodedMessage}`, '_blank');
+  
+  // Clean up
+  document.getElementById('ask-teacher-modal').classList.remove('active');
+  document.getElementById('teacher-question').value = ''; // clear for next time
+  showControls();
+}
+
+function leaveClass() {
+  if (!confirm('Leave the class session?')) return;
+  if (player) player.pauseVideo();
+  localStorage.removeItem('srzone_v2');
+  location.reload();
+}
+
+// ── Simulated student count ───────────────────────────────────
+function simulatedCount() {
+  return CONFIG.studentCountBase + Math.round(Math.sin(Date.now() / 90000) * 4);
+}
+function updateStudentChip() {
+  document.getElementById('live-count').textContent = ` ${simulatedCount()}`;
+}
+function startStudentCountUpdater() {
+  if (studentCountInterval) return;
+  updateStudentChip();
+  studentCountInterval = setInterval(updateStudentChip, 30000);
+}
+function stopStudentCountUpdater() {
+  clearInterval(studentCountInterval);
+  studentCountInterval = null;
+}
+
+// ── Android back button intercept ────────────────────────────
+history.pushState(null, '', location.href);
+window.addEventListener('popstate', () => {
+  history.pushState(null, '', location.href);
+  if (videoStarted) showToast('Use the Leave button to exit class');
+});
+
+// ── Toast ─────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Right-click block ─────────────────────────────────────────
+document.addEventListener('contextmenu', e => {
+  if (e.target.closest('#video-wrap')) e.preventDefault();
+});
+
+// ── Utils ─────────────────────────────────────────────────────
+function fmtTime(d) {
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+function msToClock(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return [h, m, sec].map(x => String(x).padStart(2, '0')).join(':');
+}
+</script>
+</body>
+</html>

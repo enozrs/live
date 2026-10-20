@@ -732,7 +732,7 @@ async function decryptManifest(base64Payload) {
 
 async function fetchAndDecryptManifest() {
   // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RAW URL
-  const manifestUrl = "https://raw.githubusercontent.com/your-repo/main/manifest.json"; 
+  const manifestUrl = "https://live.thesrzone.com/course/manifest.txt"; 
   
   const res = await fetch(manifestUrl, { cache: 'no-store' });
   if (!res.ok) throw new Error("Manifest fetch failed");
@@ -820,7 +820,7 @@ async function fetchSchedule() {
   
   try {
     // Try to fetch fresh schedule
-    const res = await fetch("https://raw.githubusercontent.com/your-repo/main/course.json", { cache: 'no-store' });
+    const res = await fetch("https://live.thesrzone.com/course/course.json", { cache: 'no-store' });
     if (res.ok) {
       schedule = await res.json();
       // Cache it for offline use

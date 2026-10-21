@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SR Zone — Admin</title>
+<style>
+:root{--bg:#0d0e10;--s1:#16181b;--s2:#202327;--bd:#2c3036;--tx:#eef0f3;--mu:#98a0ab;--ac:#0866ff;--ok:#22c55e;--er:#ef4444;--wn:#f59e0b;color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:80px}
+header{position:sticky;top:0;z-index:20;background:rgba(13,14,16,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--bd);padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top))}
+.bar{max-width:900px;margin:auto;display:flex;align-items:center;gap:10px}
+.logo{font-weight:700;font-size:17px;flex:1}.logo b{color:var(--ac)}
+.tabs{display:flex;gap:6px;max-width:900px;margin:10px auto 0}
+.tabs button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--bd);background:var(--s1);color:var(--mu);font:600 13px inherit;cursor:pointer}
+.tabs button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+main{max-width:900px;margin:auto;padding:14px}
+.tab{display:none}.tab.on{display:block}
+.note{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);color:#fcd48a;padding:10px 12px;border-radius:10px;margin-bottom:12px;font-size:13px}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px;display:flex;flex-direction:column;gap:10px}
+.card.exp{opacity:.7;border-color:#5b2a2a}.card.today{border-color:var(--ac)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>input{flex:1;min-width:120px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:620px){.g3{grid-template-columns:1fr}}
+label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--mu);font-weight:600}
+input,select{width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px;border-radius:8px;font:inherit;font-size:16px;outline:none;min-height:42px}
+@media(min-width:700px){input,select{font-size:13px}}
+input:focus{border-color:var(--ac)}input.bad{border-color:var(--er)}
+.btn,.ib{border:1px solid var(--bd);background:var(--s2);color:var(--tx);border-radius:8px;padding:0 14px;min-height:42px;font:600 13px inherit;cursor:pointer;white-space:nowrap}
+.ib{padding:0;width:42px;flex:none}.btn:hover,.ib:hover{background:#2b2f35}
+.pri{background:var(--ac);border-color:var(--ac);color:#fff}.dng:hover{background:var(--er);border-color:var(--er)}
+.tag{font-size:10px;background:var(--er);padding:2px 7px;border-radius:99px}
+.ttl{font-weight:700;margin:16px 0 8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mu{color:var(--mu);font-size:12px}.dot{width:9px;height:9px;border-radius:50%;background:var(--ok)}.dot.d{background:var(--wn)}
+.chip{font-size:11px;color:var(--ok)}.dow{font-size:11px;color:var(--ac);font-weight:700}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,30px);opacity:0;pointer-events:none;background:var(--s2);border:1px solid var(--bd);padding:11px 16px;border-radius:10px;transition:.2s;z-index:50;max-width:92vw;text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}#toast.error{border-color:var(--er)}#toast.ok{border-color:var(--ok)}
+#toast a{color:var(--ac);font-weight:700;margin-left:10px;cursor:pointer}
+</style></head><body>
+<header><div class="bar"><div class="logo">SR <b>Zone</b> / Admin</div><span class="dot" id="dot" title="Unpushed changes"></span><button class="btn pri" id="push">☁ Push</button></div>
+<div class="tabs"><button data-t="keys" class="on">🔑 Keys</button><button data-t="courses">📅 Courses</button><button data-t="settings">⚙ Settings</button></div></header>
+<main>
+<section class="tab on" id="t-keys">
+<div class="note">To revoke a key, just delete it and push. Its access is revoked.</div>
+<div class="row"><input id="kadd" data-enter="1" placeholder="Type a key, press Enter" enterkeyhint="done" autocapitalize="off" spellcheck="false"><button class="ib" id="krand" title="Random key">🎲</button><button class="btn pri" id="kaddb">Add</button></div>
+<div class="ttl"><span class="mu" id="kcount"></span><input id="kq" data-enter="1" placeholder="Search keys…" style="max-width:200px"></div>
+<div id="klist"></div></section>
+
+<section class="tab" id="t-courses">
+<div class="card"><div class="mu">Default class time (new classes copy this)</div>
+<div class="row"><label style="flex:1">Start<input type="time" id="tplS" enterkeyhint="next"></label><label style="flex:1">End<input type="time" id="tplE" enterkeyhint="next"></label><button class="btn" id="tplAll" style="align-self:flex-end">Apply to all</button></div></div>
+<div class="ttl"><span>📌 Today</span><span class="mu" id="todayLbl"></span></div><div id="pinned"></div>
+<div class="ttl"><span>All classes</span><button class="btn pri" id="dadd">+ Add class</button></div><div id="dlist"></div></section>
+
+<section class="tab" id="t-settings">
+<div class="card">
+<label>GitHub owner<input data-s="owner" autocapitalize="off" enterkeyhint="next"></label>
+<label>Repository<input data-s="repo" autocapitalize="off" enterkeyhint="next"></label>
+<label>Branch<input data-s="branch" placeholder="main" autocapitalize="off" enterkeyhint="next"></label>
+<label>Personal access token (Contents: read &amp; write)<input data-s="token" type="password" placeholder="github_pat_…" enterkeyhint="next"></label>
+<label>YouTube chat stream ID (reference only — actual value is hardcoded in class.html CONFIG.ytChatStreamId; not pushed to GitHub)<input data-s="chat" autocapitalize="off" enterkeyhint="next"></label>
+<label>Secret key (any string — must match class.html REAL_KEY_PARTS when concatenated)<div class="row"><input data-s="enc" autocapitalize="off" spellcheck="false" placeholder="e.g. kx9-vLp2qR_7z"><button class="btn" id="genkey">Generate</button></div></label>
+<div class="mu">⚠ The Secret key must equal the concatenation of REAL_KEY_PARTS in class.html. Losing it makes the pushed manifest unreadable. Token and key live only in this browser.</div>
+<div class="row"><button class="btn" id="test">Test connection</button><button class="btn" id="pull">↓ Pull from GitHub</button></div>
+<div class="mu">Pull replaces local keys and schedule with what is on GitHub. (Chat ID is no longer synced — it's hardcoded in class.html.) Handy for syncing phone and desktop.</div>
+</div></section>
+</main><div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const J=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
+const SK={owner:'sr_admin_owner',repo:'sr_admin_repo',branch:'sr_admin_branch',token:'sr_admin_token',enc:'sr_admin_enc_key',chat:'sr_admin_chat'};
+const setting=k=>localStorage.getItem(SK[k])||(k==='branch'?'main':'');
+let keys=J('sr_admin_licenses',[]),days=J('sr_admin_schedule',[]),tpl=J('sr_admin_tpl',{s:'08:58',e:'10:28'}),dirty=J('sr_admin_dirty',false);
+
+// ── time helpers (all NPT, independent of device timezone) ──
+const pad=n=>String(n).padStart(2,'0');
+const nptNow=m=>new Date(Date.now()+(345+(m||0))*60000);
+const fmtL=d=>`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+const toISO=v=>v?v+':00+05:45':'',fromISO=s=>s?String(s).slice(0,16):'';
+const expToL=s=>/^\d{12}$/.test(s||'')?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T${s.slice(8,10)}:${s.slice(10,12)}`:'';
+const lToExp=v=>v.replace(/[-T:]/g,'');
+const localToday=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+const dow=s=>s?new Date(s+'T00:00:00Z').toLocaleDateString('en',{weekday:'short',timeZone:'UTC'}):'';
+function parseVid(s){s=s.trim();if(!s)return '';if(/^[\w-]{11}$/.test(s))return s;const m=s.match(/(?:[?&]v=|youtu\.be\/|\/(?:live|embed|shorts|v)\/)([\w-]{11})/);return m?m[1]:null}
+
+// ── state / ui helpers ──
+function touch(){dirty=true;persist()}
+function persist(){localStorage.setItem('sr_admin_licenses',JSON.stringify(keys));localStorage.setItem('sr_admin_schedule',JSON.stringify(days));localStorage.setItem('sr_admin_tpl',JSON.stringify(tpl));localStorage.setItem('sr_admin_dirty',dirty);$('#dot').className='dot'+(dirty?' d':'')}
+let tt;function toast(m,t='',undo){const e=$('#toast');e.innerHTML=esc(m)+(undo?'<a id="undo">Undo</a>':'');e.className='show '+t;if(undo)$('#undo').onclick=()=>{undo();e.className=''};clearTimeout(tt);tt=setTimeout(()=>e.className='',undo?5000:3000)}
+function showTab(n){$$('.tab').forEach(x=>x.classList.toggle('on',x.id==='t-'+n));$$('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===n));if(n==='courses'){sortDays();renderDays()}}
+$$('.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.t));
+
+// Enter = Tab (desktop and mobile soft keyboards)
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();return push()}
+  if(e.key!=='Enter'||e.isComposing||e.target.tagName!=='INPUT'||e.target.dataset.enter)return;
+  e.preventDefault();
+  const f=$$('.tab.on input:not([disabled])').filter(x=>x.offsetParent&&x.dataset.enter===undefined);
+  const n=f[f.indexOf(e.target)+1];if(n){n.focus();try{n.select()}catch{}}
+});
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+
+// ── KEYS ──
+const rand=()=>Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b%32]).join('');
+const newKey=code=>({code,expires:lToExp(fmtL(nptNow(365*1440))),window_start:toISO(fmtL(nptNow())),window_end:toISO(fmtL(nptNow(5)))});
+function renderKeys(){
+  const q=$('#kq').value.trim().toLowerCase(),now=lToExp(fmtL(nptNow()));
+  $('#kcount').textContent=keys.length+' key'+(keys.length===1?'':'s');
+  $('#klist').innerHTML=keys.map((k,i)=>[k,i]).filter(([k])=>!q||k.code.toLowerCase().includes(q)).map(([k,i])=>{
+    const ex=k.expires&&k.expires<now;
+    return `<div class="card${ex?' exp':''}" data-i="${i}"><div class="row">
+<input data-f="code" value="${esc(k.code)}" placeholder="Key code" enterkeyhint="next" autocapitalize="off" spellcheck="false">${ex?'<span class="tag">expired</span>':''}
+<button class="ib" data-a="copy" title="Copy code">📋</button><button class="ib" data-a="dup" title="Duplicate key">⧉</button><button class="ib dng" data-a="del" title="Delete (revokes access)">✕</button></div>
+<div class="g3"><label>Expires<input type="datetime-local" data-f="expires" value="${expToL(k.expires)}" enterkeyhint="next"></label>
+<label>Window start<input type="datetime-local" data-f="window_start" value="${fromISO(k.window_start)}" enterkeyhint="next"></label>
+<label>Window end<input type="datetime-local" data-f="window_end" value="${fromISO(k.window_end)}" enterkeyhint="next"></label></div></div>`}).join('')||'<div class="mu" style="text-align:center;padding:24px">No keys yet. Type one above.</div>';
+}
+function addKey(){const i=$('#kadd'),c=i.value.trim();if(!c)return;keys.unshift(newKey(c));i.value='';touch();renderKeys();i.focus()}
+$('#kadd').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addKey()}});
+$('#kaddb').onclick=addKey;$('#krand').onclick=()=>{$('#kadd').value=rand();addKey()};
+$('#kq').oninput=renderKeys;
+$('#klist').addEventListener('input',e=>{const c=e.target.closest('.card'),f=e.target.dataset.f;if(!c||!f)return;const v=e.target.value;keys[c.dataset.i][f]=f==='expires'?lToExp(v):f==='code'?v.trim():toISO(v);touch()});
+$('#klist').addEventListener('click',e=>{const b=e.target.closest('[data-a]'),c=e.target.closest('.card');if(!b)return;const i=+c.dataset.i,k=keys[i];
+  if(b.dataset.a==='copy'){navigator.clipboard?.writeText(k.code);toast('Copied '+k.code,'ok')}
+  if(b.dataset.a==='dup'){const n={...k,code:k.code+'-'+rand().slice(0,3)};keys.splice(i+1,0,n);touch();renderKeys();$$('#klist .card')[i+1]?.querySelector('input').select()}
+  if(b.dataset.a==='del'){keys.splice(i,1);touch();renderKeys();toast('Key deleted','',()=>{keys.splice(i,0,k);touch();renderKeys()})}});
+
+// ── COURSES ──
+const sortDays=()=>days.sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.startTime||'').localeCompare(b.startTime||''));
+function dayCard(d,i,today){return `<div class="card${today?' today':''}" data-i="${i}">
+<div class="row"><label style="flex:1.4">Date <span class="dow">${dow(d.date)}</span><input type="date" data-f="date" value="${esc(d.date)}" enterkeyhint="next"></label>
+<label style="flex:1">Start<input type="time" data-f="startTime" value="${esc(d.startTime)}" enterkeyhint="next"></label>
+<label style="flex:1">End<input type="time" data-f="endTime" value="${esc(d.endTime)}" enterkeyhint="next"></label></div>
+<div class="g2"><label>Class title<input data-f="title" value="${esc(d.title)}" placeholder="Physics — Ch 2" enterkeyhint="next"></label>
+<label>YouTube ID or URL ${d.videoId?`<span class="chip">✓ ${esc(d.videoId)}</span>`:''}<input data-f="videoId" value="${esc(d.videoId)}" placeholder="Paste link or ID" autocapitalize="off" spellcheck="false" enterkeyhint="next"></label></div>
+<div class="row" style="justify-content:flex-end"><button class="btn" data-a="dup">⧉ Duplicate (+1 day)</button><button class="btn dng" data-a="del">✕ Delete</button></div></div>`}
+function renderDays(){
+  const t=localToday();$('#tplS').value=tpl.s;$('#tplE').value=tpl.e;
+  $('#todayLbl').textContent=t+' · '+dow(t);
+  const all=days.map((d,i)=>[d,i]),td=all.filter(([d])=>d.date===t);
+  $('#pinned').innerHTML=td.map(([d,i])=>dayCard(d,i,true)).join('')||`<div class="card mu">No class today. <button class="btn" id="addToday">+ Add for today</button></div>`;
+  $('#dlist').innerHTML=all.filter(([d])=>d.date!==t).map(([d,i])=>dayCard(d,i)).join('')||'<div class="mu" style="text-align:center;padding:16px">Nothing else scheduled.</div>';
+}
+function addDay(date,src){const d=src?{...src,date}:{date,startTime:tpl.s,endTime:tpl.e,title:days.length?days[days.length-1].title:'',videoId:''};days.push(d);touch();sortDays();renderDays();const i=days.indexOf(d);document.querySelector(`#t-courses [data-i="${i}"] [data-f=title]`)?.focus()}
+$('#dadd').onclick=()=>{sortDays();const last=days.length?days[days.length-1].date:null;addDay(last?addDay2(last):localToday())};
+const addDay2=s=>new Date(Date.parse(s+'T00:00:00Z')+864e5).toISOString().slice(0,10);
+$('#tplS').oninput=e=>{tpl.s=e.target.value;persist()};$('#tplE').oninput=e=>{tpl.e=e.target.value;persist()};
+$('#tplAll').onclick=()=>{if(days.length&&confirm('Set start/end of every class to the default?')){days.forEach(d=>{d.startTime=tpl.s;d.endTime=tpl.e});touch();renderDays()}};
+const dayPane=$('#t-courses');
+dayPane.addEventListener('input',e=>{const c=e.target.closest('.card[data-i]'),f=e.target.dataset.f;if(!c||!f)return;const d=days[c.dataset.i];let v=e.target.value;
+  if(f==='videoId'){const p=parseVid(v);if(p===null){e.target.classList.add('bad');d.videoId='';return touch()}e.target.classList.remove('bad');if(p&&p!==v){e.target.value=p;toast('ID extracted: '+p,'ok')}d.videoId=p}
+  else d[f]=v;touch()});
+dayPane.addEventListener('click',e=>{if(e.target.id==='addToday')return addDay(localToday());
+  const b=e.target.closest('[data-a]'),c=e.target.closest('.card[data-i]');if(!b||!c)return;const i=+c.dataset.i,d=days[i];
+  if(b.dataset.a==='dup')addDay(addDay2(d.date||localToday()),d);
+  if(b.dataset.a==='del'){days.splice(i,1);touch();renderDays();toast('Class deleted','',()=>{days.push(d);sortDays();touch();renderDays()})}});
+
+// ── SETTINGS ──
+$$('[data-s]').forEach(i=>{i.value=localStorage.getItem(SK[i.dataset.s])||(i.dataset.s==='chat'?'iTDZ5cqHYF4':'');i.oninput=()=>localStorage.setItem(SK[i.dataset.s],i.value.trim())});
+$('#genkey').onclick=()=>{const chars='abcdefghijklmnopqrstuvwxyz0123456789';const seg=()=>Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>chars[b%36]).join('');const k=seg()+'-'+seg()+'-'+seg();const i=$('[data-s=enc]');i.value=k;i.oninput();toast('Key generated. Split it into 3 parts in class.html REAL_KEY_PARTS — concatenation must equal this exact string.','ok')};
+
+// ── CIPHER (xorshift128 stream cipher — no Web Crypto, no AES) ──
+const DECOY_KEY='SECURE_MASTER_KEY_2024'; // must stay in sync with class.html
+function fnv1a(str){let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=(h+((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24)))>>>0}return h>>>0}
+function makeState(k,s){return{s0:(fnv1a(k+'::'+s)^0x9e3779b9)>>>0||1,s1:(fnv1a(s+k)^0x85ebca6b)>>>0||1,s2:(fnv1a(k+k)^0xc2b2ae35)>>>0||1,s3:(fnv1a(s+s)^0x27d4eb2f)>>>0||1}}
+function nextWord(st){let{s0,s1,s2,s3}=st,t=s3,s=s0;t^=t<<11;t>>>=0;t^=t>>>8;st.s3=s2;st.s2=s1;st.s1=s0;t^=s;t^=t>>>19;st.s0=t>>>0;return st.s0}
+function keystream(k,s,len){const st=makeState(k,s),out=new Uint8Array(len);let i=0;while(i<len){const w=nextWord(st);out[i++]=w&0xff;if(i>=len)break;out[i++]=(w>>>8)&0xff;if(i>=len)break;out[i++]=(w>>>16)&0xff;if(i>=len)break;out[i++]=(w>>>24)&0xff}return out}
+function xorBytes(d,ks){const o=new Uint8Array(d.length);for(let i=0;i<d.length;i++)o[i]=d[i]^ks[i];return o}
+// Custom base64 — no btoa/atob. Only used for the outer manifest wrapper.
+const _B64A='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+function bytesToB64(b){let s='';for(let i=0;i<b.length;i+=3){const a=b[i],c=(i+1<b.length)?b[i+1]:0,d=(i+2<b.length)?b[i+2]:0;s+=_B64A[a>>2];s+=_B64A[((a&3)<<4)|(c>>4)];s+=(i+1<b.length)?_B64A[((c&15)<<2)|(d>>6)]:'=';s+=(i+2<b.length)?_B64A[d&63]:'='}return s}
+function b64ToBytes(s){const T=new Uint8Array(256);for(let i=0;i<_B64A.length;i++)T[_B64A.charCodeAt(i)]=i;let n=s.length;while(n>0&&s[n-1]==='=')n--;const o=new Uint8Array((n*3)>>2),ol=o.length;let i=0,j=0;while(i<n){const a=T[s.charCodeAt(i++)],b=T[s.charCodeAt(i++)];const c=T[s.charCodeAt(i++)],d=T[s.charCodeAt(i++)];o[j++]=(a<<2)|(b>>4);if(j<ol)o[j++]=((b&15)<<4)|(c>>2);if(j<ol)o[j++]=((c&3)<<6)|d}return o}
+function encryptBytes(obj,k,s){const bytes=new TextEncoder().encode(JSON.stringify(obj)),ks=keystream(k,s,bytes.length);return xorBytes(bytes,ks)}
+function decryptJSON(bytes,k,s){const ks=keystream(k,s,bytes.length);return JSON.parse(new TextDecoder().decode(xorBytes(bytes,ks)))}
+function randomSalt(){return Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>pad(b.toString(16))).join('')}
+function strToAsciiBytes(s){const out=new Uint8Array(s.length);for(let i=0;i<s.length;i++)out[i]=s.charCodeAt(i)&0x7f;return out}
+function packManifest(aBytes,bBytes,saStr,sbStr,t){
+  if(saStr.length!==16||sbStr.length!==16)throw new Error('bad salt');
+  const out=new Uint8Array(40+aBytes.length+bBytes.length);
+  out.set(strToAsciiBytes(saStr),0);
+  out.set(strToAsciiBytes(sbStr),16);
+  const dv=new DataView(out.buffer);
+  dv.setUint32(32,t>>>0,true);
+  dv.setUint32(36,aBytes.length,true);
+  out.set(aBytes,40);
+  out.set(bBytes,40+aBytes.length);
+  return out;
+}
+function unpackManifest(bytes){
+  if(bytes.length<40)throw new Error('manifest too short');
+  let sa='',sb='';
+  for(let i=0;i<16;i++)sa+=String.fromCharCode(bytes[i]);
+  for(let i=0;i<16;i++)sb+=String.fromCharCode(bytes[16+i]);
+  const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  const aLen=dv.getUint32(36,true);
+  if(40+aLen>bytes.length)throw new Error('manifest corrupted');
+  return{aBytes:bytes.slice(40,40+aLen),bBytes:bytes.slice(40+aLen),sa,sb};
+}
+function makeDecoy(real){
+  const realCodes=new Set(real.keys.map(k=>k.code));
+  const fakeKeys=real.keys.map(k=>{let code;do{code=rand()}while(realCodes.has(code));return{code,expires:k.expires,window_start:k.window_start,window_end:k.window_end}});
+  if(fakeKeys.length===0)fakeKeys.push({code:rand(),expires:'202612312359',window_start:'',window_end:''});
+  return{keys:fakeKeys};
+}
+const canon=o=>JSON.stringify(o,(k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(x=>[x,v[x]])):v);
+
+// ── GITHUB ──
+function cfg(){const c={o:setting('owner'),r:setting('repo'),t:setting('token'),b:setting('branch'),k:setting('enc')};if(!c.o||!c.r||!c.t){showTab('settings');throw new Error('Fill GitHub owner, repo and token in Settings')}if(!c.k){showTab('settings');throw new Error('Set a Secret key in Settings (must match class.html REAL_KEY_PARTS)')}return c}
+const raw=(c,p)=>fetch(`https://raw.githubusercontent.com/${c.o}/${c.r}/${c.b}/${p}?_=${Date.now()}`,{cache:'no-store'}).then(r=>r.ok?r.text():null).catch(()=>null);
+async function put(c,path,text){for(let t=0;t<2;t++){const u=`https://api.github.com/repos/${c.o}/${c.r}/contents/${path}`,h={Authorization:`Bearer ${c.t}`,Accept:'application/vnd.github+json'};let sha;const g=await fetch(`${u}?ref=${c.b}`,{headers:h,cache:'no-store'});if(g.ok)sha=(await g.json()).sha;
+  const p=await fetch(u,{method:'PUT',headers:h,body:JSON.stringify({message:`chore: update ${path} from Admin Panel`,content:btoa(unescape(encodeURIComponent(text))),branch:c.b,sha})});if(p.ok)return;if(t||![409,422].includes(p.status))throw new Error((await p.json()).message||p.status)}}
+function validate(){
+  const codes=new Set();
+  for(const k of keys){if(!k.code)throw new Error('A key has an empty code');if(codes.has(k.code))throw new Error('Duplicate key: '+k.code);codes.add(k.code);
+    if(k.window_start&&k.window_end&&k.window_end<=k.window_start)throw new Error(`Key ${k.code}: window end must be after start`);
+    if(k.expires&&!/^\d{12}$/.test(k.expires))throw new Error(`Key ${k.code}: bad expiry`)}
+  if($$('#t-courses input.bad').length)throw new Error('Fix the invalid YouTube links first');
+  for(const d of days)if(!d.date)throw new Error('A class has no date');
+}
+let busy=false;
+async function push(){
+  if(busy)return;busy=true;const b=$('#push');b.disabled=true;b.textContent='Pushing…';
+  try{
+    validate();sortDays();const c=cfg();
+    const man={keys:keys.map(k=>({code:k.code,expires:k.expires,window_start:k.window_start||'',window_end:k.window_end||''}))};
+    const res=[];
+    // manifest: compare decrypted remote `b` (raw CDN, no API quota)
+    let same=false;const rm=await raw(c,'course/manifest.txt');
+    if(rm){try{
+      const u=unpackManifest(b64ToBytes(rm.trim()));
+      same=canon(decryptJSON(u.bBytes,c.k,u.sb))===canon(man);
+    }catch{}}
+    if(same)res.push('keys unchanged');
+    else{
+      const sa=randomSalt(),sb=randomSalt();
+      const aBytes=encryptBytes(makeDecoy(man),DECOY_KEY,sa);
+      const bBytes=encryptBytes(man,c.k,sb);
+      await put(c,'course/manifest.txt',bytesToB64(packManifest(aBytes,bBytes,sa,sb,Date.now())));
+      res.push('keys pushed');
+    }
+    const rc=await raw(c,'course/course.json');let csame=false;
+    if(rc){try{csame=canon(JSON.parse(rc))===canon(days)}catch{}}
+    if(csame)res.push('course unchanged');else{await put(c,'course/course.json',JSON.stringify(days,null,2));res.push('course pushed')}
+    dirty=false;persist();toast('✅ '+res.join(' · '),'ok');
+  }catch(e){toast('❌ '+e.message,'error')}
+  b.disabled=false;b.textContent='☁ Push';busy=false;
+}
+$('#push').onclick=push;
+$('#test').onclick=async()=>{try{const c=cfg(),r=await fetch(`https://api.github.com/repos/${c.o}/${c.r}`,{headers:{Authorization:`Bearer ${c.t}`}});toast(r.ok?'Connected ✓':'Failed: '+(await r.json()).message,r.ok?'ok':'error')}catch(e){toast(e.message,'error')}};
+$('#pull').onclick=async()=>{try{const c=cfg();if(dirty&&!confirm('Unpushed local changes will be replaced. Continue?'))return;
+  const [m,cj]=await Promise.all([raw(c,'course/manifest.txt'),raw(c,'course/course.json')]);if(!m&&!cj)throw new Error('Nothing found on GitHub (private repo? raw CDN needs a public repo)');
+  if(m){const u=unpackManifest(b64ToBytes(m.trim()));const o=decryptJSON(u.bBytes,c.k,u.sb);keys=o.keys||[]}
+  if(cj)days=JSON.parse(cj);dirty=false;persist();renderKeys();renderDays();toast('Pulled from GitHub ✓','ok')}catch(e){toast('Pull failed: '+e.message,'error')}};
+
+renderKeys();renderDays();persist();
+</script></body></html>

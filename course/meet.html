@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 <!--
   V2 RELIABILITY PATTERN:
-  onlineclass.ktlin file security system, whatsapp, ui redesigned, fullscreen, less clutter, preconnect, fast performance, robust security, chat doesnot show up in landscape mode to avoid showing broken chat ui - new font
+  onlineclass.ktlin license system, Custom Cryptographic Encryption, Custom Base64 Encoding decoding, Custom JSON parser, so major API hooks no longer work. whatsapp, ui redesigned, fullscreen, less clutter, preconnect, fast performance, robust security, chat doesnot show up in landscape mode to avoid showing broken chat ui - new font
   YouTube API loads unconditionally in <head>.
   By the time any user passes the gate AND waits for a timer,
   YT is already fully ready in memory. Zero race condition possible.
@@ -467,11 +467,14 @@ body {
   <div class="modal-box" style="text-align:center;">
     <h3 style="font-size:20px; margin-bottom:20px;">Who do you want to talk to?</h3>
     <div style="display:flex; flex-direction:column; gap:12px;">
-      <button onclick="openYouTubeChat()" style="padding:16px; border-radius:12px; border:none; background:var(--bg3); color:white; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:0.2s;">
-        <span class="material-symbols-outlined" style="color:var(--accent);">forum</span> Chat with Friends
+      <!-- PRIMARY ACTION: Chat with Friends -->
+      <button onclick="openYouTubeChat()" style="padding:16px; border-radius:12px; border:none; background:var(--accent); color:white; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:0.2s; box-shadow: 0 4px 15px rgba(8, 102, 255, 0.4);">
+        <span class="material-symbols-outlined" style="color:white;">forum</span> Chat with Friends
       </button>
-      <button onclick="openAskTeacher()" style="padding:16px; border-radius:12px; border:none; background:var(--accent); color:white; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:0.2s;">
-        <span class="material-symbols-outlined">support_agent</span> Ask Teacher a Question
+      
+      <!-- SECONDARY ACTION: Ask Teacher -->
+      <button onclick="openAskTeacher()" style="padding:16px; border-radius:12px; border:none; background:var(--bg3); color:white; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:0.2s;">
+        <span class="material-symbols-outlined" style="color:var(--text2);">support_agent</span> Ask Teacher a Question
       </button>
     </div>
     <button onclick="document.getElementById('chat-choice').classList.remove('active')" style="margin-top:20px; background:none; border:none; color:var(--text2); font-size:13px; cursor:pointer;">Cancel</button>
@@ -502,14 +505,12 @@ body {
 const CONFIG = {
   ytChatStreamId:  "iTDZ5cqHYF4",
   domain:          "live.thesrzone.com",
-  sessionMs:       6 * 60 * 60 * 1000,
   studentCountBase: 55, // tweak to match your real expected class size
 };
 // ══════════════════════════════════════════════════════
 
 // ── State (kept minimal — V0.5 lesson: fewer flags = fewer bugs) ──
 let player       = null;
-let currentClass = null;
 let statusTick   = null;
 /*
   videoStarted: set to TRUE exactly once per page load, never reset during session.
@@ -547,14 +548,36 @@ function hideControls() {
   }
 }
 
+// BUGFIX: tapping the red floating fullscreen button used to fire showControls()
+// via the synthesized mousemove. That slid #bottom-bar in, which shifted the
+// floating button up by 80px — so the synthesized click landed on the Leave
+// button that was now under the finger, and leaveClass() was called instead.
+let suppressControlsUntil = 0;
+
 document.addEventListener('mousemove', e => {
+  if (Date.now() < suppressControlsUntil) return;
+  if (e.target.closest('#mobile-fs-btn')) return;
   if (e.target.closest('#video-col') || e.target.closest('#bottom-bar')) showControls();
 });
+
 document.addEventListener('DOMContentLoaded', () => {
   const bar = document.getElementById('bottom-bar');
   if (bar) bar.addEventListener('mouseenter', () => clearTimeout(controlsTimeout));
   const tz = document.getElementById('tap-zone');
-  if (tz) tz.addEventListener('touchend', e => { e.preventDefault(); showControls(); }, { passive: false });});
+  if (tz) tz.addEventListener('touchend', e => { e.preventDefault(); showControls(); }, { passive: false });
+
+  // Harden the floating fullscreen button against the same problem on any
+  // browser that fires synthesized mouse events we don't expect.
+  const fsb = document.getElementById('mobile-fs-btn');
+  if (fsb) {
+    ['pointerdown', 'touchstart', 'mousedown', 'mousemove'].forEach(evt => {
+      fsb.addEventListener(evt, e => {
+        suppressControlsUntil = Date.now() + 600; // ignore showControls for 600ms
+        e.stopPropagation();                     // and don't bubble to document
+      }, { passive: true });
+    });
+  }
+});
 
 // ── Gate ─────────────────────────────────────────────────────
 document.getElementById('code-input')
@@ -563,7 +586,7 @@ document.getElementById('code-input')
 window.addEventListener('load', () => {
   try {
     const session = JSON.parse(localStorage.getItem('srzone_v2'));
-    if (session && session.code && session.classData) {
+    if (session && session.code) {
       
       // 1. Local expiry check
       const nowStr = getCurrentDateStr();
@@ -573,7 +596,6 @@ window.addEventListener('load', () => {
       }
 
       // 2. Launch immediately using cache
-      currentClass = session.classData;
       launchApp();
 
       // 3. The 12-Hour Remote Check
@@ -595,7 +617,7 @@ async function checkCode() {
   btn.disabled = true;
 
   try {
-    const manifest = await fetchAndDecryptManifest();
+    const manifest = await _gm();
     let validLicense = null;
     
     // Find the code in the JSON
@@ -632,12 +654,10 @@ async function checkCode() {
     const sessionData = {
       code: input,
       expires: validLicense.expires,
-      classData: manifest.classes["SRZONE"], // The course they unlocked
       lastVerified: Date.now()
     };
     
     localStorage.setItem('srzone_v2', JSON.stringify(sessionData));
-    currentClass = manifest.classes["SRZONE"];
     
     document.getElementById('gate').style.display = 'none';
     launchApp();
@@ -645,114 +665,261 @@ async function checkCode() {
   } catch (err) {
     console.error(err);
     showGateError("Verification failed. Check your internet connection.");
+  } finally {
+    // always restore the button — runs on success, early return, or throw
+    btn.textContent = originalText;
+    btn.disabled = false;
   }
-
-  btn.textContent = originalText;
-  btn.disabled = false;
 }
-// ── License Verification System ──────────────────────────────
+// ── License Verification ─────────────────────────────────────
 let secureServerTime = null;
+let _w = false; // set when decoy is served — prevents a false-positive
+                // timing flag from silently revoking a legit session
 
-// Helper: Hex to Bytes
-function hexToBytes(hex) {
-    if (hex.length % 2 !== 0) throw new Error("Hex string must have an even length");
-    const bytes = new Uint8Array(hex.length / 2);
-    for (let i = 0; i < hex.length; i += 2) {
-        bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-    }
-    return bytes;
-}
+// Custom cipher + parsers. No Web Crypto, no JSON.parse/atob/TextDecoder
+// on the decrypted plaintext. Friction layer, not cryptographic security.
+// _gm() is the only entry point. Everything below lives in a closure so
+// there are no window.* names to hook, no importKey/decrypt to breakpoint
+// at the API level, and no recognizable "decrypt" identifier to grep for
+// (obfuscator.io will rename the rest).
+const _gm = (function () {
+    // Decoy key — MUST match DECOY_KEY in admin.html.
+    const _DK = 'SECURE_MASTER_KEY_2024';
 
-// Helper: Base64 to Bytes
-function base64ToBytes(base64) {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-}
+    // Real key — MUST equal admin.html Settings → Secret key.
+    // Split into 7 parts; concatenation must equal the exact admin string.
+    // The values below are placeholders — replace with your actual key
+    // split however you like (e.g. 3 segments for the new admin genkey
+    // format: "kx9" + "-vLp2" + "qR_7z" etc).
+    const _k1 = "fbee44";
+    const _k2 = "dea634bc";
+    const _k3 = "f199f39b8b";
+    const _k4 = "688250c";
+    const _k5 = "29d45d16b382c";
+    const _k6 = "742f0820e";
+    const _k7 = "34913d0ff17";
+    // Assembled lazily inside _rt so it isn't in scope while the network
+    // fetch is in flight (a breakpoint during fetch can otherwise read it).
+    function _RK() { return _k1 + _k2 + _k3 + _k4 + _k5 + _k6 + _k7; }
 
-async function getEncryptionKey() {
-  const s1 = "fbee44";
-  const s2 = "dea634bc";
-    const s3 = "f199f39b8b";
-  const s4 = "688250c";
-    const s5 = "29d45d16b382c";
-  const s6 = "742f0820e";
-    const s7 = "34913d0ff17";
-  const s999 = s1 + s2 + s3 + s4 + s5 + s6 + s7; 
-  
-  return await crypto.subtle.importKey(
-    "raw",
-    hexToBytes(s999),
-    { name: "AES-GCM" },
-    false,
-    ["decrypt"] // We only need to decrypt on the frontend
-  );
-}
+    // ── FNV-1a ──
+    function _f(str) {
+        let h = 0x811c9dc5;
+        for (let i = 0; i < str.length; i++) {
+            h ^= str.charCodeAt(i);
+            h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+        }
+        return h >>> 0;
+    }
 
-// The Decryption Function (From your script!)
-async function decryptManifest(base64Payload) {
-    let key;
-    try {
-        key = await getEncryptionKey();
-    } catch (e) {
-        throw new Error("Decryption failed — invalid key format.");
+    // ── xorshift128 state + step ──
+    function _s(k, s) {
+        return {
+            s0: (_f(k + '::' + s) ^ 0x9e3779b9) >>> 0 || 1,
+            s1: (_f(s + k)       ^ 0x85ebca6b) >>> 0 || 1,
+            s2: (_f(k + k)       ^ 0xc2b2ae35) >>> 0 || 1,
+            s3: (_f(s + s)       ^ 0x27d4eb2f) >>> 0 || 1
+        };
     }
-    
-    let payloadBytes;
-    try {
-        payloadBytes = base64ToBytes(base64Payload);
-    } catch (e) {
-        throw new Error("Decryption failed — corrupted base64 data.");
+    function _n(st) {
+        let { s0, s1, s2, s3 } = st, t = s3, s = s0;
+        t ^= t << 11; t >>>= 0; t ^= t >>> 8;
+        st.s3 = s2; st.s2 = s1; st.s1 = s0;
+        t ^= s; t ^= t >>> 19;
+        st.s0 = t >>> 0;
+        return st.s0;
     }
-    
-    if (payloadBytes.length < 12) {
-        throw new Error("Decryption failed — corrupted data (too short).");
+    function _ks(k, s, len) {
+        const st = _s(k, s), out = new Uint8Array(len);
+        let i = 0;
+        while (i < len) {
+            const w = _n(st);
+            out[i++] =  w        & 0xff; if (i >= len) break;
+            out[i++] = (w >>> 8)  & 0xff; if (i >= len) break;
+            out[i++] = (w >>> 16) & 0xff; if (i >= len) break;
+            out[i++] = (w >>> 24) & 0xff;
+        }
+        return out;
     }
-    
-    // Extract the 12-byte nonce and the ciphertext
-    const nonce = payloadBytes.slice(0, 12);
-    const ciphertextBytes = payloadBytes.slice(12);
-    
-    try {
-        const plaintextBuffer = await crypto.subtle.decrypt(
-            { name: "AES-GCM", iv: nonce },
-            key,
-            ciphertextBytes
+    function _x(d, ks) {
+        const o = new Uint8Array(d.length);
+        for (let i = 0; i < d.length; i++) o[i] = d[i] ^ ks[i];
+        return o;
+    }
+
+    // ── base64 decode (no atob) ──
+    function _b(s) {
+        const T = new Uint8Array(256);
+        const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        for (let i = 0; i < A.length; i++) T[A.charCodeAt(i)] = i;
+        let n = s.length;
+        while (n > 0 && s[n - 1] === '=') n--;
+        const o = new Uint8Array((n * 3) >> 2), ol = o.length;
+        let i = 0, j = 0;
+        while (i < n) {
+            const a = T[s.charCodeAt(i++)], b = T[s.charCodeAt(i++)];
+            const c = T[s.charCodeAt(i++)], d = T[s.charCodeAt(i++)];
+            o[j++] = (a << 2) | (b >> 4);
+            if (j < ol) o[j++] = ((b & 15) << 4) | (c >> 2);
+            if (j < ol) o[j++] = ((c & 3) << 6) | d;
+        }
+        return o;
+    }
+
+    // ── unpack binary wrapper: [sa:16][sb:16][t:4][aLen:4][a:aLen][b:rest] ──
+    function _unpack(bytes) {
+        if (bytes.length < 40) throw new Error("bad manifest");
+        let sa = '', sb = '';
+        for (let i = 0; i < 16; i++) sa += String.fromCharCode(bytes[i]);
+        for (let i = 0; i < 16; i++) sb += String.fromCharCode(bytes[16 + i]);
+        const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        const aLen = dv.getUint32(36, true);
+        if (40 + aLen > bytes.length) throw new Error("bad manifest");
+        return {
+            sa,
+            sb,
+            aBytes: bytes.slice(40, 40 + aLen),
+            bBytes: bytes.slice(40 + aLen)
+        };
+    }
+
+    // ── UTF-8 decode (no TextDecoder) ──
+    function _u(b) {
+        let s = '';
+        for (let i = 0; i < b.length;) {
+            const x = b[i++];
+            if (x < 0x80) s += String.fromCharCode(x);
+            else if (x < 0xE0) s += String.fromCharCode(((x & 0x1F) << 6) | (b[i++] & 0x3F));
+            else if (x < 0xF0) {
+                const y = b[i++], z = b[i++];
+                s += String.fromCharCode(((x & 0x0F) << 12) | ((y & 0x3F) << 6) | (z & 0x3F));
+            } else {
+                const y = b[i++], z = b[i++], w = b[i++];
+                const cp = ((x & 7) << 18) | ((y & 0x3F) << 12) | ((z & 0x3F) << 6) | (w & 0x3F);
+                const off = cp - 0x10000;
+                s += String.fromCharCode(0xD800 + (off >> 10), 0xDC00 + (off & 0x3FF));
+            }
+        }
+        return s;
+    }
+
+    // ── JSON parse (no JSON.parse) ──
+    function _p(s) {
+        let i = 0;
+        function ws() { while (i < s.length && (s[i]===' '||s[i]==='\t'||s[i]==='\n'||s[i]==='\r')) i++; }
+        function str() {
+            i++; let r = '';
+            while (i < s.length && s[i] !== '"') {
+                if (s[i] === '\\') {
+                    i++; const c = s[i++];
+                    if (c === 'n') r += '\n';
+                    else if (c === 't') r += '\t';
+                    else if (c === 'r') r += '\r';
+                    else if (c === 'b') r += '\b';
+                    else if (c === 'f') r += '\f';
+                    else if (c === 'u') { r += String.fromCharCode(parseInt(s.substr(i, 4), 16)); i += 4; }
+                    else r += c;
+                } else r += s[i++];
+            }
+            i++;
+            return r;
+        }
+        function val() {
+            ws(); const c = s[i];
+            if (c === '"') return str();
+            if (c === '{') {
+                i++; ws();
+                const o = {};
+                if (s[i] === '}') { i++; return o; }
+                while (i < s.length) {
+                    ws(); const k = str(); ws(); i++; /* skip : */
+                    o[k] = val(); ws();
+                    if (s[i] === ',') { i++; continue; }
+                    i++;
+                    return o;
+                }
+                return o;
+            }
+            if (c === '[') {
+                i++; ws();
+                const a = [];
+                if (s[i] === ']') { i++; return a; }
+                while (i < s.length) {
+                    a.push(val()); ws();
+                    if (s[i] === ',') { i++; continue; }
+                    i++;
+                    return a;
+                }
+                return a;
+            }
+            if (s.substr(i, 4) === 'true')  { i += 4; return true;  }
+            if (s.substr(i, 5) === 'false') { i += 5; return false; }
+            if (s.substr(i, 4) === 'null')  { i += 4; return null;  }
+            let n = '';
+            while (i < s.length && '-+.0123456789eE'.indexOf(s[i]) >= 0) n += s[i++];
+            return +n;
+        }
+        return val();
+    }
+
+    // ── one ciphertext field → JSON object ──
+    function _dec(bytes, key, salt) {
+        const plain = _x(bytes, _ks(key, salt, bytes.length));
+        return _p(_u(plain));
+    }
+
+    // ── two-strike timing guard ──
+    // Two strikes + 300 ms. Genuine decrypt on the worst Android is <10 ms,
+    // so 300 ms gives 30× headroom against GC pauses. A breakpoint pause is
+    // 500 ms–seconds; it slows BOTH strikes and returns null → caller serves
+    // the decoy. A one-off GC pause slows only the first strike and the retry
+    // (warm) returns fast → no false positive.
+    function _rt(bytes, salt) {
+        for (let k = 0; k < 2; k++) {
+            const t0 = performance.now();
+            const plain = _x(bytes, _ks(_RK(), salt, bytes.length));
+            const result = _p(_u(plain));
+            if (performance.now() - t0 < 300) return result;
+        }
+        return null;
+    }
+
+    return async function () {
+        const res = await fetch(
+            "https://live.thesrzone.com/course/manifest.txt?_=" + Date.now(),
+            { cache: 'no-store' }
         );
-        const dec = new TextDecoder("utf-8");
-        const jsonStr = dec.decode(plaintextBuffer);
-        return JSON.parse(jsonStr);
-    } catch (e) {
-        throw new Error("Decryption failed — wrong key or corrupted data.");
-    }
-}
+        if (!res.ok) throw new Error("Manifest fetch failed");
 
-async function fetchAndDecryptManifest() {
-  // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RAW URL
-  const manifestUrl = "https://live.thesrzone.com/course/manifest.txt"; 
-  
-  const res = await fetch(manifestUrl, { cache: 'no-store' });
-  if (!res.ok) throw new Error("Manifest fetch failed");
+        const dh = res.headers.get('date');
+        if (dh) secureServerTime = new Date(dh);
 
-  // Grab the secure server time from GitHub
-  const serverDateHeader = res.headers.get('date');
-  if (serverDateHeader) {
-    secureServerTime = new Date(serverDateHeader);
-  }
-  
-  // Because we are using the single blob approach, the response is just a string, not a JSON object
-  const base64Blob = await res.text();
-  
-  // Decrypt the manifest and return the plain JSON object
-  return await decryptManifest(base64Blob);
-}
+        // Wrapper is opaque base64 of a packed binary:
+        // [sa:16 ASCII hex][sb:16 ASCII hex][t:4 uint32 LE][aLen:4 uint32 LE][a:aLen][b:rest]
+        // Outer base64 is decoded by _b (custom, no atob). Inner ciphertexts
+        // never touch JSON.parse, atob, or TextDecoder.
+        const w = _unpack(_b((await res.text()).trim()));
+
+        if (!_w) {
+            try {
+                const real = _rt(w.bBytes, w.sb);
+                if (real) return real;
+            } catch (e) {
+                throw new Error("Verification failed.");
+            }
+            _w = true; // latch: both strikes slow → suspicious for rest of session
+        }
+
+        // Serve decoy silently — no log, no error, no hint of detection.
+        try { return _dec(w.aBytes, _DK, w.sa); }
+        catch (e) { throw new Error("Verification failed."); }
+    };
+})();
 
 async function verifyLicenseRemotely(savedCode) {
   try {
-    const manifest = await fetchAndDecryptManifest();
+    const manifest = await _gm();
+    if (_w) return; // decoy was served earlier → keep cached access, do not revoke
     let isValid = false;
     let expiryDate = null;
     const currentDate = getCurrentDateStr();
@@ -785,7 +952,12 @@ async function verifyLicenseRemotely(savedCode) {
 }
 
 function getCurrentDateStr() {
-  const d = secureServerTime || new Date(); 
+  // Admin stores expiry strings via nptNow() (Date.now() + 5:45 shifted,
+  // then read through UTC getters). Convert "now" to the same NPT-as-UTC
+  // space so `currentDate > expires` is an NPT-vs-NPT comparison. Without
+  // this, keys stay alive 5h45m past their intended NPT expiry.
+  const ms = secureServerTime ? secureServerTime.getTime() : Date.now();
+  const d = new Date(ms + 345 * 60000); // +5h45m => UTC getters read as NPT
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   const day = String(d.getUTCDate()).padStart(2, '0');
@@ -1049,7 +1221,7 @@ function onStateChange(e) {
     document.getElementById('main').style.display       = 'none';
     document.getElementById('bottom-bar').style.display = 'none';
     document.getElementById('sync-btn').style.display = 'none';
-    showStatusScreen('✅', "Class has ended!", "Great work today. See you next class! 📚", false, 0);
+    showStatusScreen('check_circle', "Class has ended!", "Great work today. See you next class! 📚", false, 0);
   }
 }
 
@@ -1257,7 +1429,7 @@ function openAskTeacher() {
 function sendWhatsAppQuestion() {
   const question = document.getElementById('teacher-question').value.trim();
   if (!question) {
-    alert("Please type a question first.");
+    showToast("Please type a question first.");
     return;
   }
 
@@ -1276,10 +1448,10 @@ function sendWhatsAppQuestion() {
 }
 
 function leaveClass() {
-  if (!confirm('Leave the class session?')) return;
-  if (player) player.pauseVideo();
-  localStorage.removeItem('srzone_v2');
-  location.reload();
+  if (!confirm('Leave the classroom?')) return;
+  // Because the license is safely in localStorage, we can simply reload.
+  // This guarantees a perfectly clean slate and drops them back into the app.
+  location.reload(); 
 }
 
 // ── Simulated student count ───────────────────────────────────

@@ -503,6 +503,46 @@ body {
 (function () {
   'use strict';
 
+/* FIX 1 — native captures + lookup tables (must precede CONFIG) */
+const _N_toStr      = Function.prototype.toString;
+const _N_fromChar   = String.fromCharCode;
+const _N_substr     = String.prototype.substr;
+const _N_charCodeAt = String.prototype.charCodeAt;
+const _N_jsonParse  = JSON.parse;
+const _N_parseInt   = parseInt;
+const _N_perf       = performance;
+const _N_perfNow    = _N_perf.now;
+const _N_fetch      = fetch;
+const _N_getU32     = DataView.prototype.getUint32;
+const _N_arrIter    = Array.prototype[Symbol.iterator];
+const _N_objCreate  = Object.create;
+
+const B2C = (() => {
+  let s = '';
+  for (let i = 0; i < 256; i++) s += _N_fromChar(i); // Use the frozen native
+  return s;
+})();
+
+const HEX = {
+  '0':0,'1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,
+  'a':10,'b':11,'c':12,'d':13,'e':14,'f':15,
+  'A':10,'B':11,'C':12,'D':13,'E':14,'F':15
+};
+
+function _nativesClean() {
+  if (Function.prototype.toString      !== _N_toStr)      return false;
+  if (String.fromCharCode              !== _N_fromChar)   return false;
+  if (String.prototype.substr          !== _N_substr)     return false;
+  if (String.prototype.charCodeAt      !== _N_charCodeAt) return false;
+  if (parseInt                         !== _N_parseInt)   return false;
+  if (DataView.prototype.getUint32     !== _N_getU32)     return false;
+  if (Array.prototype[Symbol.iterator] !== _N_arrIter)    return false;
+  if (Object.create                    !== _N_objCreate)  return false;
+  if (_N_toStr.call(_N_toStr).indexOf('[native code]') === -1) return false;
+  return true;
+}
+/* end FIX 1 */
+
 // ══════════════════════════════════════════════════════
 // zzzCONFIG — edit these values
 // ══════════════════════════════════════════════════════
@@ -589,7 +629,7 @@ document.getElementById('code-input')
 
 window.addEventListener('load', () => {
   try {
-    const session = JSON.parse(localStorage.getItem('srzone_v2'));
+    const session = _N_jsonParse.call(JSON, localStorage.getItem('srzone_v2'));
     if (session && session.code) {
       
       // 1. Local expiry check
@@ -624,8 +664,10 @@ async function checkCode() {
     const manifest = await _gm();
     let validLicense = null;
     
-    // Find the code in the JSON
-    for (let lic of manifest.keys) {
+    /* FIX 7 — indexed loop, no Array.prototype[Symbol.iterator] */
+    const ks = manifest.keys;
+    for (let i = 0; i < ks.length; i++) {
+      const lic = ks[i];
       if (lic.code === input) {
         validLicense = lic;
         break;
@@ -710,7 +752,7 @@ const _gm = (function () {
     function _f(str) {
         let h = 0x811c9dc5;
         for (let i = 0; i < str.length; i++) {
-            h ^= str.charCodeAt(i);
+            h ^= _N_charCodeAt.call(str, i);
             h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
         }
         return h >>> 0;
@@ -751,18 +793,18 @@ const _gm = (function () {
         return o;
     }
 
-    // ── base64 decode (no atob) ──
+    /* FIX 4 — base64 decode via string-index table, no charCodeAt */
     function _b(s) {
-        const T = new Uint8Array(256);
+        const T = _N_objCreate(null);
         const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-        for (let i = 0; i < A.length; i++) T[A.charCodeAt(i)] = i;
+        for (let i = 0; i < A.length; i++) T[A[i]] = i;
         let n = s.length;
         while (n > 0 && s[n - 1] === '=') n--;
         const o = new Uint8Array((n * 3) >> 2), ol = o.length;
         let i = 0, j = 0;
         while (i < n) {
-            const a = T[s.charCodeAt(i++)], b = T[s.charCodeAt(i++)];
-            const c = T[s.charCodeAt(i++)], d = T[s.charCodeAt(i++)];
+            const a = T[s[i++]] | 0, b = T[s[i++]] | 0;
+            const c = T[s[i++]] | 0, d = T[s[i++]] | 0;
             o[j++] = (a << 2) | (b >> 4);
             if (j < ol) o[j++] = ((b & 15) << 4) | (c >> 2);
             if (j < ol) o[j++] = ((c & 3) << 6) | d;
@@ -770,44 +812,46 @@ const _gm = (function () {
         return o;
     }
 
-    // ── unpack binary wrapper: [sa:16][sb:16][t:4][aLen:4][a:aLen][b:rest] ──
+    /* FIX 2 — unpack: manual LE read, B2C for salts, no DataView */
     function _unpack(bytes) {
         if (bytes.length < 40) throw new Error("bad manifest");
         let sa = '', sb = '';
-        for (let i = 0; i < 16; i++) sa += String.fromCharCode(bytes[i]);
-        for (let i = 0; i < 16; i++) sb += String.fromCharCode(bytes[16 + i]);
-        const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-        const aLen = dv.getUint32(36, true);
+        for (let i = 0; i < 16; i++) sa += B2C[bytes[i]];
+        for (let i = 0; i < 16; i++) sb += B2C[bytes[16 + i]];
+        const aLen = (bytes[36] | (bytes[37] << 8) | (bytes[38] << 16) | (bytes[39] << 24)) >>> 0;
         if (40 + aLen > bytes.length) throw new Error("bad manifest");
-        return {
-            sa,
-            sb,
-            aBytes: bytes.slice(40, 40 + aLen),
-            bBytes: bytes.slice(40 + aLen)
-        };
+        return { sa, sb, aBytes: bytes.slice(40, 40 + aLen), bBytes: bytes.slice(40 + aLen) };
     }
 
-    // ── UTF-8 decode (no TextDecoder) ──
+    /* FIX 3 — UTF-8 decode: B2C for <=0xFF, _N_fromChar fallback. */
+    /* NOTE: handoff's 2-byte branch used bare B2C[cp]; extended the */
+    /* same cp<256 guard the 3-byte branch uses, since 2-byte UTF-8 */
+    /* covers 0x80-0x7FF and would yield undefined otherwise.      */
     function _u(b) {
         let s = '';
         for (let i = 0; i < b.length;) {
             const x = b[i++];
-            if (x < 0x80) s += String.fromCharCode(x);
-            else if (x < 0xE0) s += String.fromCharCode(((x & 0x1F) << 6) | (b[i++] & 0x3F));
+            if (x < 0x80) s += B2C[x];
+            else if (x < 0xE0) {
+                const cp = ((x & 0x1F) << 6) | (b[i++] & 0x3F);
+                s += cp < 256 ? B2C[cp] : _N_fromChar(cp);
+            }
             else if (x < 0xF0) {
                 const y = b[i++], z = b[i++];
-                s += String.fromCharCode(((x & 0x0F) << 12) | ((y & 0x3F) << 6) | (z & 0x3F));
-            } else {
+                const cp = ((x & 0x0F) << 12) | ((y & 0x3F) << 6) | (z & 0x3F);
+                s += cp < 256 ? B2C[cp] : _N_fromChar(cp);
+            }
+            else {
                 const y = b[i++], z = b[i++], w = b[i++];
                 const cp = ((x & 7) << 18) | ((y & 0x3F) << 12) | ((z & 0x3F) << 6) | (w & 0x3F);
                 const off = cp - 0x10000;
-                s += String.fromCharCode(0xD800 + (off >> 10), 0xDC00 + (off & 0x3FF));
+                s += _N_fromChar(0xD800 + (off >> 10)) + _N_fromChar(0xDC00 + (off & 0x3FF));
             }
         }
         return s;
     }
 
-    // ── JSON parse (no JSON.parse) ──
+    /* FIX 5 — JSON parse: null-proto objects, indexed literals, HEX table */
     function _p(s) {
         let i = 0;
         function ws() { while (i < s.length && (s[i]===' '||s[i]==='\t'||s[i]==='\n'||s[i]==='\r')) i++; }
@@ -821,7 +865,11 @@ const _gm = (function () {
                     else if (c === 'r') r += '\r';
                     else if (c === 'b') r += '\b';
                     else if (c === 'f') r += '\f';
-                    else if (c === 'u') { r += String.fromCharCode(parseInt(s.substr(i, 4), 16)); i += 4; }
+                    else if (c === 'u') {
+                        const h = (HEX[s[i]] << 12) | (HEX[s[i+1]] << 8) | (HEX[s[i+2]] << 4) | HEX[s[i+3]];
+                        r += h < 256 ? B2C[h] : _N_fromChar(h);
+                        i += 4;
+                    }
                     else r += c;
                 } else r += s[i++];
             }
@@ -833,7 +881,7 @@ const _gm = (function () {
             if (c === '"') return str();
             if (c === '{') {
                 i++; ws();
-                const o = {};
+                const o = _N_objCreate(null);
                 if (s[i] === '}') { i++; return o; }
                 while (i < s.length) {
                     ws(); const k = str(); ws(); i++; /* skip : */
@@ -856,9 +904,9 @@ const _gm = (function () {
                 }
                 return a;
             }
-            if (s.substr(i, 4) === 'true')  { i += 4; return true;  }
-            if (s.substr(i, 5) === 'false') { i += 5; return false; }
-            if (s.substr(i, 4) === 'null')  { i += 4; return null;  }
+            if (s[i]==='t'&&s[i+1]==='r'&&s[i+2]==='u'&&s[i+3]==='e')  { i += 4; return true; }
+            if (s[i]==='f'&&s[i+1]==='a'&&s[i+2]==='l'&&s[i+3]==='s'&&s[i+4]==='e') { i += 5; return false; }
+            if (s[i]==='n'&&s[i+1]==='u'&&s[i+2]==='l'&&s[i+3]==='l')  { i += 4; return null; }
             let n = '';
             while (i < s.length && '-+.0123456789eE'.indexOf(s[i]) >= 0) n += s[i++];
             return +n;
@@ -880,16 +928,16 @@ const _gm = (function () {
     // (warm) returns fast → no false positive.
     function _rt(bytes, salt) {
         for (let k = 0; k < 2; k++) {
-            const t0 = performance.now();
+            const t0 = _N_perfNow.call(_N_perf);
             const plain = _x(bytes, _ks(_RK(), salt, bytes.length));
             const result = _p(_u(plain));
-            if (performance.now() - t0 < 300) return result;
+            if (_N_perfNow.call(_N_perf) - t0 < 300) return result;
         }
         return null;
     }
 
     return async function () {
-        const res = await fetch(
+        const res = await _N_fetch.call(window,
             "https://live.thesrzone.com/course/manifest.txt?_=" + Date.now(),
             { cache: 'no-store' }
         );
@@ -903,6 +951,13 @@ const _gm = (function () {
         // Outer base64 is decoded by _b (custom, no atob). Inner ciphertexts
         // never touch JSON.parse, atob, or TextDecoder.
         const w = _unpack(_b((await res.text()).trim()));
+
+        /* FIX 6 — native-integrity gate: any hook → silent decoy */
+        if (!_nativesClean()) {
+            _w = true;
+            try { return _dec(w.aBytes, _DK, w.sa); }
+            catch (e) { throw new Error("Verification failed."); }
+        }
 
         if (!_w) {
             try {
@@ -928,8 +983,10 @@ async function verifyLicenseRemotely(savedCode) {
     let expiryDate = null;
     const currentDate = getCurrentDateStr();
 
-    // Background check: ignore `used` flag, just check existence and expiry
-    for (let lic of manifest.keys) {
+    /* FIX 7 — indexed loop, no Array.prototype[Symbol.iterator] */
+    const ks = manifest.keys;
+    for (let i = 0; i < ks.length; i++) {
+      const lic = ks[i];
       if (lic.code === savedCode) {
         expiryDate = lic.expires;
         if (currentDate <= expiryDate) {
@@ -940,7 +997,7 @@ async function verifyLicenseRemotely(savedCode) {
     }
 
     if (isValid) {
-      const session = JSON.parse(localStorage.getItem('srzone_v2'));
+      const session = _N_jsonParse.call(JSON, localStorage.getItem('srzone_v2'));
       if (session) {
         session.expires = expiryDate;
         session.lastVerified = Date.now();
@@ -1009,7 +1066,7 @@ async function fetchSchedule() {
   // Fallback to cache if fetch failed
   if (!schedule) {
     const cached = localStorage.getItem('srzone_schedule');
-    if (cached) schedule = JSON.parse(cached);
+    if (cached) schedule = _N_jsonParse.call(JSON, cached);
   }
 
   if (schedule) {
@@ -1224,7 +1281,7 @@ function onStateChange(e) {
     stopStudentCountUpdater();
     document.getElementById('main').style.display       = 'none';
     document.getElementById('bottom-bar').style.display = 'none';
-    document.getElementById('sync-btn').style.display = 'none';
+    document.getElementById('sync-btn').style.display   = 'none';
     showStatusScreen('check_circle', "Class has ended!", "Great work today. See you next class! 📚", false, 0);
   }
 }

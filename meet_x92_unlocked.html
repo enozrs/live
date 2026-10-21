@@ -4,12 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SR Zone — Live Class</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://www.youtube.com">
+<link rel="preconnect" href="https://i.ytimg.com">
+<link rel="dns-prefetch" href="https://www.youtube.com">
+
+
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 <!--
-  V1/V0.5 RELIABILITY PATTERN:
+  V2 RELIABILITY PATTERN:
+  onlineclass.ktlin license system, Custom Cryptographic Encryption, Custom Base64 Encoding decoding, Custom JSON parser, so major API hooks no longer work. whatsapp, ui redesigned, fullscreen, less clutter, preconnect, fast performance, robust security, chat doesnot show up in landscape mode to avoid showing broken chat ui - new font
   YouTube API loads unconditionally in <head>.
   By the time any user passes the gate AND waits for a timer,
   YT is already fully ready in memory. Zero race condition possible.
@@ -19,24 +22,28 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  --bg:     #202124;
-  --bg2:    #2b2d30;
-  --bg3:    #3c4043;
-  --border: #3c4043;
-  --text:   #e8eaed;
-  --text2:  #9aa0a6;
-  --accent: #8ab4f8;
-  --red:    #ea4335;
-  --amber:  #fbbc04;
-  --radius: 8px;
+  --bg:     #0f1011; /* Deeper, more premium dark */
+  --bg2:    #1a1b1e;
+  --bg3:    #2b2d31;
+  --border: #313338;
+  --text:   #f2f3f5;
+  --text2:  #b5bac1;
+  --accent: #0866ff; /* Your vivid blue */
+  --accent-hover: #0056d6;
+  --red:    #ef4444;
+  --amber:  #f59e0b;
+  --radius: 12px;
 }
 
 body {
-  font-family: 'Google Sans', 'Segoe UI', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--bg); color: var(--text);
   height: 100dvh; overflow: hidden;
   display: flex; flex-direction: column;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ══ GATE ══ */
@@ -45,28 +52,35 @@ body {
   display: flex; align-items: center; justify-content: center; z-index: 9999;
 }
 .gate-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 12px; padding: 2.5rem 2rem;
-  width: 340px; max-width: 92vw;
-  display: flex; flex-direction: column; gap: 1.2rem; text-align: center;
+  background: rgba(26, 27, 30, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  padding: 3rem 2rem;
+  width: 360px; max-width: 92vw;
+  display: flex; flex-direction: column; gap: 1.5rem; text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
 }
-.gate-logo { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; }
-.gate-logo span { color: var(--accent); }
-.gate-sub { font-size: 13px; color: var(--text2); }
+.gate-logo { font-size: 32px; font-weight: 700; letter-spacing: -1px; }
+.gate-sub { font-size: 14px; color: var(--text2); font-weight: 500; }
 .gate-input {
-  width: 100%; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: var(--radius); color: var(--text); font-family: inherit;
-  font-size: 15px; padding: 12px 14px; outline: none;
-  text-align: center; letter-spacing: 2px; transition: border-color 0.2s;
+  width: 100%; background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 999px; color: var(--text); font-family: inherit;
+  font-size: 16px; padding: 14px 20px; outline: none;
+  text-align: center; letter-spacing: 2px; font-weight: 600;
+  transition: all 0.2s;
 }
-.gate-input:focus { border-color: var(--accent); }
-.gate-input::placeholder { letter-spacing: 0; color: var(--text2); font-size: 13px; }
+.gate-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(8, 102, 255, 0.15); }
+.gate-input::placeholder { letter-spacing: 0; color: var(--text2); font-size: 14px; font-weight: 400; }
 .gate-btn {
-  width: 100%; background: #1a73e8; color: #fff; border: none;
-  border-radius: var(--radius); padding: 13px; font-family: inherit;
-  font-size: 15px; font-weight: 500; cursor: pointer; transition: background 0.2s;
+  width: 100%; background: var(--accent); color: #fff; border: none;
+  border-radius: 999px; padding: 16px; font-family: inherit;
+  font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;
 }
-.gate-btn:hover { background: #1765cc; }
+.gate-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.gate-btn:active { transform: translateY(1px); }
 .gate-error { font-size: 13px; color: var(--red); display: none; }
 .gate-note { font-size: 11px; color: var(--text2); }
 
@@ -95,10 +109,22 @@ body {
 */
 #sync-btn {
   display: none;
-  background: #1a73e8; color: #fff; border: none;
-  border-radius: var(--radius); padding: 12px 32px;
-  font-family: inherit; font-size: 15px; font-weight: 500;
-  cursor: pointer; transition: background 0.2s; margin-top: 4px;
+  background: var(--accent); color: #fff; border: none;
+  border-radius: 999px; padding: 14px 36px;
+  font-family: inherit; font-size: 16px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; margin-top: 8px;
+  box-shadow: 0 4px 15px rgba(8, 102, 255, 0.4);
+}
+#sync-btn:hover { background: var(--accent-hover); transform: translateY(-2px); }
+
+/* Show floating fullscreen button ONLY on small screens */
+@media (max-width: 768px) {
+  #mobile-fs-btn { display: flex !important; }
+}
+/* Hide it when actually in fullscreen */
+#video-col:fullscreen #mobile-fs-btn,
+#video-col:-webkit-full-screen #mobile-fs-btn {
+  display: none !important;
 }
 #sync-btn:hover { background: #1765cc; }
 
@@ -120,8 +146,7 @@ body {
 .chip-live { background: rgba(234,67,53,0.15); border: 1px solid rgba(234,67,53,0.35); color: #f28b82; }
 .live-dot { width: 7px; height: 7px; background: var(--red); border-radius: 50%; animation: blink 1.4s infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
-.chip-time { background: var(--bg2); border: 1px solid var(--border); color: var(--text2); font-variant-numeric: tabular-nums; }
-.chip-count { background: var(--bg2); border: 1px solid var(--border); color: var(--text2); }
+
 
 /* ══ MAIN ══ */
 #main { flex: 1; display: flex; height: calc(100dvh - 52px); overflow: hidden; }
@@ -219,6 +244,24 @@ body {
 }
 #toast.show { opacity: 1; }
 
+/* ══ MODALS ══ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10000; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
+.modal-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 24px; width: 340px; max-width: 90vw;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  transform: translateY(20px); transition: transform 0.2s;
+}
+.modal-overlay.active .modal-box { transform: translateY(0); }
+
 /* ══ RESPONSIVE ══ */
 @media (max-width: 640px) {
   #chat-panel {
@@ -299,24 +342,28 @@ body {
 <div id="gate">
   <div class="gate-card">
     <div class="gate-logo">SR <span>Zone</span></div>
-    <div class="gate-sub">Enter your class access code</div>
+    <div class="gate-sub">Enter your personal license key</div>
     <input id="code-input" class="gate-input" type="text"
-      maxlength="16" placeholder="Class code" autocomplete="off" spellcheck="false" />
-    <div id="gate-error" class="gate-error">Incorrect code. Please try again.</div>
-    <button class="gate-btn" onclick="checkCode()">Join Class</button>
-    <div class="gate-note">Access is saved on this device for 6 hours</div>
+      maxlength="16" placeholder="License Key" autocomplete="off" spellcheck="false" />
+    <div id="gate-error" class="gate-error">Invalid license key. Please check and try again.</div>
+    <button class="gate-btn" onclick="checkCode()">Submit Key</button>
+    <div class="gate-note">License is linked to this device. Enter once, access forever.</div>
   </div>
 </div>
 
 <!-- ══ STATUS SCREEN ══ -->
 <div id="status-screen">
-  <div class="status-emoji" id="s-emoji">🕐</div>
+  <div class="status-emoji" id="s-emoji" style="color: var(--accent);">
+    <span class="material-symbols-outlined" style="font-size: 64px;">schedule</span>
+  </div>
   <div class="status-title" id="s-title">Loading...</div>
   <div class="status-sub" id="s-sub"></div>
   <div class="countdown-pill" id="s-countdown" style="display:none">
     Class starts in &nbsp;<span id="countdown-val">00:00:00</span>
   </div>
-  <button id="sync-btn" onclick="manualSync()">🔄 Join Class Now</button>
+  <button id="sync-btn" onclick="manualSync()" style="align-items:center; justify-content:center; gap:8px;">
+    <span class="material-symbols-outlined" style="font-size:20px;">login</span> Enter Classroom
+  </button>
   <div id="student-count-status"></div>
 </div>
 
@@ -324,9 +371,10 @@ body {
 <div id="topbar" style="display:none">
   <div class="tb-title" id="tb-title">SR Zone</div>
   <div class="tb-sep"></div>
-  <div class="tb-chip chip-count" id="student-chip">👥 --</div>
-  <div class="tb-chip chip-live"><div class="live-dot"></div>LIVE</div>
-  <div class="tb-chip chip-time" id="tb-clock">--:--</div>
+  <div class="tb-chip chip-live">
+    <div class="live-dot"></div>
+    <span id="live-count"> --</span>
+  </div>
 </div>
 
 <!-- ══ MAIN ══ -->
@@ -346,6 +394,31 @@ body {
         </div>
       </div>
 
+      <button id="sound-pill" onclick="enableSound()" style="
+        position:absolute; bottom:16px; left:50%; transform:translateX(-50%); z-index:12;
+        background:var(--accent); color:#fff; border:none;
+        padding:10px 24px; border-radius:99px;
+        font-family:'Inter', system-ui, sans-serif; font-size:14px; font-weight:600; line-height:1;
+        display:none; cursor:pointer;
+        box-shadow:0 4px 15px rgba(8, 102, 255, 0.4);
+        align-items:center; justify-content:center; gap:8px;
+        white-space:nowrap;
+      ">
+        <span class="material-symbols-outlined" style="font-size:22px; display:flex; align-items:center;">volume_up</span>
+        <span>Tap for sound</span>
+      </button>
+
+      <button id="mobile-fs-btn" onclick="toggleFullscreen()" style="
+        position: absolute; bottom: 16px; right: 16px; z-index: 12;
+        background: #ef4444; color: white; border: none;
+        padding: 8px 14px; border-radius: 99px;
+        font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 600;
+        display: none; cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        align-items: center; gap: 6px;
+      ">
+        <span class="material-symbols-outlined" style="font-size: 18px;">fullscreen</span> Fullscreen
+      </button>
       <div id="teacher-tile">
         <div class="tile-avatar">SR</div>
         <div class="tile-name">Teacher</div>
@@ -364,8 +437,11 @@ body {
       <button class="ctrl-circle" id="hand-btn" onclick="toggleHand()">
         <span class="material-symbols-outlined">pan_tool</span>
       </button>
-      <button class="ctrl-circle" id="chat-btn" onclick="toggleChat()">
+      <button class="ctrl-circle" id="chat-btn" onclick="openChatChoice()">
         <span class="material-symbols-outlined">chat</span>
+      </button>
+      <button class="ctrl-circle" id="fs-btn" onclick="toggleFullscreen()">
+        <span class="material-symbols-outlined">fullscreen</span>
       </button>
       <button class="ctrl-circle cc-leave" onclick="leaveClass()">
         <span class="material-symbols-outlined">call_end</span>
@@ -386,42 +462,55 @@ body {
 
 <div id="toast"></div>
 
+<!-- ── Chat Choice Modal ── -->
+<div id="chat-choice" class="modal-overlay">
+  <div class="modal-box" style="text-align:center;">
+    <h3 style="font-size:20px; margin-bottom:20px;">Who do you want to talk to?</h3>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <!-- PRIMARY ACTION: Chat with Friends -->
+      <button onclick="openYouTubeChat()" style="padding:16px; border-radius:12px; border:none; background:var(--accent); color:white; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:0.2s; box-shadow: 0 4px 15px rgba(8, 102, 255, 0.4);">
+        <span class="material-symbols-outlined" style="color:white;">forum</span> Chat with Friends
+      </button>
+      
+      <!-- SECONDARY ACTION: Ask Teacher -->
+      <button onclick="openAskTeacher()" style="padding:16px; border-radius:12px; border:none; background:var(--bg3); color:white; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:0.2s;">
+        <span class="material-symbols-outlined" style="color:var(--text2);">support_agent</span> Ask Teacher a Question
+      </button>
+    </div>
+    <button onclick="document.getElementById('chat-choice').classList.remove('active')" style="margin-top:20px; background:none; border:none; color:var(--text2); font-size:13px; cursor:pointer;">Cancel</button>
+  </div>
+</div>
+
+<!-- ── Ask Teacher Form Modal ── -->
+<div id="ask-teacher-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3 style="font-size:18px; margin-bottom:8px;">Ask your Teacher</h3>
+    <p style="font-size:13px; color:var(--text2); margin-bottom:16px;">Type your question below. It will open in WhatsApp so you can send it privately.</p>
+    
+    <textarea id="teacher-question" placeholder="Type your doubt here..." style="width:100%; height:120px; background:var(--bg); border:2px solid var(--border); border-radius:12px; color:var(--text); font-family:inherit; font-size:15px; padding:12px; resize:none; outline:none; transition:0.2s; box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    
+    <div style="display:flex; gap:10px; margin-top:16px;">
+      <button onclick="document.getElementById('ask-teacher-modal').classList.remove('active')" style="flex:1; padding:12px; border-radius:999px; border:1px solid var(--border); background:var(--bg3); color:white; font-weight:600; cursor:pointer;">Cancel</button>
+      <button onclick="sendWhatsAppQuestion()" style="flex:2; padding:12px; border-radius:999px; border:none; background:#25D366; color:white; font-weight:700; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:8px;">
+        <span class="material-symbols-outlined" style="font-size:18px;">send</span> Send via WhatsApp
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════
 // zzzCONFIG — edit these values
 // ══════════════════════════════════════════════════════
 const CONFIG = {
-  classes: {
-    "d542ccf765015a2ea3495c2fea97f5620ce3c090d5305638c4ee9ed4861ba7b9": {
-      videoId: "5D7SnhC-9IA",
-      title:   "Today's Class"
-    },
-    "PHYSICS01": {
-      videoId: "YOUR_VIDEO_ID_2",
-      title:   "Physics — Ch 1"
-    },
-  },
-
-  classHour:         08,
-  classMinute:       58,
-  // ── IMPORTANT ──────────────────────────────────────────────
-  // Set this to EXACTLY your video's actual length in minutes.
-  // When video ENDED fires = class is genuinely over.
-  // No looping, no reinit, no complex state. Clean and simple.
-  classDurationMins: 90,
-  // ───────────────────────────────────────────────────────────
-
   ytChatStreamId:  "iTDZ5cqHYF4",
   domain:          "live.thesrzone.com",
-  sessionMs:       6 * 60 * 60 * 1000,
-  studentCountBase: 95, // tweak to match your real expected class size
+  studentCountBase: 55, // tweak to match your real expected class size
 };
 // ══════════════════════════════════════════════════════
 
 // ── State (kept minimal — V0.5 lesson: fewer flags = fewer bugs) ──
 let player       = null;
-let currentClass = null;
-let clockTick    = null;
 let statusTick   = null;
 /*
   videoStarted: set to TRUE exactly once per page load, never reset during session.
@@ -459,14 +548,35 @@ function hideControls() {
   }
 }
 
+// BUGFIX: tapping the red floating fullscreen button used to fire showControls()
+// via the synthesized mousemove. That slid #bottom-bar in, which shifted the
+// floating button up by 80px — so the synthesized click landed on the Leave
+// button that was now under the finger, and leaveClass() was called instead.
+let suppressControlsUntil = 0;
+
 document.addEventListener('mousemove', e => {
+  if (Date.now() < suppressControlsUntil) return;
+  if (e.target.closest('#mobile-fs-btn')) return;
   if (e.target.closest('#video-col') || e.target.closest('#bottom-bar')) showControls();
 });
+
 document.addEventListener('DOMContentLoaded', () => {
   const bar = document.getElementById('bottom-bar');
   if (bar) bar.addEventListener('mouseenter', () => clearTimeout(controlsTimeout));
   const tz = document.getElementById('tap-zone');
-  if (tz) tz.addEventListener('touchend', e => { e.preventDefault(); showControls(); });
+  if (tz) tz.addEventListener('touchend', e => { e.preventDefault(); showControls(); }, { passive: false });
+
+  // Harden the floating fullscreen button against the same problem on any
+  // browser that fires synthesized mouse events we don't expect.
+  const fsb = document.getElementById('mobile-fs-btn');
+  if (fsb) {
+    ['pointerdown', 'touchstart', 'mousedown', 'mousemove'].forEach(evt => {
+      fsb.addEventListener(evt, e => {
+        suppressControlsUntil = Date.now() + 600; // ignore showControls for 600ms
+        e.stopPropagation();                     // and don't bubble to document
+      }, { passive: true });
+    });
+  }
 });
 
 // ── Gate ─────────────────────────────────────────────────────
@@ -475,30 +585,442 @@ document.getElementById('code-input')
 
 window.addEventListener('load', () => {
   try {
-    const s = JSON.parse(localStorage.getItem('srzone_v2'));
-    if (s && Date.now() < s.exp && CONFIG.classes[s.code]) {
-      currentClass = CONFIG.classes[s.code];
+    const session = JSON.parse(localStorage.getItem('srzone_v2'));
+    if (session && session.code) {
+      
+      // 1. Local expiry check
+      const nowStr = getCurrentDateStr();
+      if (nowStr > session.expires) {
+        localStorage.removeItem('srzone_v2');
+        return; 
+      }
+
+      // 2. Launch immediately using cache
       launchApp();
+
+      // 3. The 12-Hour Remote Check
+      const verificationInterval = 12 * 60 * 60 * 1000; // 12 hours
+      if (Date.now() - (session.lastVerified || 0) >= verificationInterval) {
+        verifyLicenseRemotely(session.code);
+      }
     }
-  } catch {}
+  } catch (e) {}
 });
 
 async function checkCode() {
   const input = document.getElementById('code-input').value.trim();
   if (!input) return;
-  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
-  const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-  const cls  = CONFIG.classes[hash];
-  if (!cls) {
-    document.getElementById('gate-error').style.display = 'block';
-    const inp = document.getElementById('code-input');
-    inp.style.borderColor = '#ea4335';
-    setTimeout(() => { inp.style.borderColor = ''; }, 1500);
-    return;
+
+  const btn = document.querySelector('.gate-btn');
+  const originalText = btn.textContent;
+  btn.textContent = "Verifying...";
+  btn.disabled = true;
+
+  try {
+    const manifest = await _gm();
+    let validLicense = null;
+    
+    // Find the code in the JSON
+    for (let lic of manifest.keys) {
+      if (lic.code === input) {
+        validLicense = lic;
+        break;
+      }
+    }
+
+    if (!validLicense) {
+      showGateError("Invalid license code.");
+      return;
+    }
+
+    // 🛡️ SECURE TIME WINDOW CHECK (Uses GitHub Server Time)
+    const now = secureServerTime || new Date(); 
+    const windowStart = new Date(validLicense.window_start);
+    const windowEnd = new Date(validLicense.window_end);
+
+    if (now < windowStart || now > windowEnd) {
+      showGateError("Registration window is closed. Please contact support.");
+      return;
+    }
+
+    // Check expiry
+    const currentDate = getCurrentDateStr();
+    if (currentDate > validLicense.expires) {
+      showGateError("This license has expired.");
+      return;
+    }
+
+    // ✅ ALL CHECKS PASSED - Save to Local Cache
+    const sessionData = {
+      code: input,
+      expires: validLicense.expires,
+      lastVerified: Date.now()
+    };
+    
+    localStorage.setItem('srzone_v2', JSON.stringify(sessionData));
+    
+    document.getElementById('gate').style.display = 'none';
+    launchApp();
+
+  } catch (err) {
+    console.error(err);
+    showGateError("Verification failed. Check your internet connection.");
+  } finally {
+    // always restore the button — runs on success, early return, or throw
+    btn.textContent = originalText;
+    btn.disabled = false;
   }
-  localStorage.setItem('srzone_v2', JSON.stringify({ code: hash, exp: Date.now() + CONFIG.sessionMs }));
-  currentClass = cls;
-  launchApp();
+}
+// ── License Verification ─────────────────────────────────────
+let secureServerTime = null;
+let _w = false; // set when decoy is served — prevents a false-positive
+                // timing flag from silently revoking a legit session
+
+// Custom cipher + parsers. No Web Crypto, no JSON.parse/atob/TextDecoder
+// on the decrypted plaintext. Friction layer, not cryptographic security.
+// _gm() is the only entry point. Everything below lives in a closure so
+// there are no window.* names to hook, no importKey/decrypt to breakpoint
+// at the API level, and no recognizable "decrypt" identifier to grep for
+// (obfuscator.io will rename the rest).
+const _gm = (function () {
+    // Decoy key — MUST match DECOY_KEY in admin.html.
+    const _DK = 'SECURE_MASTER_KEY_2024';
+
+    // Real key — MUST equal admin.html Settings → Secret key.
+    // Split into 7 parts; concatenation must equal the exact admin string.
+    // The values below are placeholders — replace with your actual key
+    // split however you like (e.g. 3 segments for the new admin genkey
+    // format: "kx9" + "-vLp2" + "qR_7z" etc).
+    const _k1 = "fbee44";
+    const _k2 = "dea634bc";
+    const _k3 = "f199f39b8b";
+    const _k4 = "688250c";
+    const _k5 = "29d45d16b382c";
+    const _k6 = "742f0820e";
+    const _k7 = "34913d0ff17";
+    // Assembled lazily inside _rt so it isn't in scope while the network
+    // fetch is in flight (a breakpoint during fetch can otherwise read it).
+    function _RK() { return _k1 + _k2 + _k3 + _k4 + _k5 + _k6 + _k7; }
+
+    // ── FNV-1a ──
+    function _f(str) {
+        let h = 0x811c9dc5;
+        for (let i = 0; i < str.length; i++) {
+            h ^= str.charCodeAt(i);
+            h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+        }
+        return h >>> 0;
+    }
+
+    // ── xorshift128 state + step ──
+    function _s(k, s) {
+        return {
+            s0: (_f(k + '::' + s) ^ 0x9e3779b9) >>> 0 || 1,
+            s1: (_f(s + k)       ^ 0x85ebca6b) >>> 0 || 1,
+            s2: (_f(k + k)       ^ 0xc2b2ae35) >>> 0 || 1,
+            s3: (_f(s + s)       ^ 0x27d4eb2f) >>> 0 || 1
+        };
+    }
+    function _n(st) {
+        let { s0, s1, s2, s3 } = st, t = s3, s = s0;
+        t ^= t << 11; t >>>= 0; t ^= t >>> 8;
+        st.s3 = s2; st.s2 = s1; st.s1 = s0;
+        t ^= s; t ^= t >>> 19;
+        st.s0 = t >>> 0;
+        return st.s0;
+    }
+    function _ks(k, s, len) {
+        const st = _s(k, s), out = new Uint8Array(len);
+        let i = 0;
+        while (i < len) {
+            const w = _n(st);
+            out[i++] =  w        & 0xff; if (i >= len) break;
+            out[i++] = (w >>> 8)  & 0xff; if (i >= len) break;
+            out[i++] = (w >>> 16) & 0xff; if (i >= len) break;
+            out[i++] = (w >>> 24) & 0xff;
+        }
+        return out;
+    }
+    function _x(d, ks) {
+        const o = new Uint8Array(d.length);
+        for (let i = 0; i < d.length; i++) o[i] = d[i] ^ ks[i];
+        return o;
+    }
+
+    // ── base64 decode (no atob) ──
+    function _b(s) {
+        const T = new Uint8Array(256);
+        const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        for (let i = 0; i < A.length; i++) T[A.charCodeAt(i)] = i;
+        let n = s.length;
+        while (n > 0 && s[n - 1] === '=') n--;
+        const o = new Uint8Array((n * 3) >> 2), ol = o.length;
+        let i = 0, j = 0;
+        while (i < n) {
+            const a = T[s.charCodeAt(i++)], b = T[s.charCodeAt(i++)];
+            const c = T[s.charCodeAt(i++)], d = T[s.charCodeAt(i++)];
+            o[j++] = (a << 2) | (b >> 4);
+            if (j < ol) o[j++] = ((b & 15) << 4) | (c >> 2);
+            if (j < ol) o[j++] = ((c & 3) << 6) | d;
+        }
+        return o;
+    }
+
+    // ── unpack binary wrapper: [sa:16][sb:16][t:4][aLen:4][a:aLen][b:rest] ──
+    function _unpack(bytes) {
+        if (bytes.length < 40) throw new Error("bad manifest");
+        let sa = '', sb = '';
+        for (let i = 0; i < 16; i++) sa += String.fromCharCode(bytes[i]);
+        for (let i = 0; i < 16; i++) sb += String.fromCharCode(bytes[16 + i]);
+        const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        const aLen = dv.getUint32(36, true);
+        if (40 + aLen > bytes.length) throw new Error("bad manifest");
+        return {
+            sa,
+            sb,
+            aBytes: bytes.slice(40, 40 + aLen),
+            bBytes: bytes.slice(40 + aLen)
+        };
+    }
+
+    // ── UTF-8 decode (no TextDecoder) ──
+    function _u(b) {
+        let s = '';
+        for (let i = 0; i < b.length;) {
+            const x = b[i++];
+            if (x < 0x80) s += String.fromCharCode(x);
+            else if (x < 0xE0) s += String.fromCharCode(((x & 0x1F) << 6) | (b[i++] & 0x3F));
+            else if (x < 0xF0) {
+                const y = b[i++], z = b[i++];
+                s += String.fromCharCode(((x & 0x0F) << 12) | ((y & 0x3F) << 6) | (z & 0x3F));
+            } else {
+                const y = b[i++], z = b[i++], w = b[i++];
+                const cp = ((x & 7) << 18) | ((y & 0x3F) << 12) | ((z & 0x3F) << 6) | (w & 0x3F);
+                const off = cp - 0x10000;
+                s += String.fromCharCode(0xD800 + (off >> 10), 0xDC00 + (off & 0x3FF));
+            }
+        }
+        return s;
+    }
+
+    // ── JSON parse (no JSON.parse) ──
+    function _p(s) {
+        let i = 0;
+        function ws() { while (i < s.length && (s[i]===' '||s[i]==='\t'||s[i]==='\n'||s[i]==='\r')) i++; }
+        function str() {
+            i++; let r = '';
+            while (i < s.length && s[i] !== '"') {
+                if (s[i] === '\\') {
+                    i++; const c = s[i++];
+                    if (c === 'n') r += '\n';
+                    else if (c === 't') r += '\t';
+                    else if (c === 'r') r += '\r';
+                    else if (c === 'b') r += '\b';
+                    else if (c === 'f') r += '\f';
+                    else if (c === 'u') { r += String.fromCharCode(parseInt(s.substr(i, 4), 16)); i += 4; }
+                    else r += c;
+                } else r += s[i++];
+            }
+            i++;
+            return r;
+        }
+        function val() {
+            ws(); const c = s[i];
+            if (c === '"') return str();
+            if (c === '{') {
+                i++; ws();
+                const o = {};
+                if (s[i] === '}') { i++; return o; }
+                while (i < s.length) {
+                    ws(); const k = str(); ws(); i++; /* skip : */
+                    o[k] = val(); ws();
+                    if (s[i] === ',') { i++; continue; }
+                    i++;
+                    return o;
+                }
+                return o;
+            }
+            if (c === '[') {
+                i++; ws();
+                const a = [];
+                if (s[i] === ']') { i++; return a; }
+                while (i < s.length) {
+                    a.push(val()); ws();
+                    if (s[i] === ',') { i++; continue; }
+                    i++;
+                    return a;
+                }
+                return a;
+            }
+            if (s.substr(i, 4) === 'true')  { i += 4; return true;  }
+            if (s.substr(i, 5) === 'false') { i += 5; return false; }
+            if (s.substr(i, 4) === 'null')  { i += 4; return null;  }
+            let n = '';
+            while (i < s.length && '-+.0123456789eE'.indexOf(s[i]) >= 0) n += s[i++];
+            return +n;
+        }
+        return val();
+    }
+
+    // ── one ciphertext field → JSON object ──
+    function _dec(bytes, key, salt) {
+        const plain = _x(bytes, _ks(key, salt, bytes.length));
+        return _p(_u(plain));
+    }
+
+    // ── two-strike timing guard ──
+    // Two strikes + 300 ms. Genuine decrypt on the worst Android is <10 ms,
+    // so 300 ms gives 30× headroom against GC pauses. A breakpoint pause is
+    // 500 ms–seconds; it slows BOTH strikes and returns null → caller serves
+    // the decoy. A one-off GC pause slows only the first strike and the retry
+    // (warm) returns fast → no false positive.
+    function _rt(bytes, salt) {
+        for (let k = 0; k < 2; k++) {
+            const t0 = performance.now();
+            const plain = _x(bytes, _ks(_RK(), salt, bytes.length));
+            const result = _p(_u(plain));
+            if (performance.now() - t0 < 300) return result;
+        }
+        return null;
+    }
+
+    return async function () {
+        const res = await fetch(
+            "https://live.thesrzone.com/course/manifest.txt?_=" + Date.now(),
+            { cache: 'no-store' }
+        );
+        if (!res.ok) throw new Error("Manifest fetch failed");
+
+        const dh = res.headers.get('date');
+        if (dh) secureServerTime = new Date(dh);
+
+        // Wrapper is opaque base64 of a packed binary:
+        // [sa:16 ASCII hex][sb:16 ASCII hex][t:4 uint32 LE][aLen:4 uint32 LE][a:aLen][b:rest]
+        // Outer base64 is decoded by _b (custom, no atob). Inner ciphertexts
+        // never touch JSON.parse, atob, or TextDecoder.
+        const w = _unpack(_b((await res.text()).trim()));
+
+        if (!_w) {
+            try {
+                const real = _rt(w.bBytes, w.sb);
+                if (real) return real;
+            } catch (e) {
+                throw new Error("Verification failed.");
+            }
+            _w = true; // latch: both strikes slow → suspicious for rest of session
+        }
+
+        // Serve decoy silently — no log, no error, no hint of detection.
+        try { return _dec(w.aBytes, _DK, w.sa); }
+        catch (e) { throw new Error("Verification failed."); }
+    };
+})();
+
+async function verifyLicenseRemotely(savedCode) {
+  try {
+    const manifest = await _gm();
+    if (_w) return; // decoy was served earlier → keep cached access, do not revoke
+    let isValid = false;
+    let expiryDate = null;
+    const currentDate = getCurrentDateStr();
+
+    // Background check: ignore `used` flag, just check existence and expiry
+    for (let lic of manifest.keys) {
+      if (lic.code === savedCode) {
+        expiryDate = lic.expires;
+        if (currentDate <= expiryDate) {
+          isValid = true;
+        }
+        break;
+      }
+    }
+
+    if (isValid) {
+      const session = JSON.parse(localStorage.getItem('srzone_v2'));
+      if (session) {
+        session.expires = expiryDate;
+        session.lastVerified = Date.now();
+        localStorage.setItem('srzone_v2', JSON.stringify(session));
+      }
+    } else {
+      handleRevocation("Your premium access has expired or been revoked.");
+    }
+  } catch (e) {
+    // Network failure fallback: Do nothing, let them keep watching using cache
+    console.warn("Background verification failed, using local cache.");
+  }
+}
+
+function getCurrentDateStr() {
+  // Admin stores expiry strings via nptNow() (Date.now() + 5:45 shifted,
+  // then read through UTC getters). Convert "now" to the same NPT-as-UTC
+  // space so `currentDate > expires` is an NPT-vs-NPT comparison. Without
+  // this, keys stay alive 5h45m past their intended NPT expiry.
+  const ms = secureServerTime ? secureServerTime.getTime() : Date.now();
+  const d = new Date(ms + 345 * 60000); // +5h45m => UTC getters read as NPT
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const h = String(d.getUTCHours()).padStart(2, '0');
+  const min = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${y}${m}${day}${h}${min}`;
+}
+
+function showGateError(msg) {
+  const errorEl = document.getElementById('gate-error');
+  errorEl.textContent = msg;
+  errorEl.style.display = 'block';
+  
+  const inp = document.getElementById('code-input');
+  inp.style.borderColor = '#ea4335';
+  setTimeout(() => { inp.style.borderColor = ''; }, 1500);
+}
+
+function handleRevocation(msg) {
+  localStorage.removeItem('srzone_v2');
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('topbar').style.display = 'none';
+  document.getElementById('gate').style.display = 'flex';
+  showGateError(msg);
+}
+
+// ── Schedule Engine ───────────────────────────────────────────
+let todayClass = null;
+
+async function fetchSchedule() {
+  let schedule = null;
+  
+  try {
+    // Try to fetch fresh schedule
+    const res = await fetch("https://live.thesrzone.com/course/course.json", { cache: 'no-store' });
+    if (res.ok) {
+      schedule = await res.json();
+      // Cache it for offline use
+      localStorage.setItem('srzone_schedule', JSON.stringify(schedule));
+    }
+  } catch (err) {
+    console.warn("Network failed, trying offline cache for schedule", err);
+  }
+
+  // Fallback to cache if fetch failed
+  if (!schedule) {
+    const cached = localStorage.getItem('srzone_schedule');
+    if (cached) schedule = JSON.parse(cached);
+  }
+
+  if (schedule) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${y}-${m}-${d}`;
+    
+    todayClass = schedule.find(item => item.date === todayStr);
+    
+    if (todayClass) {
+      document.getElementById('tb-title').textContent = todayClass.title;
+    }
+  }
 }
 
 // ── App launch ────────────────────────────────────────────────
@@ -506,63 +1028,69 @@ function launchApp() {
   document.getElementById('gate').style.display   = 'none';
   document.getElementById('topbar').style.display = 'flex';
   document.getElementById('main').style.display   = 'flex';
-  document.getElementById('tb-title').textContent = currentClass.title;
-  startClock();
-  checkState();
-  statusTick = setInterval(checkState, 1000);
+  // Fetch schedule first, then start the time machine
+  fetchSchedule().then(() => {
+    checkState();
+    statusTick = setInterval(checkState, 1000);
+  });
 }
 
-// ── Clock ─────────────────────────────────────────────────────
-function startClock() {
-  const tick = () => {
-    document.getElementById('tb-clock').textContent =
-      new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-  };
-  tick();
-  clockTick = setInterval(tick, 1000);
-}
+
 
 // ── State machine ─────────────────────────────────────────────
-function classStartToday() {
-  const d = new Date();
-  d.setHours(CONFIG.classHour, CONFIG.classMinute, 0, 0);
-  return d;
-}
-
 function checkState() {
-  const now   = new Date();
-  const start = classStartToday();
-  const end   = new Date(start.getTime() + CONFIG.classDurationMins * 60000);
+  const now = new Date();
 
+  // 1. If no class scheduled for today
+  if (!todayClass) {
+    showStatusScreen('event_busy', "No Class Today", 
+      "There are no scheduled sessions for today. See you next time!", false, 0);
+    document.getElementById('sync-btn').style.display = 'none';
+    document.getElementById('student-count-status').style.display = 'none';
+    return;
+  }
+
+  // 2. Parse today's start and end times (converted to integers)
+  const [startH, startM] = todayClass.startTime.split(':').map(Number);
+  const [endH, endM] = todayClass.endTime.split(':').map(Number);
+  
+  const start = new Date();
+  start.setHours(startH, startM, 0, 0);
+  
+  const end = new Date();
+  end.setHours(endH, endM, 0, 0);
+  
+  // Fix for classes that cross midnight (e.g., 11 PM to 1 AM)
+  if (end <= start) {
+    end.setDate(end.getDate() + 1); // Push end time to tomorrow
+  }
+
+  // 3. The Time Machine
   if (now < start) {
     const msLeft = start - now;
-    showStatusScreen('🕐', "Class hasn't started yet",
+    showStatusScreen('schedule', "Class hasn't started yet",
       `Today's session begins at ${fmtTime(start)}.`, true, msLeft);
 
-    // Waiting-room social proof
     const countEl = document.getElementById('student-count-status');
     countEl.style.display = 'block';
     countEl.textContent = `👥 ${simulatedCount()} students are waiting`;
+    
+    document.getElementById('sync-btn').style.display = 'none';
 
-    // ── RELOAD ON TIMER ZERO ──────────────────────────────────
-    // Fresh page = YT API already loaded in <head> = instant play.
-    // This is the cleanest solution to the race condition.
-    // Only schedule once — the 1000ms tick window means this fires exactly once.
     if (msLeft > 0 && msLeft < 1000) {
       setTimeout(() => location.reload(), msLeft);
     }
 
   } else if (now >= start && now < end) {
-  if (!videoStarted) {
-        // Show a "Class is Live" state with a big button
-        showStatusScreen('🚀', "Class is Live!", "The session has started.", false, 0);
-        document.getElementById('sync-btn').style.display = 'block'; 
-        document.getElementById('sync-btn').textContent = "ENTER CLASSROOM";
+    if (!videoStarted) {
+      showStatusScreen('rocket_launch', "Class is Live!", "The session has started.", false, 0);
+      document.getElementById('sync-btn').style.display = 'flex'; 
+      document.getElementById('sync-btn').textContent = "ENTER CLASSROOM";
     }
     startStudentCountUpdater();
 
   } else {
-    showStatusScreen('✅', "Class has ended",
+    showStatusScreen('check_circle', "Class has ended",
       "Great session! See you tomorrow. 📚", false, 0);
     document.getElementById('sync-btn').style.display = 'none';
     document.getElementById('student-count-status').style.display = 'none';
@@ -570,15 +1098,29 @@ function checkState() {
   }
 }
 
-function showStatusScreen(emoji, title, sub, countdown, msLeft) {
+let lastStatusState = "";
+
+function showStatusScreen(iconName, title, sub, countdown, msLeft) {
   document.getElementById('status-screen').style.display = 'flex';
-  document.getElementById('s-emoji').textContent = emoji;
-  document.getElementById('s-title').textContent = title;
-  document.getElementById('s-sub').textContent   = sub;
+  
+  // Only update heavy DOM text if the state actually changed
+  const currentState = iconName + title + sub;
+  if (lastStatusState !== currentState) {
+    document.getElementById('s-emoji').innerHTML = `<span class="material-symbols-outlined" style="font-size: 64px;">${iconName}</span>`;
+    document.getElementById('s-title').textContent = title;
+    document.getElementById('s-sub').textContent   = sub;
+    lastStatusState = currentState;
+  }
+
   const box = document.getElementById('s-countdown');
   if (countdown && msLeft > 0) {
     box.style.display = 'flex';
-    document.getElementById('countdown-val').textContent = msToClock(msLeft);
+    const timeStr = msToClock(msLeft);
+    const countdownEl = document.getElementById('countdown-val');
+    // Only update the countdown text if the time string actually changed (i.e., a second passed)
+    if (countdownEl.textContent !== timeStr) {
+      countdownEl.textContent = timeStr;
+    }
   } else {
     box.style.display = 'none';
   }
@@ -590,9 +1132,14 @@ function hideStatusScreen() {
 
 // Manual fallback — if reload didn't fire on time (very slow device/network)
 function manualSync() {
-    const start = classStartToday();
+    if (!todayClass) return;
+    
+    const [startH, startM] = todayClass.startTime.split(':').map(Number);
+    const start = new Date();
+    start.setHours(startH, startM, 0, 0);
+    
     const now = new Date();
-    const elapsed = Math.floor((now - start) / 1000);
+    const elapsed = Math.max(0, Math.floor((now - start) / 1000));
     
     hideStatusScreen();
     showClassroom(elapsed);
@@ -600,12 +1147,16 @@ function manualSync() {
 
 // ── Classroom ─────────────────────────────────────────────────
 function showClassroom(seekSecs) {
-  if (videoStarted) return; // single guard, never reset during session (V0.5 pattern)
+  if (videoStarted) return;
+  if (!todayClass || !todayClass.videoId) {
+    showToast("Error: No video ID found for today.");
+    return;
+  }
   videoStarted = true;
   showControls();
 
   player = new YT.Player('yt-player', {
-    videoId: currentClass.videoId,
+    videoId: todayClass.videoId,
     playerVars: {
       autoplay: 1, controls: 0, disablekb: 1,
       modestbranding: 1, rel: 0, fs: 0,
@@ -619,23 +1170,45 @@ function showClassroom(seekSecs) {
   });
 }
 
+function applyBestQuality(playerObj) {
+  if (!playerObj || typeof playerObj.getAvailableQualityLevels !== 'function') return;
+  try {
+    const levels = playerObj.getAvailableQualityLevels();
+    if (levels.indexOf('hd1080') !== -1) {
+      playerObj.setPlaybackQuality('hd1080');
+    } else if (levels.indexOf('hd720') !== -1) {
+      playerObj.setPlaybackQuality('hd720');
+    }
+  } catch (err) {}
+}
+
 function onReady(e) {
   playerReady = true;
   e.target.playVideo();
+  
+  // 1. Try immediately
+  applyBestQuality(e.target);
+  
+  // 2. Try again after 2 seconds (YouTube sometimes takes a moment to populate available qualities)
+  setTimeout(() => applyBestQuality(e.target), 2000);
+
   setTimeout(() => {
-    try {
-      e.target.unMute();
-      e.target.setVolume(100);
-    } catch (err) {
-      // Browser blocked unmute (common on iOS without user gesture)
-      document.getElementById('play-prompt').style.display = 'flex';
-    }
+    try { e.target.unMute(); e.target.setVolume(100); } catch {}
+
+    showSoundPill();
+
+    setTimeout(() => {
+      if (typeof e.target.isMuted === 'function' && !e.target.isMuted()) {
+        hideSoundPill();
+      }
+    }, 6000);
   }, 800);
 }
 
 function onStateChange(e) {
   if (e.data === YT.PlayerState.PLAYING) {
     document.getElementById('play-prompt').style.display = 'none';
+    applyBestQuality(e.target);
   }
   if (e.data === YT.PlayerState.PAUSED) {
     setTimeout(() => { if (player && videoStarted) player.playVideo(); }, 150);
@@ -643,13 +1216,12 @@ function onStateChange(e) {
   if (e.data === YT.PlayerState.ENDED) {
     // With strict duration matching, ENDED = class is genuinely over.
     // No looping needed, no reinit. Just show the ended screen.
-    clearInterval(clockTick);
     clearInterval(statusTick);
     stopStudentCountUpdater();
     document.getElementById('main').style.display       = 'none';
     document.getElementById('bottom-bar').style.display = 'none';
     document.getElementById('sync-btn').style.display = 'none';
-    showStatusScreen('✅', "Class has ended!", "Great work today. See you next class! 📚", false, 0);
+    showStatusScreen('check_circle', "Class has ended!", "Great work today. See you next class! 📚", false, 0);
   }
 }
 
@@ -659,8 +1231,25 @@ function onPlayerError(e) {
   console.warn('YT player error:', e.data);
 }
 
+function showSoundPill() {
+  document.getElementById('sound-pill').style.display = 'flex';
+}
+function hideSoundPill() {
+  document.getElementById('sound-pill').style.display = 'none';
+}
+function enableSound() {
+  if (player && playerReady) {
+    try { player.unMute(); player.setVolume(100); } catch {}
+    player.playVideo();
+  }
+  hideSoundPill();
+  document.getElementById('play-prompt').style.display = 'none';
+  showControls();
+}
+
 function userInitiatedPlay() {
   document.getElementById('play-prompt').style.display = 'none';
+  hideSoundPill();
   if (player && playerReady) {
     player.unMute();
     player.setVolume(100);
@@ -686,7 +1275,7 @@ function toggleCam() {
   showToast(camOn ? 'Video is on' : 'Video is off');
 }
 
-const handNames = ["Manish", "Priya", "Rohan", "Sneha", "Kiran", "Samir", "Pradip", "Smriti"];
+const handNames = ["Shobhit", "Aayusha", "Rohan", "Sneha", "Kiran", "Samir", "Pradip", "Smriti"];
 let handQueue = [];
 
 function toggleHand() {
@@ -759,11 +1348,110 @@ function toggleChat() {
   }
 }
 
+// ── Fullscreen & Orientation Lock ─────────────────────────────
+function toggleFullscreen() {
+  const container = document.getElementById('video-col');
+  
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    if (container.requestFullscreen) {
+      container.requestFullscreen().catch(() => {});
+    } else if (container.webkitRequestFullscreen) {
+      container.webkitRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+  }
+}
+
+document.addEventListener('fullscreenchange', handleFsChange);
+document.addEventListener('webkitfullscreenchange', handleFsChange);
+
+function handleFsChange() {
+  const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+  const icon = document.querySelector('#fs-btn span');
+  
+  if (isFs) {
+    if (icon) icon.textContent = 'fullscreen_exit';
+    showControls(); 
+    
+    // Hide Chat button in fullscreen
+    const chatBtn = document.getElementById('chat-btn');
+    if (chatBtn) chatBtn.style.display = 'none';
+    
+    // Close chat panel if it was open before fullscreen
+    if (chatOpen) toggleChat();
+
+    // Force Landscape on Mobile
+    try {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(() => {});
+      }
+    } catch (e) {}
+  } else {
+    if (icon) icon.textContent = 'fullscreen';
+    
+    // Restore Chat button when exiting fullscreen
+    const chatBtn = document.getElementById('chat-btn');
+    if (chatBtn) chatBtn.style.display = 'flex';
+
+    // Unlock Orientation
+    try {
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
+    } catch (e) {}
+  }
+}
+
+// ── WhatsApp Teacher Support ─────────────────────────────────
+function openChatChoice() {
+  document.getElementById('chat-choice').classList.add('active');
+  // Hide controls while modal is open so it doesn't distract
+  document.getElementById('bottom-bar').style.display = 'none';
+}
+
+function openYouTubeChat() {
+  document.getElementById('chat-choice').classList.remove('active');
+  showControls(); // Bring back UI
+  if (!chatOpen) toggleChat(); // Open the YT iframe panel
+}
+
+function openAskTeacher() {
+  document.getElementById('chat-choice').classList.remove('active');
+  document.getElementById('ask-teacher-modal').classList.add('active');
+  setTimeout(() => document.getElementById('teacher-question').focus(), 100);
+}
+
+function sendWhatsAppQuestion() {
+  const question = document.getElementById('teacher-question').value.trim();
+  if (!question) {
+    showToast("Please type a question first.");
+    return;
+  }
+
+  // ⚠️ REPLACE WITH YOUR WHATSAPP NUMBER (country code, no + or spaces)
+  const myPhoneNumber = "1234567890"; 
+  
+  const message = `Hi Teacher, I have a question from the live class:\n\n"${question}"`;
+  const encodedMessage = encodeURIComponent(message);
+  
+  window.open(`https://wa.me/${myPhoneNumber}?text=${encodedMessage}`, '_blank');
+  
+  // Clean up
+  document.getElementById('ask-teacher-modal').classList.remove('active');
+  document.getElementById('teacher-question').value = ''; // clear for next time
+  showControls();
+}
+
 function leaveClass() {
-  if (!confirm('Leave the class session?')) return;
-  if (player) player.pauseVideo();
-  localStorage.removeItem('srzone_v2');
-  location.reload();
+  if (!confirm('Leave the classroom?')) return;
+  // Because the license is safely in localStorage, we can simply reload.
+  // This guarantees a perfectly clean slate and drops them back into the app.
+  location.reload(); 
 }
 
 // ── Simulated student count ───────────────────────────────────
@@ -771,7 +1459,7 @@ function simulatedCount() {
   return CONFIG.studentCountBase + Math.round(Math.sin(Date.now() / 90000) * 4);
 }
 function updateStudentChip() {
-  document.getElementById('student-chip').textContent = `👥 ${simulatedCount()}`;
+  document.getElementById('live-count').textContent = ` ${simulatedCount()}`;
 }
 function startStudentCountUpdater() {
   if (studentCountInterval) return;

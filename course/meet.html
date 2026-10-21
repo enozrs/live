@@ -639,7 +639,7 @@ async function checkCode() {
     const windowEnd = new Date(validLicense.window_end);
 
     if (now < windowStart || now > windowEnd) {
-      showGateError("Registration window is closed. Please contact support.");
+      showGateError("Code window expired. Please contact support.");
       return;
     }
 
@@ -1434,9 +1434,9 @@ function sendWhatsAppQuestion() {
   }
 
   // ⚠️ REPLACE WITH YOUR WHATSAPP NUMBER (country code, no + or spaces)
-  const myPhoneNumber = "1234567890"; 
+  const myPhoneNumber = "9779744259921"; 
   
-  const message = `Hi Teacher, I have a question from the live class:\n\n"${question}"`;
+  const message = `Hi Teacher, I have a question from class:\n\n"${question}"`;
   const encodedMessage = encodeURIComponent(message);
   
   window.open(`https://wa.me/${myPhoneNumber}?text=${encodedMessage}`, '_blank');

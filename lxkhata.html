@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LX Khata — International Trading</title>
+<style>
+:root{--ink:#1d2a33;--mut:#66747e;--line:#d5dbd9;--bg:#f2f4f1;--pan:#fff;--ac:#0b5c5c;--red:#a8321f;--grn:#1d6b3a}
+*{box-sizing:border-box}body{margin:0;font:13px/1.4 "Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+.nav{display:flex;gap:4px;align-items:center;background:#16343a;padding:8px 12px;flex-wrap:wrap}
+.nav b{color:#fff;margin-right:14px;font-size:15px}.nav button{background:none;border:0;color:#b9d2d0;padding:6px 12px;border-radius:4px;cursor:pointer}
+.nav button.on{background:var(--ac);color:#fff}#st{margin-left:auto;color:#b9d2d0;font-size:12px}
+main{padding:12px}.bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+input,select,textarea,button{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink)}
+button{cursor:pointer}button.pri{background:var(--ac);color:#fff;border-color:var(--ac)}button.dng{color:var(--red)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ac)}
+.pan{background:var(--pan);border:1px solid var(--line);border-radius:6px;padding:12px;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}.grid label{display:block;font-size:11px;color:var(--mut)}.grid input,.grid select{width:100%}
+.tw{overflow-x:auto;background:var(--pan);border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%}th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:#e6ebe8;font-size:12px;white-space:nowrap}th.s{cursor:pointer}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.red{color:var(--red)}.grn{color:var(--grn)}.mut{color:var(--mut)}.void{text-decoration:line-through;opacity:.5}
+.tot{padding:8px 4px;font-size:12px}.pg{display:flex;gap:6px;align-items:center;padding:6px 0}
+#toast{position:fixed;right:12px;top:12px;z-index:9}#toast div{background:var(--ac);color:#fff;padding:8px 12px;border-radius:4px;margin-bottom:6px}#toast div.er{background:var(--red)}
+dialog{border:1px solid var(--line);border-radius:8px;max-width:560px;width:92%}
+.po{display:none}.sig{display:none;justify-content:space-between;margin-top:50px}.sig div{width:44%}
+@media print{@page{size:landscape;margin:10mm}body{background:#fff;font-size:11px}.noprint{display:none!important}.po{display:block!important}.sig{display:flex!important}
+thead{display:table-header-group}tr{page-break-inside:avoid}.tw{border:0;overflow:visible}main{padding:0}}
+</style></head><body>
+<div id="app"></div><div id="toast"></div><dialog id="dlg"></dialog>
+<script>
+/* LX Khata — International Trading. Single source of truth = DB.tx; the journal is DERIVED from transactions
+   by lines(t), so ledgers, trial balance and register can never disagree and debits always equal credits. */
+const K='srk_intl_v1',OLD='shree_erp_db_v2',$=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=(n,c)=>c+' '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6),today=()=>new Date().toISOString().slice(0,10);
+const ACC={CASH:'Cash in Hand',BANK:'Bank',AR:'Customer Receivables',AP:'Supplier Payables',SALES:'Sales',PURCH:'Purchases',SVCINC:'Service Charge Income',SVCEXP:'Service Charge Expense',LOCEXP:'Local Charge Expense',LOCREC:'Local Charges Recovered'};
+const TYPES={receipt:'Receipt from customer',payment:'Payment to supplier',sale:'Sale / invoice to customer',purchase:'Purchase / bill from supplier',charge:'Charge only'};
+let DB,ui={tab:'reg',page:0,sort:'date',dir:-1,f:{q:'',from:'',to:'',party:'',cur:'',prod:'',type:''},void:0,all:0,edit:null,rep:'tb',rp:'',rf:'',rt:''};
+const fresh=()=>({v:1,co:{name:'LAXMAN INTERNATIONAL CO., LIMITED',country:'China',base:'USD',sigA:'Amrita Sapkota',sigP:'Laxman Sharma',pre:'C',seq:0},cur:['USD','RMB','INR','NPR'],parties:[],prods:[],tx:[],audit:[],n:0});
+function toast(m,er){const d=document.createElement('div');d.textContent=m;if(er)d.className='er';$('#toast').appendChild(d);setTimeout(()=>d.remove(),er?6000:3000)}
+function save(){try{localStorage.setItem(K,JSON.stringify(DB));$('#st')&&($('#st').textContent='Saved to this browser '+new Date().toLocaleTimeString());return true}catch(e){$('#st')&&($('#st').textContent='NOT SAVED — '+e.name);return false}}
+function commit(fn){const snap=JSON.stringify(DB);try{fn();DB.chg=(DB.chg||0)+1;if(!save())throw Error('Storage write failed — change was NOT saved. Export a backup.')}catch(e){DB=JSON.parse(snap);toast(e.message,1);return false}setTimeout(checkBackup,60);return true}
+function load(){let r=null;try{r=localStorage.getItem(K)}catch(e){}
+ if(r){try{DB=JSON.parse(r);return}catch(e){toast('Stored data unreadable; kept as '+K+'_corrupt',1);try{localStorage.setItem(K+'_corrupt',r)}catch(_){}}}
+ DB=fresh();let o=null;try{o=JSON.parse(localStorage.getItem(OLD)||'null')}catch(e){}
+ if(o&&(o.customers||o.vendors||o.items)){ // parties+products only; old vouchers have no currency, so they are NOT guessed/converted
+  (o.customers||[]).forEach(c=>DB.parties.push({id:c.id,name:c.name,roles:['customer'],no:nextNo(),country:'',phone:c.phone||'',email:'',tax:c.pan||'',addr:c.address||'',notes:'Migrated from LX Khata',active:c.active!==false}));
+  (o.vendors||[]).forEach(c=>DB.parties.push({id:c.id,name:c.name,roles:['supplier'],no:'',country:'',phone:c.phone||'',email:'',tax:c.pan||'',addr:c.address||'',notes:'Migrated from LX Khata',active:c.active!==false}));
+  (o.items||[]).forEach(i=>DB.prods.push({id:i.id,name:i.name,code:'',unit:i.unit||'',notes:'Migrated'}));
+  setTimeout(()=>toast('Migrated '+DB.parties.length+' parties and '+DB.prods.length+' products. Old vouchers were not migrated (no currency recorded); original data is untouched.'),300)}
+ save()}
+function nextNo(){DB.co.seq++;return DB.co.pre+String(DB.co.seq).padStart(4,'0')}
+const P=id=>DB.parties.find(p=>p.id===id);
+/* ---- accounting core ---- */
+function lines(t){const c=t.cur,a=+t.amt||0,k=t.cash||'CASH',p=t.party,L=[];const add=(acc,dr,cr,cur,party)=>L.push({acc,dr,cr,cur,party:party||''});
+ if(a>0){if(t.type==='receipt'){add(k,a,0,c);add('AR',0,a,c,p)}
+  if(t.type==='payment'){add('AP',a,0,c,p);add(k,0,a,c)}
+  if(t.type==='sale'){add('AR',a,0,c,p);add('SALES',0,a,c)}
+  if(t.type==='purchase'){add('PURCH',a,0,c);add('AP',0,a,c,p)}}
+ const s=+t.sa||0;if(s>0){if(t.sk==='income'){add('AR',s,0,t.sc,p);add('SVCINC',0,s,t.sc)}else if(t.sk==='expense'){add('SVCEXP',s,0,t.sc);add(k,0,s,t.sc)}}
+ const l=+t.la||0;if(l>0){if(t.lk==='recovered'){add('AR',l,0,t.lc,p);add('LOCREC',0,l,t.lc)}else if(t.lk==='expense'){add('LOCEXP',l,0,t.lc);add(k,0,l,t.lc)}}
+ return L}
+function balanced(t){const m={};lines(t).forEach(l=>m[l.cur]=(m[l.cur]||0)+l.dr-l.cr);return Object.values(m).every(v=>Math.abs(v)<.005)}
+const live=()=>DB.tx.filter(t=>!t.void),ord=a=>[...a].sort((x,y)=>x.date.localeCompare(y.date)||x.n-y.n);
+function remMap(){const net={},R={};ord(live()).forEach(t=>{lines(t).forEach(l=>{const k=l.party+'|'+l.acc+'|'+l.cur;net[k]=(net[k]||0)+l.dr-l.cr});
+ if(!t.party)return;const cust=['receipt','sale','charge'].includes(t.type),k=t.party+'|'+(cust?'AR':'AP')+'|'+t.cur,v=cust?(net[k]||0):-(net[k]||0);
+ R[t.id]=Math.abs(v)<.005?{s:'Settled',c:'grn'}:v>0?{s:money(v,t.cur)+(cust?' owed to us':' owed by us'),c:'red'}:{s:money(-v,t.cur)+' advance'+(cust?' (we owe customer)':' (supplier owes us)'),c:'mut'}});return R}
+function partyBal(id){const o={};live().forEach(t=>lines(t).forEach(l=>{if(l.party!==id)return;const k=l.acc+'|'+l.cur;o[k]=(o[k]||0)+(l.acc==='AR'?l.dr-l.cr:l.cr-l.dr)}));return o}
+/* ---- shell ---- */
+const TABS={reg:'Transaction Register',parties:'Customers & Suppliers',prods:'Products',reports:'Reports',set:'Settings'};
+function render(){$('#app').innerHTML='<div class="nav noprint"><b>LX Khata</b>'+Object.entries(TABS).map(([k,v])=>`<button class="${ui.tab===k?'on':''}" onclick="ui.tab='${k}';ui.edit=null;render()">${v}</button>`).join('')+'<span id="st"></span></div><main id="main"></main>';
+ ({reg:vReg,parties:vParties,prods:vProds,reports:vReports,set:vSet})[ui.tab]();$('#st').textContent='Last backup: '+(DB.bk?new Date(DB.bk.at).toLocaleString():'never')+' · data is stored in this browser only'}
+const sigH=()=>`<div class="sig"><div>Account: <b>${esc(DB.co.sigA)}</b><br><br>Signature: ______________________________</div><div>Proprietor: <b>${esc(DB.co.sigP)}</b><br><br>Signature: ______________________________</div></div>`;
+const hdr=t=>`<div class="po"><h2 style="margin:0">${esc(DB.co.name)}</h2><div>${t}</div><div>Printed: ${new Date().toLocaleString()}</div><br></div>`;
+const curOpts=s=>DB.cur.map(c=>`<option ${c===s?'selected':''}>${c}</option>`).join('');
+/* ---- register ---- */
+function vReg(){const f=ui.f;$('#main').innerHTML=`<div class="bar noprint"><button class="pri" onclick="openForm()">+ Add transaction</button>
+<input placeholder="Search anything…" value="${esc(f.q)}" oninput="setF('q',this.value)">
+<input type="date" value="${f.from}" onchange="setF('from',this.value)" title="From"><input type="date" value="${f.to}" onchange="setF('to',this.value)" title="To">
+<select onchange="setF('party',this.value)"><option value="">All parties</option>${DB.parties.map(p=>`<option value="${p.id}" ${f.party===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+<select onchange="setF('cur',this.value)"><option value="">All currencies</option>${curOpts(f.cur)}</select>
+<input placeholder="Product" value="${esc(f.prod)}" oninput="setF('prod',this.value)" size="10">
+<select onchange="setF('type',this.value)"><option value="">All types</option>${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${f.type===k?'selected':''}>${v}</option>`).join('')}</select>
+<label><input type="checkbox" ${ui.void?'checked':''} onchange="ui.void=this.checked;drawReg()"> Show voided</label>
+<button onclick="exportCSV()">Export CSV</button><button onclick="printReg()">Print</button></div>
+<div id="formBox" class="noprint"></div>${hdr('Transaction Register — '+(f.from||'start')+' to '+(f.to||'today'))}<div id="regBody"></div>${sigH()}`;drawReg();if(ui.edit!==null)openForm(ui.edit||undefined)}
+function setF(k,v){ui.f[k]=v;ui.page=0;drawReg()}
+function filt(){const f=ui.f,q=f.q.trim().toLowerCase();return DB.tx.filter(t=>{if(t.void&&!ui.void)return false;const p=P(t.party);
+ if(f.from&&t.date<f.from)return false;if(f.to&&t.date>f.to)return false;if(f.party&&t.party!==f.party)return false;if(f.type&&t.type!==f.type)return false;
+ if(f.cur&&![t.cur,t.sc,t.lc].includes(f.cur))return false;if(f.prod&&!(t.prod||'').toLowerCase().includes(f.prod.toLowerCase()))return false;
+ if(q&&![t.ref,t.ord,t.detail,t.prod,t.note,t.from,p&&p.name,p&&p.no,TYPES[t.type]].join(' ').toLowerCase().includes(q))return false;return true})}
+const recA=t=>t.type==='receipt'?+t.amt:0,paidA=t=>t.type==='payment'?+t.amt:0;
+function sums(a,fn,cf){const o={};a.forEach(t=>{if(t.void)return;fn(t).forEach(([c,v])=>{if(v)o[c]=(o[c]||0)+v})});return Object.entries(o).map(([c,v])=>money(v,c)).join(' · ')||'—'}
+function drawReg(){let a=filt(),R=remMap();const s=ui.sort,d=ui.dir,key={date:t=>t.date+String(t.n).padStart(8,'0'),rec:recA,paid:paidA,party:t=>(P(t.party)||{name:''}).name}[s];
+ a.sort((x,y)=>(key(x)>key(y)?1:key(x)<key(y)?-1:0)*d);const PS=50,pages=Math.max(1,Math.ceil(a.length/PS));if(ui.page>=pages)ui.page=pages-1;const v=ui.all?a:a.slice(ui.page*PS,ui.page*PS+PS);
+ const th=(l,k,n)=>`<th class="${k?'s':''} ${n?'n':''}" ${k?`onclick="sortBy('${k}')"`:''}>${l}${ui.sort===k?(ui.dir>0?' ▲':' ▼'):''}</th>`;
+ $('#regBody').innerHTML=`<div class="tw"><table><thead><tr>${th('Date','date')}${th('Rec Amt','rec',1)}<th>USD / RMB</th>${th('Received from who','party')}<th>Account Detail</th><th>Product / Name of Goods</th>${th('Paid Amt','paid',1)}<th class="n">Service Charge</th><th class="n">Local Charge</th><th>Customer Nbr</th><th>Remaining Balance</th><th class="noprint"></th></tr></thead><tbody>
+${v.map(t=>{const p=P(t.party)||{},r=R[t.id],cs=[...new Set([t.cur,t.sa>0?t.sc:'',t.la>0?t.lc:''].filter(Boolean))];
+ return `<tr class="${t.void?'void':''}"><td>${t.date}</td><td class="n">${recA(t)?money(recA(t),t.cur):''}</td><td>${cs.join(' / ')}</td><td>${esc(t.from||p.name||'')}</td>
+<td>${esc(t.detail||'')}<div class="mut">${TYPES[t.type]}${['sale','purchase'].includes(t.type)?': '+money(t.amt,t.cur):''}${t.ref?' · '+esc(t.ref):''}</div></td><td>${esc(t.prod||'')}</td>
+<td class="n">${paidA(t)?money(paidA(t),t.cur):''}</td><td class="n">${t.sa>0?money(t.sa,t.sc)+'<div class="mut">'+t.sk+'</div>':''}</td><td class="n">${t.la>0?money(t.la,t.lc)+'<div class="mut">'+t.lk+'</div>':''}</td>
+<td>${esc(p.no||'')}</td><td class="${r?r.c:''}">${t.void?'Voided':r?r.s:'—'}</td>
+<td class="noprint" style="white-space:nowrap"><button onclick="viewTx('${t.id}')">View</button>${t.void?'':`<button onclick="openForm('${t.id}')">Edit</button><button class="dng" onclick="voidTx('${t.id}')">Void</button>`}${t.party?`<button onclick="ledger('${t.party}')">Ledger</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="12" class="mut" style="text-align:center;padding:24px">No transactions match. Click “+ Add transaction” to record one.</td></tr>'}</tbody></table></div>
+<div class="tot"><b>${a.filter(t=>!t.void).length}</b> transactions (filtered). Totals are per currency, never combined:<br>
+Received: ${sums(a,t=>[[t.cur,recA(t)]])}<br>Paid: ${sums(a,t=>[[t.cur,paidA(t)]])}<br>Service charges: ${sums(a,t=>[[t.sc,+t.sa]])}<br>Local charges: ${sums(a,t=>[[t.lc,+t.la]])}</div>
+<div class="pg noprint"><button ${ui.page?'':'disabled'} onclick="ui.page--;drawReg()">◀</button>Page ${ui.page+1} / ${pages}<button ${ui.page<pages-1?'':'disabled'} onclick="ui.page++;drawReg()">▶</button></div>`}
+function sortBy(k){ui.dir=ui.sort===k?-ui.dir:-1;ui.sort=k;drawReg()}
+function printReg(){ui.all=1;drawReg();window.print();ui.all=0;drawReg()}
+function exportCSV(){const R=remMap(),q=s=>'"'+String(s??'').replace(/"/g,'""')+'"',rows=[['Date','Rec Amt','USD / RMB','Received from who','Account Detail','Product / Name of Goods','Paid Amt','Service Charge','Local Charge','Customer Nbr','Remaining Balance','Type','Reference','Status']];
+ filt().forEach(t=>{const p=P(t.party)||{};rows.push([t.date,recA(t)||'',[t.cur,t.sa>0?t.sc:'',t.la>0?t.lc:''].filter(Boolean).join('/'),t.from||p.name||'',t.detail||'',t.prod||'',paidA(t)||'',t.sa>0?t.sc+' '+t.sa+' ('+t.sk+')':'',t.la>0?t.lc+' '+t.la+' ('+t.lk+')':'',p.no||'',t.void?'':(R[t.id]||{}).s||'',t.type,t.ref||'',t.void?'void':'posted'])});
+ dl('register.csv','text/csv','\ufeff'+rows.map(r=>r.map(q).join(',')).join('\r\n'))}
+function dl(n,m,s){const u=URL.createObjectURL(new Blob([s],{type:m})),a=document.createElement('a');a.href=u;a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(u),500)}
+function viewTx(id){const t=DB.tx.find(x=>x.id===id),p=P(t.party)||{};$('#dlg').innerHTML=`<h3>${TYPES[t.type]} — ${t.date}</h3><table>${[['Party',p.name],['Customer Nbr',p.no],['Amount',t.amt>0?money(t.amt,t.cur):''],['Account',t.cash==='BANK'?'Bank':'Cash'],['Received from',t.from],['Detail',t.detail],['Product',t.prod],['Reference',t.ref],['Order/Invoice ref',t.ord],['Rate to '+DB.co.base,t.rate],['Service charge',t.sa>0?money(t.sa,t.sc)+' ('+t.sk+')':''],['Local charge',t.la>0?money(t.la,t.lc)+' ('+t.lk+')':''],['Notes',t.note]].filter(r=>r[1]).map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td></tr>`).join('')}</table>
+<h4>Ledger entries (derived)</h4><table>${lines(t).map(l=>`<tr><td>${ACC[l.acc]}</td><td class="n">${l.dr?'Dr '+money(l.dr,l.cur):''}</td><td class="n">${l.cr?'Cr '+money(l.cr,l.cur):''}</td></tr>`).join('')}</table><p><button onclick="$('#dlg').close()">Close</button></p>`;$('#dlg').showModal()}
+function voidTx(id){const t=DB.tx.find(x=>x.id===id);if(!confirm('Void this transaction? It stays in the audit history, is excluded from balances and reports, and can be seen via “Show voided”.'))return;
+ commit(()=>{DB.audit.push({at:new Date().toISOString(),act:'void',id,before:JSON.parse(JSON.stringify(t))});t.void=true});drawReg()}
+function ledger(id){ui.tab='reports';ui.rep='stmt';ui.rp=id;render()}
+/* ---- transaction form ---- */
+const plab=p=>(p.no?p.no+' — ':'')+p.name;
+function openForm(id){ui.edit=id||'';const t=id?DB.tx.find(x=>x.id===id):{date:today(),type:'receipt',cur:DB.cur[0],sc:DB.cur[0],lc:DB.cur[0],cash:'CASH',sk:'none',lk:'none'},p=P(t.party)||{};
+ $('#formBox').innerHTML=`<div class="pan"><b>${id?'Edit':'New'} transaction</b><div class="grid" style="margin-top:8px">
+<div><label>Date</label><input id="fDate" type="date" value="${t.date}"></div>
+<div><label>Transaction type</label><select id="fType">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${t.type===k?'selected':''}>${v}</option>`).join('')}</select></div>
+<div><label>Customer / supplier (type to search)</label><input id="fParty" list="dlP" value="${esc(p.name?plab(p):'')}" placeholder="optional for charge-only"></div>
+<div><label>Received from who (if different)</label><input id="fFrom" value="${esc(t.from||'')}"></div>
+<div><label>Amount (receipt / payment / invoice)</label><input id="fAmt" type="number" step="0.01" min="0" value="${t.amt||''}"></div>
+<div><label>Currency</label><select id="fCur">${curOpts(t.cur)}</select></div>
+<div><label>Via</label><select id="fCash"><option value="CASH" ${t.cash!=='BANK'?'selected':''}>Cash in Hand</option><option value="BANK" ${t.cash==='BANK'?'selected':''}>Bank</option></select></div>
+<div><label>Rate to ${esc(DB.co.base)} (optional, manual)</label><input id="fRate" type="number" step="0.000001" value="${t.rate||''}"></div>
+<div><label>Account detail</label><input id="fDetail" value="${esc(t.detail||'')}"></div>
+<div><label>Product / name of goods</label><input id="fProd" list="dlG" value="${esc(t.prod||'')}"></div>
+<div><label>Reference no.</label><input id="fRef" value="${esc(t.ref||'')}"></div>
+<div><label>Invoice / PO / order ref</label><input id="fOrd" value="${esc(t.ord||'')}"></div>
+<div><label>Service charge</label><input id="fSA" type="number" step="0.01" min="0" value="${t.sa||''}"></div>
+<div><label>Service charge currency</label><select id="fSC">${curOpts(t.sc)}</select></div>
+<div><label>Service charge is…</label><select id="fSK"><option value="none">Not posted (memo)</option><option value="income" ${t.sk==='income'?'selected':''}>Income billed to party</option><option value="expense" ${t.sk==='expense'?'selected':''}>Expense we paid</option></select></div>
+<div><label>Local charge</label><input id="fLA" type="number" step="0.01" min="0" value="${t.la||''}"></div>
+<div><label>Local charge currency</label><select id="fLC">${curOpts(t.lc)}</select></div>
+<div><label>Local charge is…</label><select id="fLK"><option value="none">Not posted (memo)</option><option value="recovered" ${t.lk==='recovered'?'selected':''}>Recovered from party</option><option value="expense" ${t.lk==='expense'?'selected':''}>Expense we paid</option></select></div>
+<div style="grid-column:1/-1"><label>Notes</label><input id="fNote" value="${esc(t.note||'')}"></div></div>
+<datalist id="dlP">${DB.parties.filter(x=>x.active).map(x=>`<option value="${esc(plab(x))}">`).join('')}</datalist><datalist id="dlG">${DB.prods.map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist>
+<p><button id="fSave" class="pri" onclick="saveTx()">Save transaction</button> <button onclick="ui.edit=null;$('#formBox').innerHTML=''">Cancel</button></p></div>`;$('#fDate').focus()}
+function saveTx(){const g=i=>$('#'+i).value.trim(),b=$('#fSave');b.disabled=true;
+ const pl=g('fParty'),party=(DB.parties.find(p=>plab(p)===pl)||{}).id||'',t={id:ui.edit||uid(),date:g('fDate'),type:g('fType'),party,from:g('fFrom'),amt:+g('fAmt')||0,cur:g('fCur'),cash:g('fCash'),rate:g('fRate'),detail:g('fDetail'),prod:g('fProd'),ref:g('fRef'),ord:g('fOrd'),sa:+g('fSA')||0,sc:g('fSC'),sk:g('fSK'),la:+g('fLA')||0,lc:g('fLC'),lk:g('fLK'),note:g('fNote')};
+ const er=!t.date?'Date is required':pl&&!party?'Pick a party from the list, or add it under Customers & Suppliers first':t.type!=='charge'&&!(t.amt>0)?'Enter an amount greater than zero':!party&&t.type!=='charge'?'Select a customer or supplier':
+  (t.sk==='income'||t.lk==='recovered')&&!party?'Charges billed to a party need a party':t.type==='charge'&&!(t.sa>0||t.la>0)?'Enter a service or local charge':!balanced(t)?'Entry does not balance':'';
+ if(er){toast(er,1);b.disabled=false;return}
+ if(commit(()=>{const old=DB.tx.findIndex(x=>x.id===t.id);if(old>=0){DB.audit.push({at:new Date().toISOString(),act:'edit',id:t.id,before:JSON.parse(JSON.stringify(DB.tx[old]))});t.n=DB.tx[old].n;DB.tx[old]=t}else{t.n=++DB.n;DB.tx.push(t)}})){toast('Transaction saved');ui.edit=null;vReg()}else b.disabled=false}
+/* ---- parties ---- */
+const ROLES=['customer','factory','supplier','logistics','agent','other'];let pq='',pe=null;
+function vParties(){const a=DB.parties.filter(p=>(p.name+p.no+p.country+p.phone).toLowerCase().includes(pq.toLowerCase()));
+ $('#main').innerHTML=`<div class="bar"><button class="pri" onclick="pForm()">+ Add party</button><input placeholder="Search name, number, country…" value="${esc(pq)}" oninput="pq=this.value;drawP()"></div><div id="pf"></div><div id="pl"></div>`;drawP()}
+function drawP(){$('#pl').innerHTML=`<div class="tw"><table><thead><tr><th>Cust Nbr</th><th>Name</th><th>Roles</th><th>Country</th><th>Phone</th><th>Outstanding (per currency)</th><th></th></tr></thead><tbody>${DB.parties.filter(p=>(p.name+p.no+p.country+p.phone).toLowerCase().includes(pq.toLowerCase())).map(p=>{const b=partyBal(p.id),s=Object.entries(b).filter(([k,v])=>Math.abs(v)>.005).map(([k,v])=>{const[a,c]=k.split('|');return `<div class="${v>0?'red':'mut'}">${money(Math.abs(v),c)} ${a==='AR'?(v>0?'owed to us':'advance'):(v>0?'owed by us':'advance')}</div>`}).join('')||'<span class="grn">Settled</span>';
+ return `<tr class="${p.active?'':'mut'}"><td>${esc(p.no)}</td><td>${esc(p.name)}${p.active?'':' (archived)'}</td><td>${p.roles.join(', ')}</td><td>${esc(p.country)}</td><td>${esc(p.phone)}</td><td>${s}</td><td style="white-space:nowrap"><button onclick="ledger('${p.id}')">Ledger</button><button onclick="pForm('${p.id}')">Edit</button><button onclick="togP('${p.id}')">${p.active?'Archive':'Restore'}</button></td></tr>`}).join('')||'<tr><td colspan="7" class="mut" style="text-align:center;padding:24px">No parties yet.</td></tr>'}</tbody></table></div>`}
+function pForm(id){const p=id?P(id):{name:'',roles:['customer'],no:'',country:'',phone:'',email:'',tax:'',addr:'',notes:'',active:true};pe=id||null;
+ $('#pf').innerHTML=`<div class="pan"><div class="grid"><div><label>Name</label><input id="pName" value="${esc(p.name)}"></div><div><label>Customer number (blank = auto for customers)</label><input id="pNo" value="${esc(p.no)}"></div><div><label>Country</label><input id="pCtry" value="${esc(p.country)}"></div><div><label>Phone</label><input id="pPh" value="${esc(p.phone)}"></div><div><label>Email</label><input id="pEm" value="${esc(p.email)}"></div><div><label>Tax / registration ID (optional)</label><input id="pTax" value="${esc(p.tax)}"></div><div style="grid-column:1/-1"><label>Address</label><input id="pAd" value="${esc(p.addr)}"></div><div style="grid-column:1/-1"><label>Internal notes</label><input id="pNt" value="${esc(p.notes)}"></div></div>
+<p>${ROLES.map(r=>`<label><input type="checkbox" class="pr" value="${r}" ${p.roles.includes(r)?'checked':''}> ${r}</label> `).join('')}</p><button class="pri" onclick="saveP()">Save party</button> <button onclick="$('#pf').innerHTML=''">Cancel</button></div>`}
+function saveP(){const g=i=>$('#'+i).value.trim(),roles=[...document.querySelectorAll('.pr:checked')].map(x=>x.value);if(!g('pName'))return toast('Name is required',1);if(!roles.length)return toast('Choose at least one role',1);
+ let no=g('pNo');if(no&&DB.parties.some(x=>x.no===no&&x.id!==pe))return toast('Customer number '+no+' is already used',1);
+ commit(()=>{let p=pe&&P(pe);if(!p){p={id:uid(),active:true};DB.parties.push(p)}if(!no&&roles.includes('customer'))no=p.no||nextNo();Object.assign(p,{name:g('pName'),no,roles,country:g('pCtry'),phone:g('pPh'),email:g('pEm'),tax:g('pTax'),addr:g('pAd'),notes:g('pNt')})})&&(toast('Party saved'),vParties())}
+function togP(id){commit(()=>{P(id).active=!P(id).active});drawP()}
+/* ---- products ---- */
+function vProds(){$('#main').innerHTML=`<div class="pan"><div class="grid"><div><label>Product / goods name</label><input id="gN"></div><div><label>Code / SKU</label><input id="gC"></div><div><label>Unit</label><input id="gU" value="pcs"></div><div><label>Notes</label><input id="gT"></div></div><p><button class="pri" onclick="addG()">Add product</button></p><span class="mut">Products speed up entry. The register also accepts any free-text goods name.</span></div>
+<div class="tw"><table><thead><tr><th>Name</th><th>Code</th><th>Unit</th><th>Notes</th><th></th></tr></thead><tbody>${DB.prods.map(g=>`<tr><td>${esc(g.name)}</td><td>${esc(g.code)}</td><td>${esc(g.unit)}</td><td>${esc(g.notes)}</td><td><button class="dng" onclick="delG('${g.id}')">Remove</button></td></tr>`).join('')||'<tr><td colspan="5" class="mut" style="text-align:center;padding:24px">No products yet.</td></tr>'}</tbody></table></div>`}
+function addG(){const n=$('#gN').value.trim();if(!n)return toast('Name is required',1);commit(()=>DB.prods.push({id:uid(),name:n,code:$('#gC').value,unit:$('#gU').value,notes:$('#gT').value}))&&vProds()}
+function delG(id){commit(()=>{DB.prods=DB.prods.filter(g=>g.id!==id)});vProds()}
+/* ---- reports ---- */
+const REP={tb:'Trial balance',stmt:'Party statement',out:'Outstanding balances',cur:'Currency summary',chg:'Charges',pl:'Profit & loss'};
+function vReports(){$('#main').innerHTML=`<div class="bar noprint">${Object.entries(REP).map(([k,v])=>`<button class="${ui.rep===k?'pri':''}" onclick="ui.rep='${k}';vReports()">${v}</button>`).join('')}
+<span>From</span><input type="date" value="${ui.rf}" onchange="ui.rf=this.value;vReports()"><span>To</span><input type="date" value="${ui.rt}" onchange="ui.rt=this.value;vReports()">
+${ui.rep==='stmt'?`<select onchange="ui.rp=this.value;vReports()"><option value="">Choose party…</option>${DB.parties.map(p=>`<option value="${p.id}" ${ui.rp===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`:''}<button onclick="window.print()">Print</button></div>
+${hdr(REP[ui.rep]+' — '+(ui.rf||'start')+' to '+(ui.rt||'today'))}<div id="rb"></div>${sigH()}`;
+ const tx=ord(live().filter(t=>(!ui.rf||t.date>=ui.rf)&&(!ui.rt||t.date<=ui.rt))),T=(h,rows)=>`<div class="tw"><table><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows||'<tr><td colspan="9" class="mut" style="padding:20px;text-align:center">No data for this selection.</td></tr>'}</tbody></table></div>`;
+ const agg=()=>{const m={};tx.forEach(t=>lines(t).forEach(l=>{const k=l.acc+'|'+l.cur;m[k]=m[k]||{d:0,c:0};m[k].d+=l.dr;m[k].c+=l.cr}));return m};let h='';
+ if(ui.rep==='tb'){const m=agg(),cs={};h=T(['Account','Currency','Debit','Credit'],Object.keys(m).sort().map(k=>{const[a,c]=k.split('|');cs[c]=cs[c]||[0,0];cs[c][0]+=m[k].d;cs[c][1]+=m[k].c;return `<tr><td>${ACC[a]}</td><td>${c}</td><td class="n">${m[k].d.toFixed(2)}</td><td class="n">${m[k].c.toFixed(2)}</td></tr>`}).join('')+Object.entries(cs).map(([c,v])=>`<tr><th>Total ${c}</th><th></th><th class="n">${v[0].toFixed(2)}</th><th class="n ${Math.abs(v[0]-v[1])<.005?'grn':'red'}">${v[1].toFixed(2)} ${Math.abs(v[0]-v[1])<.005?'✓ balanced':'MISMATCH'}</th></tr>`).join(''))+'<p class="mut">Each currency is balanced separately; currencies are never added together.</p>'}
+ if(ui.rep==='stmt'){if(!ui.rp)h='<p class="mut">Choose a party above.</p>';else{const run={},r=[];tx.forEach(t=>lines(t).forEach(l=>{if(l.party!==ui.rp)return;const k=l.acc+l.cur;run[k]=(run[k]||0)+(l.acc==='AR'?l.dr-l.cr:l.cr-l.dr);r.push(`<tr><td>${t.date}</td><td>${esc(t.ref||'')}</td><td>${TYPES[t.type]}</td><td>${esc(t.prod||t.detail||'')}</td><td>${l.acc==='AR'?'Receivable':'Payable'} ${l.cur}</td><td class="n">${l.dr?l.dr.toFixed(2):''}</td><td class="n">${l.cr?l.cr.toFixed(2):''}</td><td class="n">${Math.abs(run[k]).toFixed(2)} ${run[k]>.005?(l.acc==='AR'?'owed to us':'owed by us'):run[k]<-.005?'advance':'settled'}</td></tr>`)}));h=`<h3>${esc((P(ui.rp)||{}).name)} ${esc((P(ui.rp)||{}).no||'')}</h3>`+T(['Date','Ref','Type','Details','Account / Cur','Debit','Credit','Running balance'],r.join(''))}}
+ if(ui.rep==='out'){const row=r=>{const o={};DB.parties.forEach(p=>{const b=partyBal(p.id);Object.entries(b).forEach(([k,v])=>{const[a,c]=k.split('|');if(a===r&&Math.abs(v)>.005)(o[p.id]=o[p.id]||[]).push(`${money(v,c)}${v<0?' (advance)':''}`)})});return Object.entries(o).map(([id,v])=>`<tr><td>${esc(P(id).no)}</td><td>${esc(P(id).name)}</td><td>${v.join('<br>')}</td></tr>`).join('')};
+  h='<h3>Customers — owed to us</h3>'+T(['Nbr','Customer','Outstanding'],row('AR'))+'<h3>Suppliers — owed by us</h3>'+T(['Nbr','Supplier','Outstanding'],row('AP'))+'<p class="mut">Receivables and payables are never netted against each other. Outstanding balances are as of today (date filter ignored).</p>'}
+ if(ui.rep==='cur'){const m={};tx.forEach(t=>{const c=t.cur;m[c]=m[c]||{r:0,p:0,s:0,u:0,cash:0,bank:0};if(t.type==='receipt')m[c].r+=+t.amt;if(t.type==='payment')m[c].p+=+t.amt;if(t.type==='sale')m[c].s+=+t.amt;if(t.type==='purchase')m[c].u+=+t.amt});
+  const a=agg();Object.keys(a).forEach(k=>{const[x,c]=k.split('|');m[c]=m[c]||{r:0,p:0,s:0,u:0,cash:0,bank:0};if(x==='CASH')m[c].cash=a[k].d-a[k].c;if(x==='BANK')m[c].bank=a[k].d-a[k].c});
+  h=T(['Currency','Received','Paid','Sales billed','Purchases billed','Cash balance','Bank balance'],Object.entries(m).map(([c,v])=>`<tr><td>${c}</td>${[v.r,v.p,v.s,v.u,v.cash,v.bank].map(x=>`<td class="n">${x.toFixed(2)}</td>`).join('')}</tr>`).join(''))+convH(tx)}
+ if(ui.rep==='chg'){h=T(['Date','Ref','Party','Kind','Treatment','Amount'],tx.flatMap(t=>[t.sa>0&&['Service',t.sk,t.sa,t.sc],t.la>0&&['Local',t.lk,t.la,t.lc]].filter(Boolean).map(x=>`<tr><td>${t.date}</td><td>${esc(t.ref||'')}</td><td>${esc((P(t.party)||{}).name||'')}</td><td>${x[0]}</td><td>${x[1]==='none'?'memo only':x[1]}</td><td class="n">${money(x[2],x[3])}</td></tr>`)).join(''))}
+ if(ui.rep==='pl'){const a=agg(),cs=[...new Set(Object.keys(a).map(k=>k.split('|')[1]))],g=(x,c,s)=>a[x+'|'+c]?(s?a[x+'|'+c].c-a[x+'|'+c].d:a[x+'|'+c].d-a[x+'|'+c].c):0;
+  h=T(['Currency','Sales','Service income','Local recovered','Purchases','Service expense','Local expense','Net'],cs.map(c=>{const i=g('SALES',c,1),s=g('SVCINC',c,1),l=g('LOCREC',c,1),p=g('PURCH',c),e=g('SVCEXP',c),x=g('LOCEXP',c),n=i+s+l-p-e-x;return `<tr><td>${c}</td>${[i,s,l,p,e,x].map(v=>`<td class="n">${v.toFixed(2)}</td>`).join('')}<td class="n ${n<0?'red':'grn'}">${n.toFixed(2)}</td></tr>`}).join(''))+'<p class="mut">Per currency. Purchases are expensed when billed — no stock/closing-inventory adjustment — so treat this as an indicative management view, not a statutory statement.</p>'}
+ $('#rb').innerHTML=h}
+/* ---- settings ---- */
+function vSet(){const c=DB.co;$('#main').innerHTML=`<div class="pan"><b>Company & signatures</b><div class="grid" style="margin-top:8px"><div><label>Company name</label><input id="sN" value="${esc(c.name)}"></div><div><label>Operating country</label><input id="sC" value="${esc(c.country)}"></div>
+<div><label>Base / reporting currency (default suggestion only)</label><select id="sB">${curOpts(c.base)}</select></div><div><label>Customer number prefix</label><input id="sP" value="${esc(c.pre)}"></div>
+<div><label>“Account” signatory</label><input id="sA" value="${esc(c.sigA)}"></div><div><label>“Proprietor” signatory</label><input id="sPr" value="${esc(c.sigP)}"></div></div><p><button class="pri" onclick="saveS()">Save settings</button></p>
+<p class="mut">INR as base currency is an application default, not a determination of your legal or statutory reporting currency. Tax/GST/customs rules are not built in — confirm requirements with your accountant.</p></div>
+<div class="pan"><b>Currencies</b> (${DB.cur.join(', ')}) <input id="nc" placeholder="e.g. EUR" size="6" maxlength="5"> <button onclick="addC()">Add currency</button></div>
+<div class="pan"><b>Backup & restore</b><p class="mut">Data lives only in this browser profile. It is not synced, not encrypted, and is lost if browser data is cleared. Export a backup after each working day and keep copies elsewhere.</p>
+<button class="pri" onclick="doBackup()">Export backup (JSON)</button> <label>Restore: <input type="file" accept=".json" onchange="restore(this.files[0])"></label></div>
+<div class="pan"><b>Audit history</b> (${DB.audit.length} edits/voids kept)<div class="mut">${DB.audit.slice(-8).reverse().map(a=>a.at.slice(0,19).replace('T',' ')+' — '+a.act+' '+a.id).join('<br>')}</div></div>`}
+function saveS(){commit(()=>Object.assign(DB.co,{name:$('#sN').value,country:$('#sC').value,base:$('#sB').value,pre:$('#sP').value||'C',sigA:$('#sA').value,sigP:$('#sPr').value}))&&toast('Settings saved')}
+function addC(){const c=$('#nc').value.trim().toUpperCase();if(!/^[A-Z]{2,5}$/.test(c))return toast('Enter a 2–5 letter code',1);if(DB.cur.includes(c))return toast('Already exists',1);commit(()=>DB.cur.push(c))&&vSet()}
+function restore(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!d.co||!Array.isArray(d.tx)||!Array.isArray(d.parties)||!Array.isArray(d.cur)||!Array.isArray(d.prods))throw Error('Not a valid LX Khata backup');
+ if(!d.tx.every(t=>t.id&&t.date&&t.cur&&balanced(t)))throw Error('Backup contains unbalanced or incomplete transactions');
+ if(!confirm('Replace ALL current data with this backup ('+d.tx.length+' transactions)? Current data is first kept under the key '+K+'_pre_restore.'))return;
+ try{localStorage.setItem(K+'_pre_restore',JSON.stringify(DB))}catch(e){throw Error('Could not preserve current data first; restore cancelled')}
+ const old=DB;DB=d;if(!save()){DB=old;throw Error('Storage write failed; restore cancelled')}toast('Backup restored');render()}catch(e){toast('Restore failed: '+e.message,1)}};r.readAsText(f)}
+/* Base-currency equivalent: uses ONLY rates typed on each transaction; transactions without a rate are listed as not converted. */
+function convH(tx){const B=DB.co.base,x={r:0,p:0,s:0,u:0},miss=[],rates={},key={receipt:'r',payment:'p',sale:'s',purchase:'u'};
+ tx.forEach(t=>{if(!(t.amt>0)||!key[t.type])return;const rt=t.cur===B?1:+t.rate;if(!(rt>0)){miss.push(t);return}
+  if(t.cur!==B){const o=rates[t.cur]=rates[t.cur]||[rt,rt];o[0]=Math.min(o[0],rt);o[1]=Math.max(o[1],rt)}x[key[t.type]]+=t.amt*rt});
+ const mm={};miss.forEach(t=>{mm[t.cur]=mm[t.cur]||[0,0];mm[t.cur][0]++;mm[t.cur][1]+=+t.amt});
+ return `<h3>Approximate ${esc(B)} equivalent (manual rates only)</h3><div class="tw"><table><thead><tr><th>Received</th><th>Paid</th><th>Sales billed</th><th>Purchases billed</th></tr></thead><tbody><tr>${[x.r,x.p,x.s,x.u].map(v=>`<td class="n">${money(v,B)}</td>`).join('')}</tr></tbody></table></div>
+<p class="mut">Each amount is the original amount × the rate typed on that transaction. Rates used: ${Object.entries(rates).map(([c,o])=>c+' '+(o[0]===o[1]?o[0]:o[0]+'–'+o[1])).join(', ')||'none'}. Transactions already in ${esc(B)} count at rate 1.</p>
+${miss.length?`<p class="red"><b>Not converted (no rate entered):</b> ${miss.length} transaction(s) — ${Object.entries(mm).map(([c,v])=>v[0]+' in '+money(v[1],c)).join('; ')}. They are excluded from the totals above.</p>`:''}
+<p class="mut">Service and local charges are not converted. The original-currency table above remains the accurate record.</p>`}
+/* Mandatory backup: a blocking dialog appears on the first save of each day with unbacked changes, and again after 25 changes. */
+let bkSnooze=0;
+function doBackup(){const prev=DB.bk;DB.bk={at:new Date().toISOString(),chg:DB.chg||0};if(!save()){DB.bk=prev;toast('Could not record the backup. Try again.',1);return false}
+ dl('SR_Khata_backup_'+today()+'_'+new Date().toTimeString().slice(0,5).replace(':','')+'.json','application/json',JSON.stringify(DB,null,1));
+ toast('Backup downloaded — keep a copy outside this computer');const s=$('#st');if(s)s.textContent='Last backup: '+new Date(DB.bk.at).toLocaleString();return true}
+function checkBackup(){if(Date.now()<bkSnooze)return;const n=(DB.chg||0)-(DB.bk?DB.bk.chg||0:0);if(n<=0)return;const daily=!DB.bk||DB.bk.at.slice(0,10)!==today();if(!daily&&n<25)return;
+ let d=$('#bkdlg');if(d&&d.open)return;if(!d){d=document.createElement('dialog');d.id='bkdlg';document.body.appendChild(d);d.addEventListener('cancel',e=>e.preventDefault());d.addEventListener('close',()=>setTimeout(checkBackup,0))}
+ d.innerHTML=`<h3>Backup required</h3><p><b>${n}</b> change${n>1?'s':''} since your last backup (${DB.bk?new Date(DB.bk.at).toLocaleString():'never backed up'}). Your records exist only in this browser, so download a backup now to continue.</p><p class="mut">Save the file to a USB drive, email it to yourself, or put it in cloud storage. A copy that stays on this computer does not protect you if the computer fails.</p><p><button class="pri" onclick="if(doBackup())$('#bkdlg').close()">Download backup and continue</button></p><p style="margin:0"><button style="background:none;border:0;color:var(--mut);text-decoration:underline;padding:4px 0" onclick="bkSnooze=Date.now()+30*60000;$('#bkdlg').close()">Later</button> <span class="mut" style="font-size:11px">I understand unsaved data can be lost</span></p>`;d.showModal()}
+/* Enter acts like Tab inside entry forms (not in the search/filter bar, buttons, or file inputs) */
+document.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.isComposing)return;const el=e.target;
+ if(!el.matches||!el.matches('input,select')||el.type==='file'||el.type==='checkbox')return;const box=el.closest('.pan');if(!box)return;
+ const f=[...box.querySelectorAll('input,select,button')].filter(x=>!x.disabled&&x.type!=='hidden'&&x.type!=='file'&&x.offsetParent!==null),i=f.indexOf(el);
+ if(i<0||i===f.length-1)return;e.preventDefault();const n=f[i+1];n.focus();if(n.select&&n.tagName==='INPUT'&&n.type!=='checkbox')try{n.select()}catch(_){}});
+load();render();checkBackup();
+</script></body></html>

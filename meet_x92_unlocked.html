@@ -9,20 +9,26 @@
 <link rel="dns-prefetch" href="https://www.youtube.com">
 
 
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
 <!--
-  V2 RELIABILITY PATTERN:
+  V3 RELIABILITY PATTERN:
+  When user switches app and returns, the video is paused and never resumed - FIXED ! YouTube video quality low on mobile devices - Fixed. Time is fetched via Header only now on ! 
+  
+  Renders #yt-player at 1920×1080 scaled via GPU transform so YouTube unlocks 1080p even in portrait mode. 
+  A lightweight monitor watches for repeated rebuffering (>= 2 stalls in 45s) or severe requestAnimationFrame decode stalls (>= 12 frames slower than 120ms in 5s); 
+  if either trips, it automatically downshifts the virtual canvas to 1280×720. If 1080p runs smoothly for 60 seconds, the monitor turns itself off to save battery.
+  
   onlineclass.ktlin license system, Custom Cryptographic Encryption, Custom Base64 Encoding decoding, Custom JSON parser, so major API hooks no longer work. whatsapp, ui redesigned, fullscreen, less clutter, preconnect, fast performance, robust security, chat doesnot show up in landscape mode to avoid showing broken chat ui - new font
   YouTube API loads unconditionally in <head>.
   By the time any user passes the gate AND waits for a timer,
   YT is already fully ready in memory. Zero race condition possible.
   DO NOT lazy-load this script. The reliability is worth the ~11KB cost.
 -->
+
 <script src="https://www.youtube.com/iframe_api"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   --bg:     #0f1011; /* Deeper, more premium dark */
@@ -46,16 +52,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ══ GATE ══ */
 #gate {
   position: fixed; inset: 0; background: var(--bg);
   display: flex; align-items: center; justify-content: center; z-index: 9999;
 }
 .gate-card {
-  background: rgba(26, 27, 30, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(26, 27, 30, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
   padding: 3rem 2rem;
   width: 360px; max-width: 92vw;
@@ -85,7 +88,6 @@ body {
 .gate-error { font-size: 13px; color: var(--red); display: none; }
 .gate-note { font-size: 11px; color: var(--text2); }
 
-/* ══ STATUS SCREEN ══ */
 #status-screen {
   position: fixed; inset: 0; background: var(--bg);
   display: none; flex-direction: column;
@@ -103,11 +105,13 @@ body {
   font-size: 20px; font-weight: 600; color: var(--accent);
   font-variant-numeric: tabular-nums; letter-spacing: 1px;
 }
+
 /*
   Sync/Rejoin button — shown ~15s before countdown hits zero.
   On slow 2G, the page reload may still be in progress.
   Giving students a tap target feels like Google Meet's "Rejoin" button.
 */
+
 #sync-btn {
   display: none;
   background: var(--accent); color: #fff; border: none;
@@ -132,7 +136,6 @@ body {
 /* Student count shown on waiting screen */
 #student-count-status { font-size: 13px; color: var(--text2); display: none; }
 
-/* ══ TOP BAR ══ */
 #topbar {
   height: 52px; flex-shrink: 0; background: var(--bg);
   border-bottom: 1px solid var(--border);
@@ -149,15 +152,21 @@ body {
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
 
 
-/* ══ MAIN ══ */
 #main { flex: 1; display: flex; height: calc(100dvh - 52px); overflow: hidden; }
 #video-col { flex: 1; display: flex; flex-direction: column; position: relative; background: #000; }
-#video-wrap { flex: 1; height: 100%; position: relative; }
-#yt-player { position: absolute; width: 100%; height: 100%; pointer-events: none; }
+#video-wrap { flex: 1; height: 100%; position: relative; overflow: hidden; }
+#yt-player {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: center center;
+  pointer-events: none;
+}
 #tap-zone { position: absolute; inset: 0; z-index: 5; display: none; }
 #click-shield { position: absolute; inset: 0; z-index: 4; cursor: default; }
 
-/* Teacher PiP tile */
 #teacher-tile {
   position: absolute; top: 12px; right: 12px; width: 130px; height: 78px;
   background: #1a1a2e; border: 2px solid var(--border); border-radius: var(--radius);
@@ -176,7 +185,6 @@ body {
   font-size: 13px; color: var(--text2); z-index: 6; display: none;
 }
 
-/* Autoplay blocked prompt */
 #play-prompt {
   position: absolute; inset: 0; background: rgba(0,0,0,0.6);
   display: none; align-items: center; justify-content: center;
@@ -193,7 +201,6 @@ body {
 }
 .play-icon .material-symbols-outlined { font-size: 32px; }
 
-/* ══ BOTTOM BAR ══ */
 #bottom-bar {
   height: 80px; 
   flex-shrink: 0; 
@@ -218,7 +225,6 @@ body {
 .cc-leave { background: #ea4335; width: 64px; border-radius: 32px; }
 .material-symbols-outlined { font-size: 22px; font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
 
-/* ══ CHAT PANEL ══ */
 #chat-panel {
   width: 320px; flex-shrink: 0; background: var(--bg2);
   border-left: 1px solid var(--border);
@@ -234,7 +240,6 @@ body {
 .chat-loader { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text2); font-size: 13px; }
 #yt-chat-frame { flex: 1; border: none; background: transparent; min-height: 0; display: none; }
 
-/* ══ TOAST ══ */
 #toast {
   position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
   background: var(--bg2); border: 1px solid var(--border);
@@ -245,11 +250,9 @@ body {
 }
 #toast.show { opacity: 1; }
 
-/* ══ MODALS ══ */
 .modal-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.85);
   display: flex; align-items: center; justify-content: center;
   z-index: 10000; opacity: 0; pointer-events: none;
   transition: opacity 0.2s;
@@ -263,7 +266,6 @@ body {
 }
 .modal-overlay.active .modal-box { transform: translateY(0); }
 
-/* ══ RESPONSIVE ══ */
 @media (max-width: 640px) {
   #chat-panel {
     position: fixed; bottom: 0; left: 0; width: 100%; height: 90%; z-index: 100;
@@ -339,7 +341,6 @@ body {
 </head>
 <body>
 
-<!-- ══ GATE ══ -->
 <div id="gate">
   <div class="gate-card">
     <div class="gate-logo">SR <span>Zone</span></div>
@@ -352,7 +353,6 @@ body {
   </div>
 </div>
 
-<!-- ══ STATUS SCREEN ══ -->
 <div id="status-screen">
   <div class="status-emoji" id="s-emoji" style="color: var(--accent);">
     <span class="material-symbols-outlined" style="font-size: 64px;">schedule</span>
@@ -368,7 +368,6 @@ body {
   <div id="student-count-status"></div>
 </div>
 
-<!-- ══ TOP BAR ══ -->
 <div id="topbar" style="display:none">
   <div class="tb-title" id="tb-title">SR Zone</div>
   <div class="tb-sep"></div>
@@ -378,7 +377,6 @@ body {
   </div>
 </div>
 
-<!-- ══ MAIN ══ -->
 <div id="main" style="display:none">
   <div id="video-col">
     <div id="video-wrap">
@@ -463,7 +461,6 @@ body {
 
 <div id="toast"></div>
 
-<!-- ── Chat Choice Modal ── -->
 <div id="chat-choice" class="modal-overlay">
   <div class="modal-box" style="text-align:center;">
     <h3 style="font-size:20px; margin-bottom:20px;">Who do you want to talk to?</h3>
@@ -482,7 +479,6 @@ body {
   </div>
 </div>
 
-<!-- ── Ask Teacher Form Modal ── -->
 <div id="ask-teacher-modal" class="modal-overlay">
   <div class="modal-box">
     <h3 style="font-size:18px; margin-bottom:8px;">Ask your Teacher</h3>
@@ -1045,18 +1041,32 @@ function handleRevocation(msg) {
   showGateError(msg);
 }
 
-// ── Schedule Engine ───────────────────────────────────────────
+// ── Schedule Engine & Synced Clock ────────────────────────────
 let todayClass = null;
+let serverTimeOffset = 0; // serverMs - localMs
+let classStartTime = null;
+let classEndTime = null;
+
+function syncedNow() {
+  return new Date(Date.now() + serverTimeOffset);
+}
 
 async function fetchSchedule() {
   let schedule = null;
   
   try {
-    // Try to fetch fresh schedule
-    const res = await fetch("https://live.thesrzone.com/course/course.json", { cache: 'no-store' });
+    const t0 = Date.now();
+    const res = await fetch("https://live.thesrzone.com/course/course.json?_=" + t0, { cache: 'no-store' });
+    const t1 = Date.now();
+
+    const dateHdr = res.headers.get('date');
+    if (dateHdr) {
+      const serverMs = new Date(dateHdr).getTime() + Math.round((t1 - t0) / 2);
+      serverTimeOffset = serverMs - t1;
+    }
+
     if (res.ok) {
       schedule = await res.json();
-      // Cache it for offline use
       localStorage.setItem('srzone_schedule', JSON.stringify(schedule));
     }
   } catch (err) {
@@ -1070,7 +1080,7 @@ async function fetchSchedule() {
   }
 
   if (schedule) {
-    const now = new Date();
+    const now = syncedNow();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
@@ -1080,6 +1090,18 @@ async function fetchSchedule() {
     
     if (todayClass) {
       document.getElementById('tb-title').textContent = todayClass.title;
+
+      const [startH, startM] = todayClass.startTime.split(':').map(Number);
+      const [endH, endM] = todayClass.endTime.split(':').map(Number);
+
+      classStartTime = new Date(now);
+      classStartTime.setHours(startH, startM, 0, 0);
+
+      classEndTime = new Date(now);
+      classEndTime.setHours(endH, endM, 0, 0);
+      if (classEndTime <= classStartTime) {
+        classEndTime.setDate(classEndTime.getDate() + 1);
+      }
     }
   }
 }
@@ -1089,21 +1111,35 @@ function launchApp() {
   document.getElementById('gate').style.display   = 'none';
   document.getElementById('topbar').style.display = 'flex';
   document.getElementById('main').style.display   = 'flex';
-  // Fetch schedule first, then start the time machine
   fetchSchedule().then(() => {
     checkState();
-    statusTick = setInterval(checkState, 2000); // increased from 1s to compensate Control flattening cost
+    statusTick = setInterval(checkState, 2000);
   });
 }
 
-
-
 // ── State machine ─────────────────────────────────────────────
 function checkState() {
-  const now = new Date();
+  const now = syncedNow();
+
+  // Fast path once inside the live classroom
+  if (videoStarted) {
+    if (classEndTime && now >= classEndTime) {
+      clearInterval(statusTick);
+      stopStudentCountUpdater();
+      if (player && typeof player.stopVideo === 'function') {
+        try { player.stopVideo(); } catch {}
+      }
+      document.getElementById('main').style.display       = 'none';
+      document.getElementById('bottom-bar').style.display = 'none';
+      document.getElementById('sync-btn').style.display   = 'none';
+      showStatusScreen('check_circle', "Class has ended",
+        "Great session! See you tomorrow. 📚", false, 0);
+    }
+    return;
+  }
 
   // 1. If no class scheduled for today
-  if (!todayClass) {
+  if (!todayClass || !classStartTime || !classEndTime) {
     showStatusScreen('event_busy', "No Class Today", 
       "There are no scheduled sessions for today. See you next time!", false, 0);
     document.getElementById('sync-btn').style.display = 'none';
@@ -1111,43 +1147,25 @@ function checkState() {
     return;
   }
 
-  // 2. Parse today's start and end times (converted to integers)
-  const [startH, startM] = todayClass.startTime.split(':').map(Number);
-  const [endH, endM] = todayClass.endTime.split(':').map(Number);
-  
-  const start = new Date();
-  start.setHours(startH, startM, 0, 0);
-  
-  const end = new Date();
-  end.setHours(endH, endM, 0, 0);
-  
-  // Fix for classes that cross midnight (e.g., 11 PM to 1 AM)
-  if (end <= start) {
-    end.setDate(end.getDate() + 1); // Push end time to tomorrow
-  }
-
-  // 3. The Time Machine
-  if (now < start) {
-    const msLeft = start - now;
+  // 2. The Time Machine
+  if (now < classStartTime) {
+    const msLeft = classStartTime - now;
     showStatusScreen('schedule', "Class hasn't started yet",
-      `Today's session begins at ${fmtTime(start)}.`, true, msLeft);
+      `Today's session begins at ${fmtTime(classStartTime)}.`, true, msLeft);
 
     const countEl = document.getElementById('student-count-status');
     countEl.style.display = 'block';
     countEl.textContent = `👥 ${simulatedCount()} students are waiting`;
-    
     document.getElementById('sync-btn').style.display = 'none';
 
     if (msLeft > 0 && msLeft < 1000) {
       setTimeout(() => location.reload(), msLeft);
     }
 
-  } else if (now >= start && now < end) {
-    if (!videoStarted) {
-      showStatusScreen('rocket_launch', "Class is Live!", "The session has started.", false, 0);
-      document.getElementById('sync-btn').style.display = 'flex'; 
-      document.getElementById('sync-btn').textContent = "ENTER CLASSROOM";
-    }
+  } else if (now >= classStartTime && now < classEndTime) {
+    showStatusScreen('rocket_launch', "Class is Live!", "The session has started.", false, 0);
+    document.getElementById('sync-btn').style.display = 'flex'; 
+    document.getElementById('sync-btn').textContent = "ENTER CLASSROOM";
     startStudentCountUpdater();
 
   } else {
@@ -1193,20 +1211,72 @@ function hideStatusScreen() {
 
 // Manual fallback — if reload didn't fire on time (very slow device/network)
 function manualSync() {
-    if (!todayClass) return;
-    
-    const [startH, startM] = todayClass.startTime.split(':').map(Number);
-    const start = new Date();
-    start.setHours(startH, startM, 0, 0);
-    
-    const now = new Date();
-    const elapsed = Math.max(0, Math.floor((now - start) / 1000));
-    
-    hideStatusScreen();
-    showClassroom(elapsed);
+  if (!todayClass || !classStartTime) return;
+  const elapsed = Math.max(0, Math.floor((syncedNow() - classStartTime) / 1000));
+  hideStatusScreen();
+  showClassroom(elapsed);
 }
 
-// ── Classroom ─────────────────────────────────────────────────
+// ── Classroom & Adaptive 1080p -> 720p Viewport ───────────────
+let virtualW = 1920, virtualH = 1080;
+let qualityDowngraded = false;
+let qualityGuardActive = false;
+let rebufferTimestamps = [];
+let hasPlayedOnce = false;
+let lastSeekTime = 0;
+
+function fitPlayerViewport() {
+  const wrap = document.getElementById('video-wrap');
+  const frame = document.getElementById('yt-player');
+  if (!wrap || !frame || !wrap.clientWidth || !wrap.clientHeight) return;
+  frame.style.width = virtualW + 'px';
+  frame.style.height = virtualH + 'px';
+  const scale = Math.min(wrap.clientWidth / virtualW, wrap.clientHeight / virtualH);
+  frame.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+
+function downgradeTo720p() {
+  if (qualityDowngraded) return;
+  qualityDowngraded = true;
+  qualityGuardActive = false;
+  virtualW = 1280;
+  virtualH = 720;
+  fitPlayerViewport();
+}
+
+function startQualityGuard() {
+  if (qualityDowngraded || qualityGuardActive) return;
+  qualityGuardActive = true;
+  const startedAt = performance.now();
+  let lastFrame = startedAt;
+  let jankFrames = 0;
+  let windowStart = startedAt;
+
+  function checkFrame(now) {
+    if (!qualityGuardActive || qualityDowngraded || !videoStarted) return;
+    // Stop monitoring after 60s of smooth 1080p playback to save battery
+    if (now - startedAt > 60000) {
+      qualityGuardActive = false;
+      return;
+    }
+    if (!document.hidden && player && typeof player.getPlayerState === 'function' && player.getPlayerState() === 1) {
+      const delta = now - lastFrame;
+      if (delta > 120 && delta < 1000) jankFrames++; // < 11 FPS main-thread/decode stall
+      if (now - windowStart >= 5000) {
+        if (jankFrames >= 12) {
+          downgradeTo720p();
+          return;
+        }
+        jankFrames = 0;
+        windowStart = now;
+      }
+    }
+    lastFrame = now;
+    requestAnimationFrame(checkFrame);
+  }
+  requestAnimationFrame(checkFrame);
+}
+
 function showClassroom(seekSecs) {
   if (videoStarted) return;
   if (!todayClass || !todayClass.videoId) {
@@ -1214,7 +1284,15 @@ function showClassroom(seekSecs) {
     return;
   }
   videoStarted = true;
+  fitPlayerViewport();
   showControls();
+
+  const wrap = document.getElementById('video-wrap');
+  if (wrap && typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(fitPlayerViewport).observe(wrap);
+  } else {
+    window.addEventListener('resize', fitPlayerViewport);
+  }
 
   player = new YT.Player('yt-player', {
     videoId: todayClass.videoId,
@@ -1231,27 +1309,10 @@ function showClassroom(seekSecs) {
   });
 }
 
-function applyBestQuality(playerObj) {
-  if (!playerObj || typeof playerObj.getAvailableQualityLevels !== 'function') return;
-  try {
-    const levels = playerObj.getAvailableQualityLevels();
-    if (levels.indexOf('hd1080') !== -1) {
-      playerObj.setPlaybackQuality('hd1080');
-    } else if (levels.indexOf('hd720') !== -1) {
-      playerObj.setPlaybackQuality('hd720');
-    }
-  } catch (err) {}
-}
-
 function onReady(e) {
   playerReady = true;
+  fitPlayerViewport();
   e.target.playVideo();
-  
-  // 1. Try immediately
-  applyBestQuality(e.target);
-  
-  // 2. Try again after 2 seconds (YouTube sometimes takes a moment to populate available qualities)
-  setTimeout(() => applyBestQuality(e.target), 2000);
 
   setTimeout(() => {
     try { e.target.unMute(); e.target.setVolume(100); } catch {}
@@ -1269,10 +1330,25 @@ function onReady(e) {
 function onStateChange(e) {
   if (e.data === YT.PlayerState.PLAYING) {
     document.getElementById('play-prompt').style.display = 'none';
-    applyBestQuality(e.target);
+    fitPlayerViewport();
+    hasPlayedOnce = true;
+    startQualityGuard();
   }
-  if (e.data === YT.PlayerState.PAUSED) {
-    setTimeout(() => { if (player && videoStarted) player.playVideo(); }, 150);
+  if (e.data === YT.PlayerState.BUFFERING && hasPlayedOnce && !qualityDowngraded && (Date.now() - lastSeekTime > 4000)) {
+    const now = Date.now();
+    rebufferTimestamps.push(now);
+    rebufferTimestamps = rebufferTimestamps.filter(t => now - t < 45000);
+    if (rebufferTimestamps.length >= 2) {
+      downgradeTo720p();
+    }
+  }
+  if (e.data === YT.PlayerState.PAUSED && !document.hidden) {
+    setTimeout(() => {
+      if (player && videoStarted && !document.hidden) {
+        lastSeekTime = Date.now();   // suppress rebuffer counting for 4s after our own resume
+        player.playVideo();
+      }
+    }, 150);
   }
   if (e.data === YT.PlayerState.ENDED) {
     // With strict duration matching, ENDED = class is genuinely over.
@@ -1402,6 +1478,13 @@ function toggleChat() {
     btn.className = 'ctrl-circle';
     panel.style.height = '';
     if (isMobile()) {
+      const frame = document.getElementById('yt-chat-frame');
+      if (frame) {
+        frame.src = 'about:blank';
+        frame.style.display = 'none';
+      }
+      document.getElementById('chat-loader').style.display = 'flex';
+      chatLoaded = false;
       showControls();
     } else {
       controlsTimeout = setTimeout(hideControls, 4000);
@@ -1531,6 +1614,57 @@ function stopStudentCountUpdater() {
   clearInterval(studentCountInterval);
   studentCountInterval = null;
 }
+
+// ── App-Switch & Return Recovery ──────────────────────────────
+let wasBackgrounded = false;
+let lastReturnTime = 0;
+
+function handleClassroomReturn() {
+  if (!videoStarted || !player || !playerReady || !classStartTime) return;
+  const nowMs = Date.now();
+  if (nowMs - lastReturnTime < 800) return; // debounce visibilitychange + focus firing together
+  lastReturnTime = nowMs;
+  wasBackgrounded = false;
+
+  const expectedElapsed = Math.max(0, Math.floor((syncedNow() - classStartTime) / 1000));
+  try {
+    const currentPos = typeof player.getCurrentTime === 'function' ? player.getCurrentTime() : 0;
+    lastSeekTime = Date.now();   // always — any resume action we trigger may fire BUFFERING
+    if (Math.abs(expectedElapsed - currentPos) > 4) {
+      player.seekTo(expectedElapsed, true);
+    }
+    player.playVideo();
+  } catch (e) {}
+
+  // If browser autoplay policy blocked resume without a gesture, show the tap-to-resume overlay
+  setTimeout(() => {
+    if (!player || typeof player.getPlayerState !== 'function') return;
+    const state = player.getPlayerState();
+    if (state !== 1 && state !== 3) { // 1 = PLAYING, 3 = BUFFERING
+      document.getElementById('play-prompt').style.display = 'flex';
+    }
+  }, 700);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    wasBackgrounded = true;
+  } else if (wasBackgrounded) {
+    handleClassroomReturn();
+  }
+});
+
+window.addEventListener('focus', () => {
+  if (!document.hidden && wasBackgrounded) {
+    handleClassroomReturn();
+  }
+});
+
+window.addEventListener('pageshow', e => {
+  if (e.persisted && !document.hidden) {
+    handleClassroomReturn();
+  }
+});
 
 // ── Android back button intercept ────────────────────────────
 history.pushState(null, '', location.href);

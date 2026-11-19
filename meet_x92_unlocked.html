@@ -12,12 +12,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
 <!--
-  V3 RELIABILITY PATTERN:
-  When user switches app and returns, the video is paused and never resumed - FIXED ! YouTube video quality low on mobile devices - Fixed. Time is fetched via Header only now on ! 
+  V4 RELIABILITY PATTERN:
+  Made sound play button persistent so in ios safari, blocked autoplay also gets to play. 
+  Viewport larger does not work at all (tested), only desktop mode does, so used that instead for higher quality.
+  Desktop mode ma sabai ui elements including yt chat is scaled to compensate for UX.
+  When user switches app and returns, the video is paused and never resumed - FIXED ! 
+  YouTube video quality low on mobile devices - Fixed. Time is fetched via Header only now on ! 
   
-  Renders #yt-player at 1920×1080 scaled via GPU transform so YouTube unlocks 1080p even in portrait mode. 
-  A lightweight monitor watches for repeated rebuffering (>= 2 stalls in 45s) or severe requestAnimationFrame decode stalls (>= 12 frames slower than 120ms in 5s); 
-  if either trips, it automatically downshifts the virtual canvas to 1280×720. If 1080p runs smoothly for 60 seconds, the monitor turns itself off to save battery.
+  THIS DOES NOT WORK = Renders #yt-player at (1440p from old 1920×1080) scaled via GPU transform so YouTube unlocks 1080p even in portrait mode. 
+Code is only retained to see if anything of value comes up in future regarding stall detection. 
   
   onlineclass.ktlin license system, Custom Cryptographic Encryption, Custom Base64 Encoding decoding, Custom JSON parser, so major API hooks no longer work. whatsapp, ui redesigned, fullscreen, less clutter, preconnect, fast performance, robust security, chat doesnot show up in landscape mode to avoid showing broken chat ui - new font
   YouTube API loads unconditionally in <head>.
@@ -122,16 +125,48 @@ body {
 }
 #sync-btn:hover { background: var(--accent-hover); transform: translateY(-2px); }
 
-/* Show floating fullscreen button ONLY on small screens */
+/* Show floating fullscreen & refresh buttons on mobile (normal + Desktop Mode) */
 @media (max-width: 768px) {
-  #mobile-fs-btn { display: flex !important; }
+  #mobile-fs-btn,
+  #refresh-btn { display: flex !important; }
 }
-/* Hide it when actually in fullscreen */
+
+/* Touch device with a wide viewport = Desktop Mode enabled on a phone/tablet.
+   Enlarge both pills so they're still comfortably tappable. */
+@media (pointer: coarse) and (min-width: 769px) {
+  #mobile-fs-btn {
+    display: flex !important;
+    padding: 14px 22px !important;
+    font-size: 18px !important;
+    bottom: 24px !important;
+    right: 24px !important;
+    gap: 8px !important;
+  }
+  #mobile-fs-btn .material-symbols-outlined {
+    font-size: 24px !important;
+  }
+  #refresh-btn {
+    display: flex !important;
+    padding: 14px 22px !important;
+    font-size: 18px !important;
+    bottom: 24px !important;
+    left: 24px !important;
+    gap: 8px !important;
+  }
+  #refresh-btn .material-symbols-outlined {
+    font-size: 24px !important;
+  }
+}
+
+/* Hide both when actually in fullscreen */
 #video-col:fullscreen #mobile-fs-btn,
-#video-col:-webkit-full-screen #mobile-fs-btn {
+#video-col:-webkit-full-screen #mobile-fs-btn,
+#video-col:fullscreen #refresh-btn,
+#video-col:-webkit-full-screen #refresh-btn {
   display: none !important;
 }
-#sync-btn:hover { background: #1765cc; }
+
+
 
 /* Student count shown on waiting screen */
 #student-count-status { font-size: 13px; color: var(--text2); display: none; }
@@ -159,8 +194,8 @@ body {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 1920px;
-  height: 1080px;
+  width: 2560px;
+  height: 1440px;
   transform-origin: center center;
   pointer-events: none;
 }
@@ -266,6 +301,7 @@ body {
 }
 .modal-overlay.active .modal-box { transform: translateY(0); }
 
+/* Standard mobile (Desktop Mode OFF) */
 @media (max-width: 640px) {
   #chat-panel {
     position: fixed; bottom: 0; left: 0; width: 100%; height: 90%; z-index: 100;
@@ -276,70 +312,315 @@ body {
   #bottom-bar { gap: 8px; padding: 0 12px; z-index: 110; }
 }
 
-@media (orientation: landscape) and (max-height: 500px) {
+/* Simulated Desktop Mode on touch phones/tablets (~980px zoomed-out layout) */
+@media (pointer: coarse) and (min-width: 769px) {
+  #topbar { height: 68px; padding: 0 24px; }
+  .tb-title { font-size: 20px; }
+  .tb-chip { font-size: 16px; padding: 6px 14px; }
+  #main { height: calc(100dvh - 68px); }
+
+  #teacher-tile { width: 150px; height: 90px; top: 16px; right: 16px; }
+  .tile-avatar { width: 40px; height: 40px; font-size: 16px; }
+  .tile-name { font-size: 13px; }
+
+  #bottom-bar { height: 112px; gap: 18px; padding: 0 24px; z-index: 110; }
+  .ctrl-circle { width: 72px; height: 72px; }
+  .cc-leave { width: 96px; border-radius: 48px; }
+  .ctrl-circle .material-symbols-outlined { font-size: 32px; }
+
+  #sync-btn {
+    padding: 32px 72px;
+    font-size: 40px;
+    margin-top: 24px;
+  }
+  #sync-btn .material-symbols-outlined {
+    font-size: 40px !important;
+  }
+
+  /* Enlarged modals for desktop-mode phones/tablets */
+  .modal-box {
+    width: 720px;
+    max-width: 88vw;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 40px 36px;
+    border-radius: 28px;
+  }
+
+  /* Chat choice modal (Ask Teacher / Chat with Friends) */
+  #chat-choice .modal-box h3 {
+    font-size: 34px !important;
+    margin-bottom: 32px !important;
+  }
+  #btn-chat-friends,
+  #btn-chat-teacher {
+    padding: 32px !important;
+    font-size: 28px !important;
+    border-radius: 16px !important;
+    gap: 16px !important;
+  }
+  #btn-chat-friends .material-symbols-outlined,
+  #btn-chat-teacher .material-symbols-outlined {
+    font-size: 34px !important;
+  }
+  #btn-chat-cancel {
+    font-size: 22px !important;
+    margin-top: 32px !important;
+  }
+
+  /* Ask Teacher modal (same fix — it was tiny too) */
+  #ask-teacher-modal .modal-box h3 {
+    font-size: 34px !important;
+    margin-bottom: 16px !important;
+  }
+  #ask-teacher-modal .modal-box p {
+    font-size: 22px !important;
+    margin-bottom: 24px !important;
+    line-height: 1.6 !important;
+  }
+  #teacher-question {
+    font-size: 26px !important;
+    height: 200px !important;
+    padding: 20px !important;
+    border-radius: 16px !important;
+  }
+  #ask-teacher-modal .modal-box > div:last-child {
+    gap: 16px !important;
+    margin-top: 28px !important;
+  }
+  #btn-teacher-cancel,
+  #btn-teacher-send {
+    padding: 24px !important;
+    font-size: 26px !important;
+  }
+  #btn-teacher-send .material-symbols-outlined {
+    font-size: 30px !important;
+  }
+  #sound-pill { padding: 20px 36px !important; font-size: 22px !important; }
+  #toast { font-size: 18px; padding: 14px 24px; bottom: 130px; }
+  #hand-notif { font-size: 18px; padding: 14px 20px; bottom: 130px; }
+}
+
+/* Portrait phone in simulated Desktop Mode */
+@media (pointer: coarse) and (min-width: 769px) and (orientation: portrait) {
+  #chat-panel {
+    position: fixed; bottom: 0; left: 0; width: 100%; height: 85%; z-index: 100;
+    border: none; border-radius: 24px 24px 0 0; box-shadow: 0 -10px 25px rgba(0,0,0,0.8);
+  }
+  .chat-head { padding: 18px 22px; }
+  .chat-head-title { font-size: 18px; }
+  .chat-close { font-size: 26px; padding: 4px 10px; }
+}
+
+/* Landscape mobile (covers both normal mobile & simulated Desktop Mode) */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) {
   #topbar, #teacher-tile { display: none !important; }
   #main { height: 100dvh !important; }
 
   #chat-panel { 
     position: fixed !important;
     top: 0 !important; 
-    bottom: 0 !important; /* Locks to bottom edge of visual viewport */
+    bottom: 0 !important;
     left: 0 !important;
     width: 100% !important;
-    height: auto !important; /* Overrides the 100dvh */
+    height: auto !important;
     border-radius: 0; 
     z-index: 200; 
-    /* The display: flex !important was removed from here */
-    padding-bottom: env(safe-area-inset-bottom, 15px) !important; /* Protects against gesture bars */
+    padding-bottom: env(safe-area-inset-bottom, 15px) !important;
   }
 
   .chat-head {
-    padding: 4px 12px !important;
-    height: 32px !important;
-    flex-shrink: 0 !important; /* Prevents header from shrinking */
+    padding: 6px 14px !important;
+    height: 40px !important;
+    flex-shrink: 0 !important;
     background: var(--bg);
   }
   
-  .chat-head-title { font-size: 11px !important; }
-  .chat-close { font-size: 14px !important; }
+  .chat-head-title { font-size: 14px !important; }
+  .chat-close { font-size: 18px !important; }
 
   #yt-chat-frame {
     height: auto !important;
-    flex: 1 1 auto !important; /* Fills remaining space mathematically */
-    min-height: 0 !important; /* Allows flex item to shrink smaller than content */
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
     display: block; 
   }
 
   #bottom-bar {
     position: fixed; 
-    bottom: 10px; 
+    bottom: 12px; 
     left: 50%;
     transform: translateX(-50%);
-    height: 52px; 
+    height: 64px; 
     width: auto;
     background: rgba(32, 33, 36, 0.95); 
     border: 1px solid var(--border);
-    border-radius: 26px;
-    padding: 0 12px;
+    border-radius: 32px;
+    padding: 0 16px;
     z-index: 210; 
     display: none; 
     align-items: center;
   }
 
   .ctrl-circle { 
-    width: 38px !important; 
-    height: 38px !important; 
+    width: 48px !important; 
+    height: 48px !important; 
     background: rgba(255,255,255,0.1) !important; 
+  }
+  .ctrl-circle .material-symbols-outlined {
+    font-size: 24px !important;
   }
   
   #hand-notif { 
-    bottom: 70px !important; 
+    bottom: 84px !important; 
   }
 }
   
+/* ═══ PATCH: Simulated Desktop Mode scaling ═══ */
+@media (pointer: coarse) and (min-width: 769px) {
+
+  /* Floating Refresh / Fullscreen pills */
+  #mobile-fs-btn, #refresh-btn {
+    padding: 26px 44px !important;
+    font-size: 32px !important;
+    bottom: 40px !important;
+    gap: 14px !important;
+  }
+  #mobile-fs-btn { right: 40px !important; }
+  #refresh-btn   { left: 40px !important; }
+  #mobile-fs-btn .material-symbols-outlined,
+  #refresh-btn .material-symbols-outlined { font-size: 42px !important; }
+
+  /* Waiting / Live / Ended status screen */
+  #status-screen { gap: 32px; padding: 0 48px; }
+  #s-emoji .material-symbols-outlined { font-size: 120px !important; }
+  .status-title { font-size: 54px; font-weight: 600; text-align: center; }
+  .status-sub { font-size: 28px; max-width: 760px; line-height: 1.5; }
+  .countdown-pill { padding: 22px 48px; gap: 18px; font-size: 26px; }
+  #countdown-val { font-size: 50px; letter-spacing: 2px; }
+  #student-count-status { font-size: 26px; }
+  #sync-btn {
+    padding: 28px 64px; font-size: 32px; margin-top: 16px; gap: 14px !important;
+  }
+  #sync-btn .material-symbols-outlined { font-size: 40px !important; }
+
+  /* License gate */
+  .gate-card { width: 720px; max-width: 90vw; padding: 64px 48px; gap: 36px; border-radius: 40px; }
+  .gate-logo { font-size: 64px; }
+  .gate-sub { font-size: 26px; }
+  .gate-input { font-size: 30px; padding: 26px 32px; border-width: 3px; }
+  .gate-input::placeholder { font-size: 26px; }
+  .gate-btn { font-size: 30px; padding: 28px; }
+  .gate-error { font-size: 24px; }
+  .gate-note { font-size: 20px; }
+
+  /* Tap-to-join overlay + live dot */
+  #play-prompt-inner { padding: 48px 64px; gap: 24px; border-radius: 28px; }
+  #play-prompt-inner p { font-size: 28px !important; }
+  .play-icon { width: 110px; height: 110px; }
+  .play-icon .material-symbols-outlined { font-size: 56px; }
+  .live-dot { width: 12px; height: 12px; }
+}
+
+/* Landscape phones: scale back down so nothing overflows ~440px height */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) {
+  #mobile-fs-btn, #refresh-btn {
+    padding: 14px 26px !important; font-size: 20px !important;
+    bottom: 20px !important; gap: 8px !important;
+  }
+  #mobile-fs-btn { right: 20px !important; }
+  #refresh-btn   { left: 20px !important; }
+  #mobile-fs-btn .material-symbols-outlined,
+  #refresh-btn .material-symbols-outlined { font-size: 26px !important; }
+
+  #status-screen { gap: 10px; }
+  #s-emoji .material-symbols-outlined { font-size: 56px !important; }
+  .status-title { font-size: 30px; }
+  .status-sub { font-size: 17px; max-width: 600px; }
+  .countdown-pill { padding: 10px 28px; font-size: 16px; gap: 10px; }
+  #countdown-val { font-size: 28px; }
+  #student-count-status { font-size: 15px; }
+  #sync-btn { padding: 14px 40px; font-size: 20px; margin-top: 4px; }
+  #sync-btn .material-symbols-outlined { font-size: 24px !important; }
+
+  .gate-card { width: 520px; padding: 20px 28px; gap: 12px; border-radius: 24px; max-height: 94vh; overflow-y: auto; }
+  .gate-logo { font-size: 32px; }
+  .gate-sub { font-size: 15px; }
+  .gate-input { font-size: 18px; padding: 12px 18px; }
+  .gate-input::placeholder { font-size: 15px; }
+  .gate-btn { font-size: 18px; padding: 14px; }
+  .gate-error { font-size: 14px; }
+  .gate-note { font-size: 12px; }
+
+  #play-prompt-inner { padding: 20px 32px; gap: 10px; }
+  #play-prompt-inner p { font-size: 16px !important; }
+  .play-icon { width: 64px; height: 64px; }
+  .play-icon .material-symbols-outlined { font-size: 32px; }
+}
+/* ═══ PATCH: Zoomed YouTube chat iframe (Desktop Mode, portrait + landscape) ═══ */
+@media (pointer: coarse) and (min-width: 769px) {
+  #chat-panel { --chat-zoom: 2.8; --chat-head: 72px; }
+
+  .chat-head { height: var(--chat-head) !important; }
+
+  #yt-chat-frame {
+    position: absolute !important;
+    top: var(--chat-head) !important;
+    left: 0 !important;
+    flex: none !important;
+    width: calc(100% / var(--chat-zoom)) !important;
+    height: calc((100% - var(--chat-head)) / var(--chat-zoom)) !important;
+    transform: scale(var(--chat-zoom)) !important;
+    transform-origin: 0 0 !important;
+  }
+}
+/* ═══ PATCH: Bigger bottom bar icons (Desktop Mode) ═══ */
+
+/* Portrait Desktop Mode */
+@media (pointer: coarse) and (min-width: 769px) and (orientation: portrait) {
+  #bottom-bar { height: 148px !important; gap: 22px !important; padding: 0 28px !important; }
+  .ctrl-circle { width: 100px !important; height: 100px !important; }
+  .cc-leave { width: 140px !important; border-radius: 70px !important; }
+  .ctrl-circle .material-symbols-outlined { font-size: 54px !important; }
+  #hand-notif, #toast { bottom: 176px !important; }
+}
+
+/* Landscape Desktop Mode (~980px wide) */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) and (min-width: 950px) {
+  #bottom-bar {
+    height: 128px !important;
+    gap: 24px !important;
+    padding: 0 36px !important;
+    border-radius: 64px !important;
+  }
+  .ctrl-circle { width: 104px !important; height: 104px !important; }
+  .cc-leave { width: 144px !important; border-radius: 72px !important; }
+  .ctrl-circle .material-symbols-outlined { font-size: 56px !important; }
+  #hand-notif, #toast { bottom: 164px !important; }
+}
 </style>
 </head>
 <body>
+
+<!-- Conditional Desktop Mode Banner (auto-hides once enabled) -->
+<div id="desktop-mode-banner" style="
+  display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 10001;
+  background: #1e293b; border-bottom: 2px solid var(--accent);
+  padding: 12px 16px; align-items: center; justify-content: space-between; gap: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6); font-size: 13px; line-height: 1.4;
+">
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <span class="material-symbols-outlined" style="color: var(--accent); font-size: 24px; flex-shrink: 0;">hd</span>
+    <div id="dm-banner-text">
+      <strong style="color: #fff; display: block;">Enable 1080p HD Mode</strong>
+      <span style="color: var(--text2);">Tap browser menu (<strong>⋮</strong> or <strong>AA</strong>) → turn on <strong>Desktop site</strong>.</span>
+    </div>
+  </div>
+  <button id="dm-banner-close" style="
+    background: rgba(255,255,255,0.1); border: none; color: var(--text2);
+    width: 28px; height: 28px; border-radius: 50%; cursor: pointer; flex-shrink: 0; font-size: 14px;
+  ">✕</button>
+</div>
 
 <div id="gate">
   <div class="gate-card">
@@ -394,17 +675,29 @@ body {
       </div>
 
       <button id="sound-pill" style="
-        position:absolute; bottom:16px; left:50%; transform:translateX(-50%); z-index:12;
-        background:var(--accent); color:#fff; border:none;
-        padding:10px 24px; border-radius:99px;
-        font-family:'Inter', system-ui, sans-serif; font-size:14px; font-weight:600; line-height:1;
+        position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); z-index:12;
+        background:var(--accent); color:#fff; border:2px solid rgba(255,255,255,0.25);
+        padding:14px 28px; border-radius:999px;
+        font-family:'Inter', system-ui, sans-serif; font-size:16px; font-weight:600; line-height:1;
         display:none; cursor:pointer;
-        box-shadow:0 4px 15px rgba(8, 102, 255, 0.4);
-        align-items:center; justify-content:center; gap:8px;
+        box-shadow:0 10px 30px rgba(0, 0, 0, 0.75);
+        align-items:center; justify-content:center; gap:10px;
         white-space:nowrap;
       ">
-        <span class="material-symbols-outlined" style="font-size:22px; display:flex; align-items:center;">volume_up</span>
+        <span class="material-symbols-outlined" style="font-size:24px; display:flex; align-items:center;">volume_up</span>
         <span>Tap for sound</span>
+      </button>
+
+      <button id="refresh-btn" style="
+        position: absolute; bottom: 16px; left: 16px; z-index: 12;
+        background: #007aff; color: white; border: none;
+        padding: 8px 14px; border-radius: 99px;
+        font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 600;
+        display: none; cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        align-items: center; gap: 6px;
+      ">
+        <span class="material-symbols-outlined" style="font-size: 18px;">refresh</span> Refresh
       </button>
 
       <button id="mobile-fs-btn" style="
@@ -596,7 +889,7 @@ let suppressControlsUntil = 0;
 
 document.addEventListener('mousemove', e => {
   if (Date.now() < suppressControlsUntil) return;
-  if (e.target.closest('#mobile-fs-btn')) return;
+  if (e.target.closest('#mobile-fs-btn') || e.target.closest('#refresh-btn')) return;
   if (e.target.closest('#video-col') || e.target.closest('#bottom-bar')) showControls();
 });
 
@@ -606,17 +899,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const tz = document.getElementById('tap-zone');
   if (tz) tz.addEventListener('touchend', e => { e.preventDefault(); showControls(); }, { passive: false });
 
-  // Harden the floating fullscreen button against the same problem on any
-  // browser that fires synthesized mouse events we don't expect.
-  const fsb = document.getElementById('mobile-fs-btn');
-  if (fsb) {
+  // Harden floating buttons against synthesized mouse events shifting #bottom-bar
+  ['mobile-fs-btn', 'refresh-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
     ['pointerdown', 'touchstart', 'mousedown', 'mousemove'].forEach(evt => {
-      fsb.addEventListener(evt, e => {
-        suppressControlsUntil = Date.now() + 600; // ignore showControls for 600ms
-        e.stopPropagation();                     // and don't bubble to document
+      btn.addEventListener(evt, e => {
+        suppressControlsUntil = Date.now() + 600;
+        e.stopPropagation();
       }, { passive: true });
     });
-  }
+  });
 });
 
 // ── Gate ─────────────────────────────────────────────────────
@@ -1165,7 +1458,7 @@ function checkState() {
   } else if (now >= classStartTime && now < classEndTime) {
     showStatusScreen('rocket_launch', "Class is Live!", "The session has started.", false, 0);
     document.getElementById('sync-btn').style.display = 'flex'; 
-    document.getElementById('sync-btn').textContent = "ENTER CLASSROOM";
+    /* label + icon now live in the HTML; don't overwrite every tick */
     startStudentCountUpdater();
 
   } else {
@@ -1217,8 +1510,8 @@ function manualSync() {
   showClassroom(elapsed);
 }
 
-// ── Classroom & Adaptive 1080p -> 720p Viewport ───────────────
-let virtualW = 1920, virtualH = 1080;
+// ── Classroom & Adaptive 1440p -> 1080p Stage Viewport ────────
+let virtualW = 2560, virtualH = 1440;
 let qualityDowngraded = false;
 let qualityGuardActive = false;
 let rebufferTimestamps = [];
@@ -1231,16 +1524,20 @@ function fitPlayerViewport() {
   if (!wrap || !frame || !wrap.clientWidth || !wrap.clientHeight) return;
   frame.style.width = virtualW + 'px';
   frame.style.height = virtualH + 'px';
+  if (frame.tagName === 'IFRAME') {
+    frame.setAttribute('width', String(virtualW));
+    frame.setAttribute('height', String(virtualH));
+  }
   const scale = Math.min(wrap.clientWidth / virtualW, wrap.clientHeight / virtualH);
   frame.style.transform = `translate(-50%, -50%) scale(${scale})`;
 }
 
-function downgradeTo720p() {
+function downgradeTo1080p() {
   if (qualityDowngraded) return;
   qualityDowngraded = true;
   qualityGuardActive = false;
-  virtualW = 1280;
-  virtualH = 720;
+  virtualW = 1920;
+  virtualH = 1080;
   fitPlayerViewport();
 }
 
@@ -1264,7 +1561,7 @@ function startQualityGuard() {
       if (delta > 120 && delta < 1000) jankFrames++; // < 11 FPS main-thread/decode stall
       if (now - windowStart >= 5000) {
         if (jankFrames >= 12) {
-          downgradeTo720p();
+          downgradeTo1080p();
           return;
         }
         jankFrames = 0;
@@ -1276,6 +1573,8 @@ function startQualityGuard() {
   }
   requestAnimationFrame(checkFrame);
 }
+
+let soundActivated = false;
 
 function showClassroom(seekSecs) {
   if (videoStarted) return;
@@ -1294,12 +1593,24 @@ function showClassroom(seekSecs) {
     window.addEventListener('resize', fitPlayerViewport);
   }
 
+  createYTPlayer(seekSecs);
+}
+
+function createYTPlayer(seekSecs) {
+  if (!window.YT || !window.YT.Player) {
+    setTimeout(() => createYTPlayer(seekSecs), 300);
+    return;
+  }
+
   player = new YT.Player('yt-player', {
+    width: String(virtualW),
+    height: String(virtualH),
     videoId: todayClass.videoId,
     playerVars: {
       autoplay: 1, controls: 0, disablekb: 1,
       modestbranding: 1, rel: 0, fs: 0,
       playsinline: 1, start: seekSecs, mute: 1,
+      origin: window.location.origin,
     },
     events: {
       onReady:       onReady,
@@ -1314,17 +1625,9 @@ function onReady(e) {
   fitPlayerViewport();
   e.target.playVideo();
 
-  setTimeout(() => {
-    try { e.target.unMute(); e.target.setVolume(100); } catch {}
-
+  if (!soundActivated) {
     showSoundPill();
-
-    setTimeout(() => {
-      if (typeof e.target.isMuted === 'function' && !e.target.isMuted()) {
-        hideSoundPill();
-      }
-    }, 6000);
-  }, 800);
+  }
 }
 
 function onStateChange(e) {
@@ -1339,7 +1642,7 @@ function onStateChange(e) {
     rebufferTimestamps.push(now);
     rebufferTimestamps = rebufferTimestamps.filter(t => now - t < 45000);
     if (rebufferTimestamps.length >= 2) {
-      downgradeTo720p();
+      downgradeTo1080p();
     }
   }
   if (e.data === YT.PlayerState.PAUSED && !document.hidden) {
@@ -1375,6 +1678,7 @@ function hideSoundPill() {
   document.getElementById('sound-pill').style.display = 'none';
 }
 function enableSound() {
+  soundActivated = true;
   if (player && playerReady) {
     try { player.unMute(); player.setVolume(100); } catch {}
     player.playVideo();
@@ -1385,11 +1689,11 @@ function enableSound() {
 }
 
 function userInitiatedPlay() {
+  soundActivated = true;
   document.getElementById('play-prompt').style.display = 'none';
   hideSoundPill();
   if (player && playerReady) {
-    player.unMute();
-    player.setVolume(100);
+    try { player.unMute(); player.setVolume(100); } catch {}
     player.playVideo();
   }
   showControls();
@@ -1700,6 +2004,41 @@ function msToClock(ms) {
   return [h, m, sec].map(x => String(x).padStart(2, '0')).join(':');
 }
 
+// ── Conditional Desktop Mode Banner ──────────────────────────
+function checkDesktopMode() {
+  const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  const isCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  const ua = navigator.userAgent || '';
+
+  // True if browser is still sending a mobile User-Agent / Client Hint
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua)
+    || (navigator.userAgentData && navigator.userAgentData.mobile === true);
+
+  // Only show on touch phones/tablets that do NOT have Desktop Mode enabled yet
+  if (!isTouch || !isCoarse || !isMobileUA) return;
+
+  const banner = document.getElementById('desktop-mode-banner');
+  const textEl = document.getElementById('dm-banner-text');
+  if (!banner || !textEl) return;
+
+  // Detect WhatsApp / Facebook / Instagram in-app browsers (which lack a Desktop Mode toggle)
+  const isInApp = /FBAN|FBAV|Instagram|WhatsApp|Line\/|wv\)/i.test(ua);
+  if (isInApp) {
+    textEl.innerHTML = `
+      <strong style="color: #fff; display: block;">Open in Chrome or Safari for 1080p HD</strong>
+      <span style="color: var(--text2);">Tap <strong>⋮</strong> → <strong>Open in Chrome</strong>, then enable <strong>Desktop site</strong>.</span>
+    `;
+  }
+
+  banner.style.display = 'flex';
+  document.getElementById('dm-banner-close')?.addEventListener('click', () => {
+    banner.style.display = 'none';
+  });
+}
+
+// Run immediately on page load
+window.addEventListener('DOMContentLoaded', checkDesktopMode);
+
 // ── DOM Bindings (replaces all inline onclick handlers) ──
 document.addEventListener('DOMContentLoaded', () => {
   const bind = (id, fn) => document.getElementById(id)?.addEventListener('click', fn);
@@ -1710,6 +2049,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bind('play-prompt', userInitiatedPlay);
   bind('sound-pill', enableSound);
   bind('mobile-fs-btn', toggleFullscreen);
+  bind('refresh-btn', () => location.reload());
   
   bind('mic-btn', toggleMic);
   bind('cam-btn', toggleCam);

@@ -15,7 +15,7 @@
   V3 RELIABILITY PATTERN:
   When user switches app and returns, the video is paused and never resumed - FIXED ! YouTube video quality low on mobile devices - Fixed. Time is fetched via Header only now on ! 
   
-  Renders #yt-player at 1920×1080 scaled via GPU transform so YouTube unlocks 1080p even in portrait mode. 
+  Renders #yt-player at ( 1440p from old 1920×1080) scaled via GPU transform so YouTube unlocks 1080p even in portrait mode. 
   A lightweight monitor watches for repeated rebuffering (>= 2 stalls in 45s) or severe requestAnimationFrame decode stalls (>= 12 frames slower than 120ms in 5s); 
   if either trips, it automatically downshifts the virtual canvas to 1280×720. If 1080p runs smoothly for 60 seconds, the monitor turns itself off to save battery.
   
@@ -122,13 +122,16 @@ body {
 }
 #sync-btn:hover { background: var(--accent-hover); transform: translateY(-2px); }
 
-/* Show floating fullscreen button ONLY on small screens */
+/* Show floating fullscreen & refresh buttons ONLY on small screens */
 @media (max-width: 768px) {
-  #mobile-fs-btn { display: flex !important; }
+  #mobile-fs-btn,
+  #refresh-btn { display: flex !important; }
 }
-/* Hide it when actually in fullscreen */
+/* Hide them when actually in fullscreen */
 #video-col:fullscreen #mobile-fs-btn,
-#video-col:-webkit-full-screen #mobile-fs-btn {
+#video-col:-webkit-full-screen #mobile-fs-btn,
+#video-col:fullscreen #refresh-btn,
+#video-col:-webkit-full-screen #refresh-btn {
   display: none !important;
 }
 #sync-btn:hover { background: #1765cc; }
@@ -394,7 +397,7 @@ body {
       </div>
 
       <button id="sound-pill" style="
-        position:absolute; bottom:16px; left:50%; transform:translateX(-50%); z-index:12;
+        position:absolute; bottom:64px; left:50%; transform:translateX(-50%); z-index:12;
         background:var(--accent); color:#fff; border:none;
         padding:10px 24px; border-radius:99px;
         font-family:'Inter', system-ui, sans-serif; font-size:14px; font-weight:600; line-height:1;
@@ -405,6 +408,18 @@ body {
       ">
         <span class="material-symbols-outlined" style="font-size:22px; display:flex; align-items:center;">volume_up</span>
         <span>Tap for sound</span>
+      </button>
+
+      <button id="refresh-btn" style="
+        position: absolute; bottom: 16px; left: 16px; z-index: 12;
+        background: #007aff; color: white; border: none;
+        padding: 8px 14px; border-radius: 99px;
+        font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 600;
+        display: none; cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        align-items: center; gap: 6px;
+      ">
+        <span class="material-symbols-outlined" style="font-size: 18px;">refresh</span> Refresh
       </button>
 
       <button id="mobile-fs-btn" style="
@@ -596,7 +611,7 @@ let suppressControlsUntil = 0;
 
 document.addEventListener('mousemove', e => {
   if (Date.now() < suppressControlsUntil) return;
-  if (e.target.closest('#mobile-fs-btn')) return;
+  if (e.target.closest('#mobile-fs-btn') || e.target.closest('#refresh-btn')) return;
   if (e.target.closest('#video-col') || e.target.closest('#bottom-bar')) showControls();
 });
 
@@ -606,17 +621,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const tz = document.getElementById('tap-zone');
   if (tz) tz.addEventListener('touchend', e => { e.preventDefault(); showControls(); }, { passive: false });
 
-  // Harden the floating fullscreen button against the same problem on any
-  // browser that fires synthesized mouse events we don't expect.
-  const fsb = document.getElementById('mobile-fs-btn');
-  if (fsb) {
+  // Harden floating buttons against synthesized mouse events shifting #bottom-bar
+  ['mobile-fs-btn', 'refresh-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
     ['pointerdown', 'touchstart', 'mousedown', 'mousemove'].forEach(evt => {
-      fsb.addEventListener(evt, e => {
-        suppressControlsUntil = Date.now() + 600; // ignore showControls for 600ms
-        e.stopPropagation();                     // and don't bubble to document
+      btn.addEventListener(evt, e => {
+        suppressControlsUntil = Date.now() + 600;
+        e.stopPropagation();
       }, { passive: true });
     });
-  }
+  });
 });
 
 // ── Gate ─────────────────────────────────────────────────────
@@ -1090,6 +1105,7 @@ async function fetchSchedule() {
     
     if (todayClass) {
       document.getElementById('tb-title').textContent = todayClass.title;
+      if (todayClass.videoId) preloadPlayer(todayClass.videoId);
 
       const [startH, startM] = todayClass.startTime.split(':').map(Number);
       const [endH, endM] = todayClass.endTime.split(':').map(Number);
@@ -1209,20 +1225,23 @@ function hideStatusScreen() {
   document.getElementById('status-screen').style.display = 'none';
 }
 
-// Manual fallback — if reload didn't fire on time (very slow device/network)
+let pendingUserPlay = false;
+
 function manualSync() {
   if (!todayClass || !classStartTime) return;
+  if (!todayClass.videoId) {
+    showToast("Error: No video ID found for today.");
+    return;
+  }
   const elapsed = Math.max(0, Math.floor((syncedNow() - classStartTime) / 1000));
   hideStatusScreen();
   showClassroom(elapsed);
 }
 
-// ── Classroom & Adaptive 1080p -> 720p Viewport ───────────────
-let virtualW = 1920, virtualH = 1080;
+// ── Classroom & Adaptive 1440p -> 1080p Stage Viewport ────────
+let virtualW = 2560, virtualH = 1440;
 let qualityDowngraded = false;
 let qualityGuardActive = false;
-let rebufferTimestamps = [];
-let hasPlayedOnce = false;
 let lastSeekTime = 0;
 
 function fitPlayerViewport() {
@@ -1231,6 +1250,10 @@ function fitPlayerViewport() {
   if (!wrap || !frame || !wrap.clientWidth || !wrap.clientHeight) return;
   frame.style.width = virtualW + 'px';
   frame.style.height = virtualH + 'px';
+  if (frame.tagName === 'IFRAME') {
+    frame.setAttribute('width', String(virtualW));
+    frame.setAttribute('height', String(virtualH));
+  }
   const scale = Math.min(wrap.clientWidth / virtualW, wrap.clientHeight / virtualH);
   frame.style.transform = `translate(-50%, -50%) scale(${scale})`;
 }
@@ -1239,8 +1262,8 @@ function downgradeTo720p() {
   if (qualityDowngraded) return;
   qualityDowngraded = true;
   qualityGuardActive = false;
-  virtualW = 1280;
-  virtualH = 720;
+  virtualW = 1920;
+  virtualH = 1080;
   fitPlayerViewport();
 }
 
@@ -1277,6 +1300,40 @@ function startQualityGuard() {
   requestAnimationFrame(checkFrame);
 }
 
+window.onYouTubeIframeAPIReady = function () {
+  if (todayClass && todayClass.videoId) preloadPlayer(todayClass.videoId);
+};
+
+function preloadPlayer(videoId) {
+  if (player || !videoId) return;
+  if (!window.YT || !window.YT.Player) return;
+
+  fitPlayerViewport();
+
+  const wrap = document.getElementById('video-wrap');
+  if (wrap && typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(fitPlayerViewport).observe(wrap);
+  } else {
+    window.addEventListener('resize', fitPlayerViewport);
+  }
+
+  player = new YT.Player('yt-player', {
+    width: String(virtualW),
+    height: String(virtualH),
+    videoId: videoId,
+    playerVars: {
+      autoplay: 0, controls: 0, disablekb: 1,
+      modestbranding: 1, rel: 0, fs: 0,
+      playsinline: 1, mute: 1,
+    },
+    events: {
+      onReady:       onReady,
+      onStateChange: onStateChange,
+      onError:       onPlayerError,
+    }
+  });
+}
+
 function showClassroom(seekSecs) {
   if (videoStarted) return;
   if (!todayClass || !todayClass.videoId) {
@@ -1287,60 +1344,63 @@ function showClassroom(seekSecs) {
   fitPlayerViewport();
   showControls();
 
-  const wrap = document.getElementById('video-wrap');
-  if (wrap && typeof ResizeObserver !== 'undefined') {
-    new ResizeObserver(fitPlayerViewport).observe(wrap);
-  } else {
-    window.addEventListener('resize', fitPlayerViewport);
-  }
+  if (!player) preloadPlayer(todayClass.videoId);
 
-  player = new YT.Player('yt-player', {
-    videoId: todayClass.videoId,
-    playerVars: {
-      autoplay: 1, controls: 0, disablekb: 1,
-      modestbranding: 1, rel: 0, fs: 0,
-      playsinline: 1, start: seekSecs, mute: 1,
-    },
-    events: {
-      onReady:       onReady,
-      onStateChange: onStateChange,
-      onError:       onPlayerError,
-    }
-  });
+  if (player && playerReady) {
+    try {
+      lastSeekTime = Date.now();
+      player.seekTo(seekSecs, true);
+      player.unMute();
+      player.setVolume(100);
+      player.playVideo();
+    } catch (e) {}
+
+    hideSoundPill();
+
+    setTimeout(() => {
+      if (player && typeof player.getPlayerState === 'function') {
+        const st = player.getPlayerState();
+        if (st !== YT.PlayerState.PLAYING && st !== YT.PlayerState.BUFFERING) {
+          document.getElementById('play-prompt').style.display = 'flex';
+        }
+      }
+    }, 1200);
+  } else {
+    pendingUserPlay = true;
+    document.getElementById('play-prompt').style.display = 'flex';
+  }
 }
 
 function onReady(e) {
   playerReady = true;
   fitPlayerViewport();
-  e.target.playVideo();
 
-  setTimeout(() => {
-    try { e.target.unMute(); e.target.setVolume(100); } catch {}
-
-    showSoundPill();
+  if (pendingUserPlay) {
+    pendingUserPlay = false;
+    const elapsed = classStartTime ? Math.max(0, Math.floor((syncedNow() - classStartTime) / 1000)) : 0;
+    try {
+      lastSeekTime = Date.now();
+      e.target.mute();
+      e.target.seekTo(elapsed, true);
+      e.target.playVideo();
+    } catch (err) {}
 
     setTimeout(() => {
-      if (typeof e.target.isMuted === 'function' && !e.target.isMuted()) {
-        hideSoundPill();
+      if (typeof e.target.getPlayerState === 'function' && e.target.getPlayerState() === YT.PlayerState.PLAYING) {
+        document.getElementById('play-prompt').style.display = 'none';
+        if (typeof e.target.isMuted === 'function' && e.target.isMuted()) {
+          showSoundPill();
+        }
       }
-    }, 6000);
-  }, 800);
+    }, 800);
+  }
 }
 
 function onStateChange(e) {
   if (e.data === YT.PlayerState.PLAYING) {
     document.getElementById('play-prompt').style.display = 'none';
     fitPlayerViewport();
-    hasPlayedOnce = true;
     startQualityGuard();
-  }
-  if (e.data === YT.PlayerState.BUFFERING && hasPlayedOnce && !qualityDowngraded && (Date.now() - lastSeekTime > 4000)) {
-    const now = Date.now();
-    rebufferTimestamps.push(now);
-    rebufferTimestamps = rebufferTimestamps.filter(t => now - t < 45000);
-    if (rebufferTimestamps.length >= 2) {
-      downgradeTo720p();
-    }
   }
   if (e.data === YT.PlayerState.PAUSED && !document.hidden) {
     setTimeout(() => {
@@ -1710,6 +1770,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bind('play-prompt', userInitiatedPlay);
   bind('sound-pill', enableSound);
   bind('mobile-fs-btn', toggleFullscreen);
+  bind('refresh-btn', () => location.reload());
   
   bind('mic-btn', toggleMic);
   bind('cam-btn', toggleCam);

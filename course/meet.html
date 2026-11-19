@@ -18,7 +18,7 @@
   When user switches app and returns, the video is paused and never resumed - FIXED ! 
   YouTube video quality low on mobile devices - Fixed. Time is fetched via Header only now on ! 
   
-  THIS DOES NOT WORK --> Renders #yt-player at (1440p from old 1920×1080) scaled via GPU transform so YouTube unlocks 1080p even in portrait mode. 
+  THIS DOES NOT WORK = Renders #yt-player at (1440p from old 1920×1080) scaled via GPU transform so YouTube unlocks 1080p even in portrait mode. 
 Code is only retained to see if anything of value comes up in future regarding stall detection. 
   
   onlineclass.ktlin license system, Custom Cryptographic Encryption, Custom Base64 Encoding decoding, Custom JSON parser, so major API hooks no longer work. whatsapp, ui redesigned, fullscreen, less clutter, preconnect, fast performance, robust security, chat doesnot show up in landscape mode to avoid showing broken chat ui - new font
@@ -327,7 +327,74 @@ body {
   .cc-leave { width: 96px; border-radius: 48px; }
   .ctrl-circle .material-symbols-outlined { font-size: 32px; }
 
-  #sync-btn { padding: 20px 48px; font-size: 22px; }
+  #sync-btn {
+    padding: 32px 72px;
+    font-size: 40px;
+    margin-top: 24px;
+  }
+  #sync-btn .material-symbols-outlined {
+    font-size: 40px !important;
+  }
+
+  /* Enlarged modals for desktop-mode phones/tablets */
+  .modal-box {
+    width: 720px;
+    max-width: 88vw;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 40px 36px;
+    border-radius: 28px;
+  }
+
+  /* Chat choice modal (Ask Teacher / Chat with Friends) */
+  #chat-choice .modal-box h3 {
+    font-size: 34px !important;
+    margin-bottom: 32px !important;
+  }
+  #btn-chat-friends,
+  #btn-chat-teacher {
+    padding: 32px !important;
+    font-size: 28px !important;
+    border-radius: 16px !important;
+    gap: 16px !important;
+  }
+  #btn-chat-friends .material-symbols-outlined,
+  #btn-chat-teacher .material-symbols-outlined {
+    font-size: 34px !important;
+  }
+  #btn-chat-cancel {
+    font-size: 22px !important;
+    margin-top: 32px !important;
+  }
+
+  /* Ask Teacher modal (same fix — it was tiny too) */
+  #ask-teacher-modal .modal-box h3 {
+    font-size: 34px !important;
+    margin-bottom: 16px !important;
+  }
+  #ask-teacher-modal .modal-box p {
+    font-size: 22px !important;
+    margin-bottom: 24px !important;
+    line-height: 1.6 !important;
+  }
+  #teacher-question {
+    font-size: 26px !important;
+    height: 200px !important;
+    padding: 20px !important;
+    border-radius: 16px !important;
+  }
+  #ask-teacher-modal .modal-box > div:last-child {
+    gap: 16px !important;
+    margin-top: 28px !important;
+  }
+  #btn-teacher-cancel,
+  #btn-teacher-send {
+    padding: 24px !important;
+    font-size: 26px !important;
+  }
+  #btn-teacher-send .material-symbols-outlined {
+    font-size: 30px !important;
+  }
   #sound-pill { padding: 20px 36px !important; font-size: 22px !important; }
   #toast { font-size: 18px; padding: 14px 24px; bottom: 130px; }
   #hand-notif { font-size: 18px; padding: 14px 20px; bottom: 130px; }

@@ -15,6 +15,7 @@
   V4 RELIABILITY PATTERN:
   Made sound play button persistent so in ios safari, blocked autoplay also gets to play. 
   Viewport larger does not work at all (tested), only desktop mode does, so used that instead for higher quality.
+  Desktop mode ma sabai ui elements including yt chat is scaled to compensate for UX.
   When user switches app and returns, the video is paused and never resumed - FIXED ! 
   YouTube video quality low on mobile devices - Fixed. Time is fetched via Header only now on ! 
   
@@ -558,7 +559,7 @@ body {
 }
 /* ═══ PATCH: Zoomed YouTube chat iframe (Desktop Mode, portrait + landscape) ═══ */
 @media (pointer: coarse) and (min-width: 769px) {
-  #chat-panel { --chat-zoom: 1.8; --chat-head: 72px; }
+  #chat-panel { --chat-zoom: 4.0; --chat-head: 72px; }
 
   .chat-head { height: var(--chat-head) !important; }
 

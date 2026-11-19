@@ -4,15 +4,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SR Zone — Admin</title>
 <style>
-:root{--bg:#0d0e10;--s1:#16181b;--s2:#202327;--bd:#2c3036;--tx:#eef0f3;--mu:#98a0ab;--ac:#0866ff;--ok:#22c55e;--er:#ef4444;--wn:#f59e0b;color-scheme:dark}
+:root{--bg:#0d0e10;--s1:#16181b;--s2:#202327;--bd:#2c3036;--tx:#eef0f3;--mu:#98a0ab;--ac:#fff;--ok:#22c55e;--er:#ef4444;--wn:#f59e0b;color-scheme:dark}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);padding-bottom:80px}
 header{position:sticky;top:0;z-index:20;background:rgba(13,14,16,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--bd);padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top))}
 .bar{max-width:900px;margin:auto;display:flex;align-items:center;gap:10px}
 .logo{font-weight:700;font-size:17px;flex:1}.logo b{color:var(--ac)}
 .tabs{display:flex;gap:6px;max-width:900px;margin:10px auto 0}
-.tabs button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--bd);background:var(--s1);color:var(--mu);font:600 13px inherit;cursor:pointer}
-.tabs button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.tabs button{flex:1;padding:9px;border-radius:8px;border:1px solid var(--bd);background:var(--s1);color:var(--mu);font-weight:600; font-size:13px; font-family: inherit;cursor:pointer}
+.tabs button.on{background:var(--ac);border-color:var(--ac);color:#000}
 main{max-width:900px;margin:auto;padding:14px}
 .tab{display:none}.tab.on{display:block}
 .note{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);color:#fcd48a;padding:10px 12px;border-radius:10px;margin-bottom:12px;font-size:13px}
@@ -25,9 +25,9 @@ label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--mu);
 input,select{width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px;border-radius:8px;font:inherit;font-size:16px;outline:none;min-height:42px}
 @media(min-width:700px){input,select{font-size:13px}}
 input:focus{border-color:var(--ac)}input.bad{border-color:var(--er)}
-.btn,.ib{border:1px solid var(--bd);background:var(--s2);color:var(--tx);border-radius:8px;padding:0 14px;min-height:42px;font:600 13px inherit;cursor:pointer;white-space:nowrap}
+.btn,.ib{border:1px solid var(--bd);background:var(--s2);color:var(--tx);border-radius:999px;padding:0 14px;min-height:42px;font-weight:900; font-size:13px; font-family: inherit;cursor:pointer;white-space:nowrap}
 .ib{padding:0;width:42px;flex:none}.btn:hover,.ib:hover{background:#2b2f35}
-.pri{background:var(--ac);border-color:var(--ac);color:#fff}.dng:hover{background:var(--er);border-color:var(--er)}
+.pri{background:var(--ac);border-color:var(--ac);color:#000}.dng:hover{background:var(--er);border-color:var(--er)}
 .tag{font-size:10px;background:var(--er);padding:2px 7px;border-radius:99px}
 .ttl{font-weight:700;margin:16px 0 8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .mu{color:var(--mu);font-size:12px}.dot{width:9px;height:9px;border-radius:50%;background:var(--ok)}.dot.d{background:var(--wn)}
@@ -35,21 +35,73 @@ input:focus{border-color:var(--ac)}input.bad{border-color:var(--er)}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,30px);opacity:0;pointer-events:none;background:var(--s2);border:1px solid var(--bd);padding:11px 16px;border-radius:10px;transition:.2s;z-index:50;max-width:92vw;text-align:center}
 #toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}#toast.error{border-color:var(--er)}#toast.ok{border-color:var(--ok)}
 #toast a{color:var(--ac);font-weight:700;margin-left:10px;cursor:pointer}
+/* --- compact default-time bar --- */
+.tplbar{flex-direction:row;align-items:center;gap:8px;padding:8px 10px;flex-wrap:wrap}
+.tplbar>.mu{flex:1 1 auto;white-space:nowrap;font-size:12px}
+.tplbar label{flex:0 0 auto;flex-direction:row;align-items:center;gap:6px;font-size:11px}
+.tplbar input{width:118px;min-height:36px;padding:6px 8px;flex:0 0 auto}
+.tplbar .btn{min-height:36px;padding:0 12px;font-size:12px;flex:0 0 auto}
+/* --- today section: soft blue --- */
+#pinned .card{background:linear-gradient(180deg,rgba(59,130,246,.16),rgba(59,130,246,.05));border-color:rgba(96,165,250,.32)}
+#pinned .card.today{border-color:rgba(96,165,250,.55)}
+/* --- compact class card --- */
+.dayc{padding:8px 10px;gap:0}
+.dayc .row{flex-wrap:nowrap;gap:6px;align-items:flex-end}
+.dayc label{min-width:0}
+.dayc input{min-height:36px;padding:6px 8px}
+.dayc .dc-date{flex:1.2 1 0}
+.dayc .dc-title{flex:3 1 0}
+.dayc .dc-v{flex:1.2 1 0}
+.dayc .dc-t{flex:0.8 1 0}
+.dayc .dc-act{display:flex;gap:4px;flex:none}
+.dayc .ib{width:36px;height:36px;min-height:36px;font-size:13px}
+@media(max-width:699px){.dayc .row{flex-wrap:wrap}.dayc .dc-date{flex:1 1 100%}.dayc .dc-title{flex:1 1 100%}.dayc .dc-t{flex:1 1 30%}.dayc .dc-v{flex:1 1 100%}.dayc .dc-act{margin-left:auto}}
+/* --- import dialog --- */
+#impBox{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;padding:14px}
+#impBox.show{display:flex}
+#impBox .dlg{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:14px;width:100%;max-width:620px;max-height:92vh;overflow:auto;display:flex;flex-direction:column;gap:10px}
+#impBox textarea{width:100%;min-height:150px;resize:vertical;background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:10px;border-radius:8px;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;outline:none;white-space:pre}
+#impBox textarea:focus{border-color:var(--ac)}
+#impBox code{background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:0 4px;color:var(--tx);font-size:11px}
+#impBox .schema{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;line-height:1.6}
+#impBox .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:620px){#impBox .g4{grid-template-columns:1fr 1fr}}
 </style></head><body>
 <header><div class="bar"><div class="logo">SR <b>Zone</b> / Admin</div><span class="dot" id="dot" title="Unpushed changes"></span><button class="btn pri" id="push">☁ Push</button></div>
-<div class="tabs"><button data-t="keys" class="on">🔑 Keys</button><button data-t="courses">📅 Courses</button><button data-t="settings">⚙ Settings</button></div></header>
+<div class="tabs"><button data-t="courses" class="on">📅 Courses</button><button data-t="keys">🔑 Keys</button><button data-t="settings">⚙ Settings</button></div></header>
 <main>
-<section class="tab on" id="t-keys">
+<section class="tab" id="t-keys">
 <div class="note">To revoke a key, just delete it and push. Its access is revoked.</div>
 <div class="row"><input id="kadd" data-enter="1" placeholder="Type a key, press Enter" enterkeyhint="done" autocapitalize="off" spellcheck="false"><button class="ib" id="krand" title="Random key">🎲</button><button class="btn pri" id="kaddb">Add</button></div>
 <div class="ttl"><span class="mu" id="kcount"></span><input id="kq" data-enter="1" placeholder="Search keys…" style="max-width:200px"></div>
 <div id="klist"></div></section>
 
-<section class="tab" id="t-courses">
-<div class="card"><div class="mu">Default class time (new classes copy this)</div>
-<div class="row"><label style="flex:1">Start<input type="time" id="tplS" enterkeyhint="next"></label><label style="flex:1">End<input type="time" id="tplE" enterkeyhint="next"></label><button class="btn" id="tplAll" style="align-self:flex-end">Apply to all</button></div></div>
+<section class="tab on" id="t-courses">
+<div class="card tplbar"><div class="mu">Default time</div>
+<label>Start<input type="time" id="tplS" enterkeyhint="next"></label><label>End<input type="time" id="tplE" enterkeyhint="next"></label><button class="btn" id="tplAll">Apply to all</button></div>
 <div class="ttl"><span>📌 Today</span><span class="mu" id="todayLbl"></span></div><div id="pinned"></div>
-<div class="ttl"><span>All classes</span><button class="btn pri" id="dadd">+ Add class</button></div><div id="dlist"></div></section>
+<div class="ttl"><span>All classes <span class="mu" id="dcount"></span></span><span class="row" style="flex:none"><button class="btn" id="impOpen">⇪ Import</button><button class="btn pri" id="dadd">+ Add class</button></span></div><div id="dlist"></div></section>
+
+<div id="impBox"><div class="dlg">
+<div class="ttl" style="margin:0"><span>⇪ Import classes</span><button class="ib" id="impX" title="Close">✕</button></div>
+<div class="mu schema">
+<b>Format:</b> one class per line → <code>Title</code> <code>TAB</code> <code>YouTube URL or 11-char ID</code><br>
+<b>Schema:</b> each line becomes <code>{ date, title, videoId, startTime, endTime }</code> in course.json<br>
+• <code>title</code> = text before the tab &nbsp;• <code>videoId</code> = extracted from the URL<br>
+• <code>date</code> = Start date, then +N days for each following line (in pasted order)<br>
+• <code>startTime</code> / <code>endTime</code> = the times below, applied to every class<br>
+Lines with a missing title or invalid YouTube link are skipped.
+</div>
+<textarea id="impText" data-enter="1" placeholder="L1 Intro Quiz&#9;https://www.youtube.com/watch?v=2CnN7lVtERk&#10;L2 Adverbs&#9;https://www.youtube.com/watch?v=cSKxH-Xx9sM" spellcheck="false" wrap="off"></textarea>
+<div class="g4">
+<label>Start date<input type="date" id="impDate" data-enter="1"></label>
+<label>Start time<input type="time" id="impS" data-enter="1"></label>
+<label>End time<input type="time" id="impE" data-enter="1"></label>
+<label>Every N days<input type="number" id="impStep" data-enter="1" min="1" value="1"></label>
+</div>
+<label>If classes already exist<select id="impMode"><option value="append">Add to existing classes</option><option value="replace">Replace all existing classes</option></select></label>
+<div class="row"><span class="mu" id="impInfo" style="flex:1">0 classes</span><button class="btn" id="impCancel">Cancel</button><button class="btn pri" id="impGo">Import</button></div>
+</div></div>
 
 <section class="tab" id="t-settings">
 <div class="card">
@@ -120,7 +172,9 @@ function addKey(){const i=$('#kadd'),c=i.value.trim();if(!c)return;keys.unshift(
 $('#kadd').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addKey()}});
 $('#kaddb').onclick=addKey;$('#krand').onclick=()=>{$('#kadd').value=rand();addKey()};
 $('#kq').oninput=renderKeys;
-$('#klist').addEventListener('input',e=>{const c=e.target.closest('.card'),f=e.target.dataset.f;if(!c||!f)return;const v=e.target.value;keys[c.dataset.i][f]=f==='expires'?lToExp(v):f==='code'?v.trim():toISO(v);touch()});
+$('#klist').addEventListener('input',e=>{const c=e.target.closest('.card'),f=e.target.dataset.f;if(!c||!f)return;const v=e.target.value;keys[c.dataset.i][f]=f==='expires'?lToExp(v):f==='code'?v.trim():toISO(v);
+  if(f==='window_start'&&v){const end=fmtL(new Date(Date.parse(v+':00Z')+5*60000));keys[c.dataset.i].window_end=toISO(end);const we=c.querySelector('[data-f=window_end]');if(we)we.value=end}
+  touch()});
 $('#klist').addEventListener('click',e=>{const b=e.target.closest('[data-a]'),c=e.target.closest('.card');if(!b)return;const i=+c.dataset.i,k=keys[i];
   if(b.dataset.a==='copy'){navigator.clipboard?.writeText(k.code);toast('Copied '+k.code,'ok')}
   if(b.dataset.a==='dup'){const n={...k,code:k.code+'-'+rand().slice(0,3)};keys.splice(i+1,0,n);touch();renderKeys();$$('#klist .card')[i+1]?.querySelector('input').select()}
@@ -128,18 +182,19 @@ $('#klist').addEventListener('click',e=>{const b=e.target.closest('[data-a]'),c=
 
 // ── COURSES ──
 const sortDays=()=>days.sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.startTime||'').localeCompare(b.startTime||''));
-function dayCard(d,i,today){return `<div class="card${today?' today':''}" data-i="${i}">
-<div class="row"><label style="flex:1.4">Date <span class="dow">${dow(d.date)}</span><input type="date" data-f="date" value="${esc(d.date)}" enterkeyhint="next"></label>
-<label style="flex:1">Start<input type="time" data-f="startTime" value="${esc(d.startTime)}" enterkeyhint="next"></label>
-<label style="flex:1">End<input type="time" data-f="endTime" value="${esc(d.endTime)}" enterkeyhint="next"></label></div>
-<div class="g2"><label>Class title<input data-f="title" value="${esc(d.title)}" placeholder="Physics — Ch 2" enterkeyhint="next"></label>
-<label>YouTube ID or URL ${d.videoId?`<span class="chip">✓ ${esc(d.videoId)}</span>`:''}<input data-f="videoId" value="${esc(d.videoId)}" placeholder="Paste link or ID" autocapitalize="off" spellcheck="false" enterkeyhint="next"></label></div>
-<div class="row" style="justify-content:flex-end"><button class="btn" data-a="dup">⧉ Duplicate (+1 day)</button><button class="btn dng" data-a="del">✕ Delete</button></div></div>`}
+function dayCard(d,i,today){return `<div class="card dayc${today?' today':''}" data-i="${i}">
+<div class="row"><label class="dc-date"><span class="dow" style="margin-right:2px">${dow(d.date)}</span><input type="date" data-f="date" value="${esc(d.date)}" enterkeyhint="next"></label>
+<label class="dc-title">Title<input data-f="title" value="${esc(d.title)}" placeholder="Video Title" enterkeyhint="next"></label>
+<label class="dc-v">YouTube ${d.videoId?'<span class="chip">✓</span>':''}<input data-f="videoId" value="${esc(d.videoId)}" placeholder="ID or URL" autocapitalize="off" spellcheck="false" enterkeyhint="next"></label>
+<label class="dc-t">Start<input type="time" data-f="startTime" value="${esc(d.startTime)}" enterkeyhint="next"></label>
+<label class="dc-t">End<input type="time" data-f="endTime" value="${esc(d.endTime)}" enterkeyhint="next"></label>
+<div class="dc-act"><button class="ib" data-a="play" title="Test on YouTube">▶</button><button class="ib" data-a="dup" title="Duplicate (+1 day)">⧉</button><button class="ib dng" data-a="del" title="Delete">✕</button></div></div></div>`}
 function renderDays(){
   const t=localToday();$('#tplS').value=tpl.s;$('#tplE').value=tpl.e;
   $('#todayLbl').textContent=t+' · '+dow(t);
   const all=days.map((d,i)=>[d,i]),td=all.filter(([d])=>d.date===t);
   $('#pinned').innerHTML=td.map(([d,i])=>dayCard(d,i,true)).join('')||`<div class="card mu">No class today. <button class="btn" id="addToday">+ Add for today</button></div>`;
+  $('#dcount').textContent='('+all.filter(([d])=>d.date!==t).length+')';
   $('#dlist').innerHTML=all.filter(([d])=>d.date!==t).map(([d,i])=>dayCard(d,i)).join('')||'<div class="mu" style="text-align:center;padding:16px">Nothing else scheduled.</div>';
 }
 function addDay(date,src){const d=src?{...src,date}:{date,startTime:tpl.s,endTime:tpl.e,title:days.length?days[days.length-1].title:'',videoId:''};days.push(d);touch();sortDays();renderDays();const i=days.indexOf(d);document.querySelector(`#t-courses [data-i="${i}"] [data-f=title]`)?.focus()}
@@ -153,8 +208,58 @@ dayPane.addEventListener('input',e=>{const c=e.target.closest('.card[data-i]'),f
   else d[f]=v;touch()});
 dayPane.addEventListener('click',e=>{if(e.target.id==='addToday')return addDay(localToday());
   const b=e.target.closest('[data-a]'),c=e.target.closest('.card[data-i]');if(!b||!c)return;const i=+c.dataset.i,d=days[i];
+  if(b.dataset.a==='play'){
+    if(!d.videoId) return toast('No YouTube ID set','error');
+    window.open('https://youtube.com/watch?v='+d.videoId,'_blank');
+    toast('Testing video...','ok');
+  }
   if(b.dataset.a==='dup')addDay(addDay2(d.date||localToday()),d);
   if(b.dataset.a==='del'){days.splice(i,1);touch();renderDays();toast('Class deleted','',()=>{days.push(d);sortDays();touch();renderDays()})}});
+
+// ── IMPORT ──
+const addDays=(s,n)=>new Date(Date.parse(s+'T00:00:00Z')+n*864e5).toISOString().slice(0,10);
+function impParse(){
+  const out=[],bad=[];
+  $('#impText').value.split(/\r?\n/).forEach((ln,n)=>{
+    if(!ln.trim())return;
+    const m=ln.match(/https?:\/\/\S+/);
+    const rawId=m?m[0]:(ln.split('\t')[1]||'').trim();
+    const title=(m?ln.replace(m[0],''):ln.split('\t')[0]).replace(/\t/g,' ').trim();
+    const id=parseVid(rawId);
+    if(!title||!id)bad.push(n+1);else out.push({title,videoId:id});
+  });
+  return{out,bad};
+}
+function impInfo(){
+  const{out,bad}=impParse();
+  $('#impInfo').textContent=out.length+' class'+(out.length===1?'':'es')+(bad.length?' · skipped line'+(bad.length>1?'s':'')+' '+bad.join(', '):'');
+}
+function impClose(){$('#impBox').classList.remove('show')}
+$('#impOpen').onclick=()=>{
+  sortDays();
+  const last=days.length?days[days.length-1].date:'';
+  $('#impDate').value=last?addDays(last,1):localToday();
+  $('#impS').value=tpl.s;$('#impE').value=tpl.e;
+  $('#impBox').classList.add('show');
+  $('#impText').focus();impInfo();
+};
+$('#impX').onclick=$('#impCancel').onclick=impClose;
+$('#impBox').addEventListener('mousedown',e=>{if(e.target.id==='impBox')impClose()});
+$('#impText').addEventListener('input',impInfo);
+$('#impGo').onclick=()=>{
+  const{out,bad}=impParse();
+  const sd=$('#impDate').value,st=$('#impS').value,et=$('#impE').value,step=Math.max(1,parseInt($('#impStep').value)||1);
+  if(!out.length)return toast('Nothing valid to import','error');
+  if(!sd)return toast('Pick a start date','error');
+  if(!st||!et)return toast('Set start and end time','error');
+  const replace=$('#impMode').value==='replace';
+  if(replace&&days.length&&!confirm('Delete all '+days.length+' existing classes and import '+out.length+' new ones?'))return;
+  if(replace)days=[];
+  out.forEach((x,i)=>days.push({date:addDays(sd,i*step),startTime:st,endTime:et,title:x.title,videoId:x.videoId}));
+  touch();sortDays();renderDays();impClose();
+  $('#impText').value='';
+  toast('Imported '+out.length+' class'+(out.length===1?'':'es')+(bad.length?' · skipped '+bad.length:''),'ok');
+};
 
 // ── SETTINGS ──
 $$('[data-s]').forEach(i=>{i.value=localStorage.getItem(SK[i.dataset.s])||(i.dataset.s==='chat'?'iTDZ5cqHYF4':'');i.oninput=()=>localStorage.setItem(SK[i.dataset.s],i.value.trim())});
@@ -253,5 +358,5 @@ $('#pull').onclick=async()=>{try{const c=cfg();if(dirty&&!confirm('Unpushed loca
   if(m){const u=unpackManifest(b64ToBytes(m.trim()));const o=decryptJSON(u.bBytes,c.k,u.sb);keys=o.keys||[]}
   if(cj)days=JSON.parse(cj);dirty=false;persist();renderKeys();renderDays();toast('Pulled from GitHub ✓','ok')}catch(e){toast('Pull failed: '+e.message,'error')}};
 
-renderKeys();renderDays();persist();
+renderKeys();sortDays();renderDays();persist();
 </script></body></html>

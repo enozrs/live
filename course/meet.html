@@ -165,7 +165,7 @@ body {
   display: none !important;
 }
 
-#sync-btn:hover { background: #1765cc; }
+
 
 /* Student count shown on waiting screen */
 #student-count-status { font-size: 13px; color: var(--text2); display: none; }
@@ -475,6 +475,87 @@ body {
   }
 }
   
+/* ═══ PATCH: Simulated Desktop Mode scaling ═══ */
+@media (pointer: coarse) and (min-width: 769px) {
+
+  /* Floating Refresh / Fullscreen pills */
+  #mobile-fs-btn, #refresh-btn {
+    padding: 26px 44px !important;
+    font-size: 32px !important;
+    bottom: 40px !important;
+    gap: 14px !important;
+  }
+  #mobile-fs-btn { right: 40px !important; }
+  #refresh-btn   { left: 40px !important; }
+  #mobile-fs-btn .material-symbols-outlined,
+  #refresh-btn .material-symbols-outlined { font-size: 42px !important; }
+
+  /* Waiting / Live / Ended status screen */
+  #status-screen { gap: 32px; padding: 0 48px; }
+  #s-emoji .material-symbols-outlined { font-size: 120px !important; }
+  .status-title { font-size: 54px; font-weight: 600; text-align: center; }
+  .status-sub { font-size: 28px; max-width: 760px; line-height: 1.5; }
+  .countdown-pill { padding: 22px 48px; gap: 18px; font-size: 26px; }
+  #countdown-val { font-size: 50px; letter-spacing: 2px; }
+  #student-count-status { font-size: 26px; }
+  #sync-btn {
+    padding: 28px 64px; font-size: 32px; margin-top: 16px; gap: 14px !important;
+  }
+  #sync-btn .material-symbols-outlined { font-size: 40px !important; }
+
+  /* License gate */
+  .gate-card { width: 720px; max-width: 90vw; padding: 64px 48px; gap: 36px; border-radius: 40px; }
+  .gate-logo { font-size: 64px; }
+  .gate-sub { font-size: 26px; }
+  .gate-input { font-size: 30px; padding: 26px 32px; border-width: 3px; }
+  .gate-input::placeholder { font-size: 26px; }
+  .gate-btn { font-size: 30px; padding: 28px; }
+  .gate-error { font-size: 24px; }
+  .gate-note { font-size: 20px; }
+
+  /* Tap-to-join overlay + live dot */
+  #play-prompt-inner { padding: 48px 64px; gap: 24px; border-radius: 28px; }
+  #play-prompt-inner p { font-size: 28px !important; }
+  .play-icon { width: 110px; height: 110px; }
+  .play-icon .material-symbols-outlined { font-size: 56px; }
+  .live-dot { width: 12px; height: 12px; }
+}
+
+/* Landscape phones: scale back down so nothing overflows ~440px height */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) {
+  #mobile-fs-btn, #refresh-btn {
+    padding: 14px 26px !important; font-size: 20px !important;
+    bottom: 20px !important; gap: 8px !important;
+  }
+  #mobile-fs-btn { right: 20px !important; }
+  #refresh-btn   { left: 20px !important; }
+  #mobile-fs-btn .material-symbols-outlined,
+  #refresh-btn .material-symbols-outlined { font-size: 26px !important; }
+
+  #status-screen { gap: 10px; }
+  #s-emoji .material-symbols-outlined { font-size: 56px !important; }
+  .status-title { font-size: 30px; }
+  .status-sub { font-size: 17px; max-width: 600px; }
+  .countdown-pill { padding: 10px 28px; font-size: 16px; gap: 10px; }
+  #countdown-val { font-size: 28px; }
+  #student-count-status { font-size: 15px; }
+  #sync-btn { padding: 14px 40px; font-size: 20px; margin-top: 4px; }
+  #sync-btn .material-symbols-outlined { font-size: 24px !important; }
+
+  .gate-card { width: 520px; padding: 20px 28px; gap: 12px; border-radius: 24px; max-height: 94vh; overflow-y: auto; }
+  .gate-logo { font-size: 32px; }
+  .gate-sub { font-size: 15px; }
+  .gate-input { font-size: 18px; padding: 12px 18px; }
+  .gate-input::placeholder { font-size: 15px; }
+  .gate-btn { font-size: 18px; padding: 14px; }
+  .gate-error { font-size: 14px; }
+  .gate-note { font-size: 12px; }
+
+  #play-prompt-inner { padding: 20px 32px; gap: 10px; }
+  #play-prompt-inner p { font-size: 16px !important; }
+  .play-icon { width: 64px; height: 64px; }
+  .play-icon .material-symbols-outlined { font-size: 32px; }
+}
 </style>
 </head>
 <body>
@@ -1335,7 +1416,7 @@ function checkState() {
   } else if (now >= classStartTime && now < classEndTime) {
     showStatusScreen('rocket_launch', "Class is Live!", "The session has started.", false, 0);
     document.getElementById('sync-btn').style.display = 'flex'; 
-    document.getElementById('sync-btn').textContent = "ENTER CLASSROOM";
+    /* label + icon now live in the HTML; don't overwrite every tick */
     startStudentCountUpdater();
 
   } else {

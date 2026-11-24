@@ -2001,23 +2001,36 @@ function toggleChat() {
 }
 
 // sometimes yt does not let you send msg immediately after sending one, bug fixed. 
+let unstickingChat = false;
+
+function unstickChatFrame() {
+  if (!chatOpen || unstickingChat) return;
+  const frame = document.getElementById('yt-chat-frame');
+  if (!frame) return;
+
+  unstickingChat = true;
+  window.focus();
+  frame.style.display = 'none';
+
+  // Wait for one full frame to paint with display: none so the browser
+  // resets the iframe's touch/IME input bridge, then restore it
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      if (chatOpen) frame.style.display = 'block';
+      unstickingChat = false;
+    }, 40);
+  });
+}
+
 if (window.visualViewport) {
   let lastVvHeight = window.visualViewport.height;
   window.visualViewport.addEventListener('resize', () => {
     const vv = window.visualViewport;
-    const keyboardClosed = vv.height > lastVvHeight + 80;
+    const keyboardClosed = vv.height > lastVvHeight + 50;
     lastVvHeight = vv.height;
 
     if (chatOpen && keyboardClosed) {
-      const frame = document.getElementById('yt-chat-frame');
-      if (frame) {
-        // 1. Pull focus back to parent so next tap triggers a fresh focus/keyboard open
-        window.focus();
-        // 2. Force compositor to rebuild the iframe's touch hit-test box before paint
-        frame.style.visibility = 'hidden';
-        void frame.offsetHeight;
-        frame.style.visibility = '';
-      }
+      unstickChatFrame();
     }
   });
 }

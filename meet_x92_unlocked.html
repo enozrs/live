@@ -17,7 +17,8 @@
   Viewport larger does not work at all (tested), only desktop mode does, so used that instead for higher quality.
   Desktop mode ma sabai ui elements including yt chat is scaled to compensate for UX.
   When user switches app and returns, the video is paused and never resumed - FIXED ! 
-  YouTube video quality low on mobile devices - Fixed. Time is fetched via Header only now on ! 
+  YouTube video quality low on mobile devices - Fixed. Time is fetched via Server now on ! 
+  Chat will be destroyed on fullscreen to save resources - Skeleton Loading for better UX
   
   THIS DOES NOT WORK = Renders #yt-player at (1440p from old 1920×1080) scaled via GPU transform so YouTube unlocks 1080p even in portrait mode. 
 Code is only retained to see if anything of value comes up in future regarding stall detection. 
@@ -125,44 +126,44 @@ body {
 }
 #sync-btn:hover { background: var(--accent-hover); transform: translateY(-2px); }
 
-/* Show floating fullscreen & refresh buttons on mobile (normal + Desktop Mode) */
+/* Floating 3-button onscreen bar (Refresh - Chat - Fullscreen) */
+#floating-actions {
+  position: absolute; bottom: 16px; left: 12px; right: 12px; z-index: 12;
+  display: none; align-items: center; justify-content: space-between; gap: 8px;
+  pointer-events: none;
+}
+.float-pill {
+  pointer-events: auto; border: none; color: #fff;
+  padding: 8px 14px; border-radius: 99px;
+  font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.5); white-space: nowrap;
+}
+.float-pill .material-symbols-outlined { font-size: 18px; }
+
+/* Show floating 3-button bar on mobile (normal + Desktop Mode) */
 @media (max-width: 768px) {
-  #mobile-fs-btn,
-  #refresh-btn { display: flex !important; }
+  #floating-actions { display: flex !important; }
 }
 
-/* Touch device with a wide viewport = Desktop Mode enabled on a phone/tablet.
-   Enlarge both pills so they're still comfortably tappable. */
 @media (pointer: coarse) and (min-width: 769px) {
-  #mobile-fs-btn {
+  #floating-actions {
     display: flex !important;
-    padding: 14px 22px !important;
-    font-size: 18px !important;
-    bottom: 24px !important;
-    right: 24px !important;
-    gap: 8px !important;
-  }
-  #mobile-fs-btn .material-symbols-outlined {
-    font-size: 24px !important;
-  }
-  #refresh-btn {
-    display: flex !important;
-    padding: 14px 22px !important;
-    font-size: 18px !important;
     bottom: 24px !important;
     left: 24px !important;
+    right: 24px !important;
+  }
+  .float-pill {
+    padding: 14px 22px !important;
+    font-size: 18px !important;
     gap: 8px !important;
   }
-  #refresh-btn .material-symbols-outlined {
-    font-size: 24px !important;
-  }
+  .float-pill .material-symbols-outlined { font-size: 24px !important; }
 }
 
-/* Hide both when actually in fullscreen */
-#video-col:fullscreen #mobile-fs-btn,
-#video-col:-webkit-full-screen #mobile-fs-btn,
-#video-col:fullscreen #refresh-btn,
-#video-col:-webkit-full-screen #refresh-btn {
+/* Hide floating bar when actually in fullscreen */
+#video-col:fullscreen #floating-actions,
+#video-col:-webkit-full-screen #floating-actions {
   display: none !important;
 }
 
@@ -220,6 +221,35 @@ body {
   font-size: 13px; color: var(--text2); z-index: 6; display: none;
 }
 
+/* Top auto-hiding notice shown ONLY when Desktop site mode is active */
+#dm-blur-tip {
+  display: none;
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  z-index: 12; pointer-events: none;
+  background: rgba(26, 27, 30, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 14px 26px;
+  align-items: center; gap: 10px;
+  color: var(--text); font-size: 22px; font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+#dm-blur-tip .material-symbols-outlined {
+  color: var(--accent); font-size: 26px;
+}
+
+@media (pointer: coarse) and (min-width: 769px) {
+  #dm-blur-tip.show { display: flex; }
+}
+
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) {
+  #dm-blur-tip {
+    top: 12px; padding: 9px 20px; font-size: 16px; gap: 8px;
+  }
+  #dm-blur-tip .material-symbols-outlined { font-size: 20px; }
+}
+
 #play-prompt {
   position: absolute; inset: 0; background: rgba(0,0,0,0.6);
   display: none; align-items: center; justify-content: center;
@@ -267,12 +297,67 @@ body {
 }
 #chat-panel.open { display: flex; }
 .chat-head {
-  padding: 12px 14px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
 }
 .chat-head-title { font-size: 13px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+.chat-head-actions { display: flex; align-items: center; gap: 16px; }
+.talk-teacher-btn {
+  background: rgba(37, 211, 102, 0.14); color: #4ade80;
+  border: 1px solid rgba(37, 211, 102, 0.4); border-radius: 999px;
+  padding: 8px 14px; font-family: inherit; font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap;
+}
+.talk-teacher-btn .material-symbols-outlined { font-size: 15px; }
 .chat-close { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 2px 6px; }
-.chat-loader { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text2); font-size: 13px; }
+
+/* Chat Skeleton Loader */
+.chat-loader {
+  flex: 1; display: flex; flex-direction: column; justify-content: space-between;
+  padding: 16px 14px; overflow: hidden; background: var(--bg2);
+}
+.sk-list { display: flex; flex-direction: column; gap: 16px; }
+.sk-row { display: flex; align-items: flex-start; gap: 10px; }
+.sk-avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  background: var(--bg3); position: relative; overflow: hidden;
+}
+.sk-lines { flex: 1; display: flex; flex-direction: column; gap: 7px; padding-top: 2px; }
+.sk-line {
+  height: 10px; border-radius: 6px; background: var(--bg3);
+  position: relative; overflow: hidden;
+}
+.sk-footer {
+  padding-top: 12px; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sk-input {
+  height: 36px; border-radius: 999px; background: var(--bg3);
+  position: relative; overflow: hidden;
+}
+.sk-status { font-size: 12px; color: var(--text2); text-align: center; }
+
+.sk-avatar::after, .sk-line::after, .sk-input::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
+  transform: translateX(-100%);
+  animation: skShimmer 1.3s infinite;
+}
+@keyframes skShimmer { 100% { transform: translateX(100%); } }
+
+@media (pointer: coarse) and (min-width: 769px) {
+  .talk-teacher-btn { font-size: 19px; padding: 9px 18px; gap: 8px; }
+  .talk-teacher-btn .material-symbols-outlined { font-size: 22px; }
+  .chat-loader { padding: 28px 24px; }
+  .sk-list { gap: 28px; }
+  .sk-row { gap: 18px; }
+  .sk-avatar { width: 56px; height: 56px; }
+  .sk-lines { gap: 14px; }
+  .sk-line { height: 20px; border-radius: 10px; }
+  .sk-input { height: 68px; }
+  .sk-status { font-size: 22px; }
+}
+
 #yt-chat-frame { flex: 1; border: none; background: transparent; min-height: 0; display: none; }
 
 #toast {
@@ -295,7 +380,7 @@ body {
 .modal-overlay.active { opacity: 1; pointer-events: auto; }
 .modal-box {
   background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 20px; padding: 24px; width: 340px; max-width: 90vw;
+  border-radius: 20px; padding: 16px; width: 340px; max-width: 90vw;
   box-shadow: 0 20px 40px rgba(0,0,0,0.5);
   transform: translateY(20px); transition: transform 0.2s;
 }
@@ -437,13 +522,14 @@ body {
   }
   
   .chat-head-title { font-size: 14px !important; }
+  .talk-teacher-btn { font-size: 12px !important; padding: 4px 10px !important; gap: 4px !important; }
+  .talk-teacher-btn .material-symbols-outlined { font-size: 15px !important; }
   .chat-close { font-size: 18px !important; }
 
   #yt-chat-frame {
     height: auto !important;
     flex: 1 1 auto !important;
     min-height: 0 !important;
-    display: block; 
   }
 
   #bottom-bar {
@@ -479,17 +565,18 @@ body {
 /* ═══ PATCH: Simulated Desktop Mode scaling ═══ */
 @media (pointer: coarse) and (min-width: 769px) {
 
-  /* Floating Refresh / Fullscreen pills */
-  #mobile-fs-btn, #refresh-btn {
-    padding: 26px 44px !important;
-    font-size: 32px !important;
+  /* Floating Refresh / Chat / Fullscreen pills */
+  #floating-actions {
     bottom: 40px !important;
+    left: 40px !important;
+    right: 40px !important;
+  }
+  .float-pill {
+    padding: 26px 38px !important;
+    font-size: 32px !important;
     gap: 14px !important;
   }
-  #mobile-fs-btn { right: 40px !important; }
-  #refresh-btn   { left: 40px !important; }
-  #mobile-fs-btn .material-symbols-outlined,
-  #refresh-btn .material-symbols-outlined { font-size: 42px !important; }
+  .float-pill .material-symbols-outlined { font-size: 42px !important; }
 
   /* Waiting / Live / Ended status screen */
   #status-screen { gap: 32px; padding: 0 48px; }
@@ -524,14 +611,17 @@ body {
 
 /* Landscape phones: scale back down so nothing overflows ~440px height */
 @media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) {
-  #mobile-fs-btn, #refresh-btn {
-    padding: 14px 26px !important; font-size: 20px !important;
-    bottom: 20px !important; gap: 8px !important;
+  #floating-actions {
+    bottom: 20px !important;
+    left: 20px !important;
+    right: 20px !important;
   }
-  #mobile-fs-btn { right: 20px !important; }
-  #refresh-btn   { left: 20px !important; }
-  #mobile-fs-btn .material-symbols-outlined,
-  #refresh-btn .material-symbols-outlined { font-size: 26px !important; }
+  .float-pill {
+    padding: 14px 24px !important;
+    font-size: 20px !important;
+    gap: 8px !important;
+  }
+  .float-pill .material-symbols-outlined { font-size: 26px !important; }
 
   #status-screen { gap: 10px; }
   #s-emoji .material-symbols-outlined { font-size: 56px !important; }
@@ -557,11 +647,24 @@ body {
   .play-icon { width: 64px; height: 64px; }
   .play-icon .material-symbols-outlined { font-size: 32px; }
 }
-/* ═══ PATCH: Zoomed YouTube chat iframe (Desktop Mode, portrait + landscape) ═══ */
+/* ═══ PATCH: Zoomed YouTube chat iframe + Header Scaling (Desktop Mode) ═══ */
 @media (pointer: coarse) and (min-width: 769px) {
-  #chat-panel { --chat-zoom: 2.8; --chat-head: 72px; }
+  #chat-panel { --chat-zoom: 2.8; --chat-head: 108px; }
 
-  .chat-head { height: var(--chat-head) !important; }
+  .chat-head {
+    height: var(--chat-head) !important;
+    padding: 0 28px !important;
+  }
+  .chat-head-title { font-size: 28px !important; letter-spacing: 1px !important; }
+  .chat-head-actions { gap: 28px !important; }
+  .talk-teacher-btn {
+    font-size: 26px !important;
+    padding: 14px 26px !important;
+    gap: 10px !important;
+    border-width: 2px !important;
+  }
+  .talk-teacher-btn .material-symbols-outlined { font-size: 30px !important; }
+  .chat-close { font-size: 38px !important; padding: 8px 16px !important; }
 
   #yt-chat-frame {
     position: absolute !important;
@@ -573,7 +676,40 @@ body {
     transform: scale(var(--chat-zoom)) !important;
     transform-origin: 0 0 !important;
   }
+
+  /* Topbar, Sound Pill, Teacher Tile, Toasts & Blur Tip */
+  #topbar { height: 96px !important; padding: 0 32px !important; }
+  .tb-title { font-size: 30px !important; }
+  .tb-chip { font-size: 24px !important; padding: 10px 20px !important; gap: 10px !important; }
+  #main { height: calc(100dvh - 96px) !important; }
+
+  #sound-pill {
+    padding: 28px 52px !important;
+    font-size: 34px !important;
+    gap: 16px !important;
+    border-width: 3px !important;
+  }
+  #sound-pill .material-symbols-outlined { font-size: 42px !important; }
+
+  #teacher-tile { width: 220px !important; height: 132px !important; top: 24px !important; right: 24px !important; border-radius: 18px !important; gap: 8px !important; }
+  .tile-avatar { width: 58px !important; height: 58px !important; font-size: 24px !important; }
+  .tile-name { font-size: 20px !important; padding: 4px 14px !important; }
+
+  #toast, #hand-notif {
+    font-size: 26px !important;
+    padding: 18px 30px !important;
+    border-radius: 18px !important;
+  }
+
+  #dm-blur-tip {
+    top: 24px !important;
+    padding: 16px 32px !important;
+    font-size: 26px !important;
+    gap: 12px !important;
+  }
+  #dm-blur-tip .material-symbols-outlined { font-size: 32px !important; }
 }
+
 /* ═══ PATCH: Bigger bottom bar icons (Desktop Mode) ═══ */
 
 /* Portrait Desktop Mode */
@@ -587,6 +723,14 @@ body {
 
 /* Landscape Desktop Mode (~980px wide) */
 @media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) and (min-width: 950px) {
+  #chat-panel { --chat-head: 76px !important; }
+  .chat-head { padding: 0 22px !important; }
+  .chat-head-title { font-size: 22px !important; }
+  .chat-head-actions { gap: 22px !important; }
+  .talk-teacher-btn { font-size: 20px !important; padding: 10px 20px !important; gap: 8px !important; }
+  .talk-teacher-btn .material-symbols-outlined { font-size: 24px !important; }
+  .chat-close { font-size: 30px !important; padding: 6px 14px !important; }
+
   #bottom-bar {
     height: 128px !important;
     gap: 24px !important;
@@ -602,23 +746,71 @@ body {
 </head>
 <body>
 
-<!-- Conditional Desktop Mode Banner (auto-hides once enabled) -->
-<div id="desktop-mode-banner" style="
+<!-- Full-Screen Desktop Mode Overlay (with low-quality escape hatch) -->
+<div id="desktop-mode-gate" style="
+  display: none; position: fixed; inset: 0; z-index: 10005;
+  background: rgba(15, 16, 17, 0.97); backdrop-filter: blur(8px);
+  align-items: center; justify-content: center; padding: 20px;
+">
+  <div style="
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 24px; padding: 32px 24px; width: 380px; max-width: 94vw;
+    text-align: center; display: flex; flex-direction: column; gap: 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.75);
+  ">
+    <div style="
+      width: 60px; height: 60px; border-radius: 50%; margin: 0 auto;
+      background: rgba(8, 102, 255, 0.15); color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+    ">
+      <span class="material-symbols-outlined" style="font-size: 32px;">hd</span>
+    </div>
+
+    <h2 id="dmg-title" style="font-size: 20px; font-weight: 700; color: var(--text);">
+      Full HD मा हेर्न Desktop Mode On गर्नुहोस्
+    </h2>
+
+    <p id="dmg-desc" style="font-size: 14px; color: var(--text2); line-height: 1.6;">
+      मोबाइल View Ma भिडियो धमिलो (Blurry) देखिन्छ।<br><br>
+      Full HD मा क्लास हेर्न माथिको 3 Dots <strong style="color:#fff;">⋮</strong> थिचेर <strong style="color:#fff;">Desktop site</strong> अन गर्नुहोस्।
+    </p>
+
+    <button id="dmg-copy-btn" style="
+      display: none; width: 100%; background: var(--accent); color: #fff;
+      border: none; border-radius: 999px; padding: 14px;
+      font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+      align-items: center; justify-content: center; gap: 8px;
+    ">
+      <span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>
+      <span id="dmg-copy-label">Copy Class Link</span>
+    </button>
+
+    <button id="dmg-bypass-btn" style="
+      margin-top: 4px; background: none; border: none;
+      color: var(--text2); font-size: 12px; text-decoration: underline;
+      cursor: pointer; opacity: 0.75; line-height: 1.4;
+    ">
+      म Low Quality मै क्लास हेर्छु →
+    </button>
+  </div>
+</div>
+
+<!-- Subtle top reminder shown only if user bypasses the full-screen prompt -->
+<div id="desktop-mode-reminder" style="
   display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 10001;
   background: #1e293b; border-bottom: 2px solid var(--accent);
-  padding: 12px 16px; align-items: center; justify-content: space-between; gap: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6); font-size: 13px; line-height: 1.4;
+  padding: 10px 14px; align-items: center; justify-content: space-between; gap: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6); font-size: 12px; line-height: 1.4;
 ">
-  <div style="display: flex; align-items: center; gap: 10px;">
-    <span class="material-symbols-outlined" style="color: var(--accent); font-size: 24px; flex-shrink: 0;">hd</span>
-    <div id="dm-banner-text">
-      <strong style="color: #fff; display: block;">Enable 1080p HD Mode</strong>
-      <span style="color: var(--text2);">Tap browser menu (<strong>⋮</strong> or <strong>AA</strong>) → turn on <strong>Desktop site</strong>.</span>
-    </div>
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <span class="material-symbols-outlined" style="color: var(--accent); font-size: 20px; flex-shrink: 0;">hd</span>
+    <span id="dmr-text" style="color: var(--text2);">
+      <strong style="color: #fff;">भिडियो धमिलो देखियो?</strong> <strong style="color: #fff;">3 dots ⋮</strong> थिचेर <strong style="color: #fff;">Desktop site</strong> ON गर्नुहोस्।
+    </span>
   </div>
-  <button id="dm-banner-close" style="
+  <button id="dmr-close" style="
     background: rgba(255,255,255,0.1); border: none; color: var(--text2);
-    width: 28px; height: 28px; border-radius: 50%; cursor: pointer; flex-shrink: 0; font-size: 14px;
+    width: 26px; height: 26px; border-radius: 50%; cursor: pointer; flex-shrink: 0; font-size: 13px;
   ">✕</button>
 </div>
 
@@ -688,35 +880,30 @@ body {
         <span>Tap for sound</span>
       </button>
 
-      <button id="refresh-btn" style="
-        position: absolute; bottom: 16px; left: 16px; z-index: 12;
-        background: #007aff; color: white; border: none;
-        padding: 8px 14px; border-radius: 99px;
-        font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 600;
-        display: none; cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        align-items: center; gap: 6px;
-      ">
-        <span class="material-symbols-outlined" style="font-size: 18px;">refresh</span> Refresh
-      </button>
+      <div id="floating-actions">
+        <button id="refresh-btn" class="float-pill" style="background: #007aff;">
+          <span class="material-symbols-outlined">refresh</span> Refresh
+        </button>
 
-      <button id="mobile-fs-btn" style="
-        position: absolute; bottom: 16px; right: 16px; z-index: 12;
-        background: #ef4444; color: white; border: none;
-        padding: 8px 14px; border-radius: 99px;
-        font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 600;
-        display: none; cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        align-items: center; gap: 6px;
-      ">
-        <span class="material-symbols-outlined" style="font-size: 18px;">fullscreen</span> Fullscreen
-      </button>
+        <button id="mobile-chat-btn" class="float-pill" style="background: #2b2d31; border: 1px solid rgba(255,255,255,0.22);">
+          <span class="material-symbols-outlined">chat</span> Chat
+        </button>
+
+        <button id="mobile-fs-btn" class="float-pill" style="background: #ef4444;">
+          <span class="material-symbols-outlined">fullscreen</span> Fullscreen
+        </button>
+      </div>
       <div id="teacher-tile">
         <div class="tile-avatar">SR</div>
         <div class="tile-name">Teacher</div>
       </div>
 
       <div id="hand-notif"></div>
+
+      <div id="dm-blur-tip">
+        <span class="material-symbols-outlined">refresh</span>
+        <span>Blur or Low Quality भएमा Refresh गर्नुहोस्</span>
+      </div>
     </div>
 
     <div id="bottom-bar">
@@ -743,34 +930,34 @@ body {
 
   <div id="chat-panel">
     <div class="chat-head">
-      <span class="chat-head-title">Class Chat</span>
-      <button class="chat-close" id="btn-chat-close">✕</button>
+      <span class="chat-head-title">Chat</span>
+      <div class="chat-head-actions">
+        <button id="btn-talk-teacher" class="talk-teacher-btn">
+          <span class="material-symbols-outlined">support_agent</span> Ask Teacher
+        </button>
+        <button class="chat-close" id="btn-chat-close">✕</button>
+      </div>
     </div>
-    <div id="chat-loader" class="chat-loader">Connecting to chat...</div>
-    <iframe id="yt-chat-frame" src="" allow="autoplay"
-      sandbox="allow-same-origin allow-scripts allow-forms allow-popups"></iframe>
+    <div id="chat-loader" class="chat-loader">
+      <div class="sk-list">
+        <div class="sk-row"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line" style="width:36%"></div><div class="sk-line" style="width:84%"></div></div></div>
+        <div class="sk-row"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line" style="width:44%"></div><div class="sk-line" style="width:68%"></div></div></div>
+        <div class="sk-row"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line" style="width:30%"></div><div class="sk-line" style="width:92%"></div><div class="sk-line" style="width:55%"></div></div></div>
+        <div class="sk-row"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line" style="width:48%"></div><div class="sk-line" style="width:76%"></div></div></div>
+        <div class="sk-row"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line" style="width:34%"></div><div class="sk-line" style="width:88%"></div></div></div>
+        <div class="sk-row"><div class="sk-avatar"></div><div class="sk-lines"><div class="sk-line" style="width:42%"></div><div class="sk-line" style="width:62%"></div></div></div>
+      </div>
+      <div class="sk-footer">
+        <div class="sk-status">Loading live chat...</div>
+        <div class="sk-input"></div>
+      </div>
+    </div>
   </div>
 </div>
 
 <div id="toast"></div>
 
-<div id="chat-choice" class="modal-overlay">
-  <div class="modal-box" style="text-align:center;">
-    <h3 style="font-size:20px; margin-bottom:20px;">Who do you want to talk to?</h3>
-    <div style="display:flex; flex-direction:column; gap:12px;">
-      <!-- PRIMARY ACTION: Chat with Friends -->
-      <button id="btn-chat-friends" style="padding:16px; border-radius:12px; border:none; background:var(--accent); color:white; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:0.2s; box-shadow: 0 4px 15px rgba(8, 102, 255, 0.4);">
-        <span class="material-symbols-outlined" style="color:white;">forum</span> Chat with Friends
-      </button>
-      
-      <!-- SECONDARY ACTION: Ask Teacher -->
-      <button id="btn-chat-teacher" style="padding:16px; border-radius:12px; border:none; background:var(--bg3); color:white; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:0.2s;">
-        <span class="material-symbols-outlined" style="color:var(--text2);">support_agent</span> Ask Teacher a Question
-      </button>
-    </div>
-    <button id="btn-chat-cancel" style="margin-top:20px; background:none; border:none; color:var(--text2); font-size:13px; cursor:pointer;">Cancel</button>
-  </div>
-</div>
+<!-- Chat choice modal removed: chat buttons open live chat directly -->
 
 <div id="ask-teacher-modal" class="modal-overlay">
   <div class="modal-box">
@@ -782,7 +969,7 @@ body {
     <div style="display:flex; gap:10px; margin-top:16px;">
       <button id="btn-teacher-cancel" style="flex:1; padding:12px; border-radius:999px; border:1px solid var(--border); background:var(--bg3); color:white; font-weight:600; cursor:pointer;">Cancel</button>
       <button id="btn-teacher-send" style="flex:2; padding:12px; border-radius:999px; border:none; background:#25D366; color:white; font-weight:700; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:8px;">
-        <span class="material-symbols-outlined" style="font-size:18px;">send</span> Send via WhatsApp
+        <span class="material-symbols-outlined" style="font-size:18px;">send</span> Send
       </button>
     </div>
   </div>
@@ -865,6 +1052,7 @@ function showControls() {
   if (isMobile() && chatOpen) return;
   controlsVisible = true;
   document.getElementById('bottom-bar').style.display = 'flex';
+  document.getElementById('dm-blur-tip')?.classList.add('show');
   document.getElementById('tap-zone').style.display = 'none';
   clearTimeout(controlsTimeout);
   controlsTimeout = setTimeout(hideControls, 5000);
@@ -874,6 +1062,7 @@ function hideControls() {
   if (chatOpen && !isMobile()) return;
   controlsVisible = false;
   document.getElementById('bottom-bar').style.display = 'none';
+  document.getElementById('dm-blur-tip')?.classList.remove('show');
   
   // Bring back the tap-zone so mobile users can tap to show controls again
   if (isMobile()) {
@@ -889,7 +1078,7 @@ let suppressControlsUntil = 0;
 
 document.addEventListener('mousemove', e => {
   if (Date.now() < suppressControlsUntil) return;
-  if (e.target.closest('#mobile-fs-btn') || e.target.closest('#refresh-btn')) return;
+  if (e.target.closest('#floating-actions')) return;
   if (e.target.closest('#video-col') || e.target.closest('#bottom-bar')) showControls();
 });
 
@@ -899,8 +1088,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const tz = document.getElementById('tap-zone');
   if (tz) tz.addEventListener('touchend', e => { e.preventDefault(); showControls(); }, { passive: false });
 
-  // Harden floating buttons against synthesized mouse events shifting #bottom-bar
-  ['mobile-fs-btn', 'refresh-btn'].forEach(id => {
+  // Harden all 3 floating buttons against synthesized mouse events shifting #bottom-bar
+  ['mobile-fs-btn', 'mobile-chat-btn', 'refresh-btn'].forEach(id => {
     const btn = document.getElementById(id);
     if (!btn) return;
     ['pointerdown', 'touchstart', 'mousedown', 'mousemove'].forEach(evt => {
@@ -1751,44 +1940,58 @@ function showHandNotif(name) {
   notif.style.display = 'block';
 }
 
+function destroyChat() {
+  const frame  = document.getElementById('yt-chat-frame');
+  const loader = document.getElementById('chat-loader');
+  if (frame) {
+    frame.onload = null;
+    frame.src = 'about:blank';
+    frame.remove();
+  }
+  if (loader) loader.style.display = 'flex';
+  chatLoaded = false;
+}
+
 function toggleChat() {
   chatOpen = !chatOpen;
-  const panel = document.getElementById('chat-panel');
-  const btn   = document.getElementById('chat-btn');
+  const panel  = document.getElementById('chat-panel');
+  const btn    = document.getElementById('chat-btn');
+  const loader = document.getElementById('chat-loader');
 
   if (chatOpen) {
     panel.classList.add('open');
     btn.className = 'ctrl-circle cc-chat-on';
 
-    // Lazy load iframe on first open — saves bandwidth for non-chat users
+    // Lazy-load on first open (or after Fullscreen destroyed it); instant on subsequent opens
     if (!chatLoaded) {
-      const src   = `https://www.youtube.com/live_chat?v=${CONFIG.ytChatStreamId}&embed_domain=${CONFIG.domain}&dark_theme=1`;
-      const frame = document.getElementById('yt-chat-frame');
-      frame.src   = src;
+      if (loader) loader.style.display = 'flex';
+      const frame = document.createElement('iframe');
+      frame.id = 'yt-chat-frame';
+      frame.allow = 'autoplay';
+      frame.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-popups');
+      frame.style.display = 'none';
       frame.onload = () => {
-        document.getElementById('chat-loader').style.display = 'none';
+        if (loader) loader.style.display = 'none';
         frame.style.display = 'block';
       };
+      frame.src = `https://www.youtube.com/live_chat?v=${CONFIG.ytChatStreamId}&embed_domain=${CONFIG.domain}&dark_theme=1`;
+      panel.appendChild(frame);
       chatLoaded = true;
     }
 
     if (isMobile()) {
       document.getElementById('bottom-bar').style.display = 'none';
+      document.getElementById('dm-blur-tip')?.classList.remove('show');
     } else {
       clearTimeout(controlsTimeout);
     }
   } else {
+    // Keep iframe warm in background so reopening is instant and saves mobile data
     panel.classList.remove('open');
     btn.className = 'ctrl-circle';
     panel.style.height = '';
+
     if (isMobile()) {
-      const frame = document.getElementById('yt-chat-frame');
-      if (frame) {
-        frame.src = 'about:blank';
-        frame.style.display = 'none';
-      }
-      document.getElementById('chat-loader').style.display = 'flex';
-      chatLoaded = false;
       showControls();
     } else {
       controlsTimeout = setTimeout(hideControls, 4000);
@@ -1830,8 +2033,9 @@ function handleFsChange() {
     const chatBtn = document.getElementById('chat-btn');
     if (chatBtn) chatBtn.style.display = 'none';
     
-    // Close chat panel if it was open before fullscreen
+    // Close chat drawer if open, and destroy iframe to free RAM/CPU during fullscreen
     if (chatOpen) toggleChat();
+    if (chatLoaded) destroyChat();
 
     // Force Landscape on Mobile
     try {
@@ -1856,20 +2060,11 @@ function handleFsChange() {
 }
 
 // ── WhatsApp Teacher Support ─────────────────────────────────
-function openChatChoice() {
-  document.getElementById('chat-choice').classList.add('active');
-  // Hide controls while modal is open so it doesn't distract
-  document.getElementById('bottom-bar').style.display = 'none';
-}
-
-function openYouTubeChat() {
-  document.getElementById('chat-choice').classList.remove('active');
-  showControls(); // Bring back UI
-  if (!chatOpen) toggleChat(); // Open the YT iframe panel
-}
-
 function openAskTeacher() {
-  document.getElementById('chat-choice').classList.remove('active');
+  // On mobile, close & destroy the chat drawer first so the modal sits cleanly onscreen
+  if (chatOpen && isMobile()) toggleChat();
+  document.getElementById('bottom-bar').style.display = 'none';
+  document.getElementById('dm-blur-tip')?.classList.remove('show');
   document.getElementById('ask-teacher-modal').classList.add('active');
   setTimeout(() => document.getElementById('teacher-question').focus(), 100);
 }
@@ -2004,7 +2199,7 @@ function msToClock(ms) {
   return [h, m, sec].map(x => String(x).padStart(2, '0')).join(':');
 }
 
-// ── Conditional Desktop Mode Banner ──────────────────────────
+// ── Full-Screen Desktop Mode Overlay ─────────────────────────
 function checkDesktopMode() {
   const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
   const isCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
@@ -2017,22 +2212,47 @@ function checkDesktopMode() {
   // Only show on touch phones/tablets that do NOT have Desktop Mode enabled yet
   if (!isTouch || !isCoarse || !isMobileUA) return;
 
-  const banner = document.getElementById('desktop-mode-banner');
-  const textEl = document.getElementById('dm-banner-text');
-  if (!banner || !textEl) return;
+  const gate = document.getElementById('desktop-mode-gate');
+  const titleEl = document.getElementById('dmg-title');
+  const descEl = document.getElementById('dmg-desc');
+  const copyBtn = document.getElementById('dmg-copy-btn');
+  const copyLabel = document.getElementById('dmg-copy-label');
+  const bypassBtn = document.getElementById('dmg-bypass-btn');
+  if (!gate || !titleEl || !descEl) return;
 
   // Detect WhatsApp / Facebook / Instagram in-app browsers (which lack a Desktop Mode toggle)
   const isInApp = /FBAN|FBAV|Instagram|WhatsApp|Line\/|wv\)/i.test(ua);
   if (isInApp) {
-    textEl.innerHTML = `
-      <strong style="color: #fff; display: block;">Open in Chrome or Safari for 1080p HD</strong>
-      <span style="color: var(--text2);">Tap <strong>⋮</strong> → <strong>Open in Chrome</strong>, then enable <strong>Desktop site</strong>.</span>
+    titleEl.textContent = 'Full HD मा हेर्न Chrome / Safari खोल्नुहोस्';
+    descEl.innerHTML = `
+      WhatsApp भित्रबाट HD चल्दैन।<br><br>
+      माथिको <strong style="color:#fff;">⋮</strong> थिचेर <strong style="color:#fff;">Open in Chrome / Safari</strong> गर्नुहोस्, अनि <strong style="color:#fff;">Desktop site</strong> ON गर्नुहोस्।
     `;
+    if (copyBtn) {
+      copyBtn.style.display = 'flex';
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard?.writeText(location.href);
+        if (copyLabel) copyLabel.textContent = 'Link Copied! Chrome/Safari मा Paste गर्नुहोस्';
+      });
+    }
   }
 
-  banner.style.display = 'flex';
-  document.getElementById('dm-banner-close')?.addEventListener('click', () => {
-    banner.style.display = 'none';
+  gate.style.display = 'flex';
+  bypassBtn?.addEventListener('click', () => {
+    gate.style.display = 'none';
+    const reminder = document.getElementById('desktop-mode-reminder');
+    const rText = document.getElementById('dmr-text');
+    if (reminder) {
+      if (isInApp && rText) {
+        rText.innerHTML = `<strong style="color: #fff;">भिडियो धमिलो देखियो?</strong> <strong style="color: #fff;">⋮</strong> थिचेर <strong style="color: #fff;">Open in Chrome / Safari</strong> अनि <strong style="color: #fff;">Desktop site</strong> अन गर्नुहोस्।`;
+      }
+      reminder.style.display = 'flex';
+    }
+  });
+
+  document.getElementById('dmr-close')?.addEventListener('click', () => {
+    const reminder = document.getElementById('desktop-mode-reminder');
+    if (reminder) reminder.style.display = 'none';
   });
 }
 
@@ -2049,22 +2269,23 @@ document.addEventListener('DOMContentLoaded', () => {
   bind('play-prompt', userInitiatedPlay);
   bind('sound-pill', enableSound);
   bind('mobile-fs-btn', toggleFullscreen);
+  bind('mobile-chat-btn', toggleChat);
   bind('refresh-btn', () => location.reload());
   
   bind('mic-btn', toggleMic);
   bind('cam-btn', toggleCam);
   bind('hand-btn', toggleHand);
-  bind('chat-btn', openChatChoice);
+  bind('chat-btn', toggleChat);
   bind('fs-btn', toggleFullscreen);
   bind('btn-leave', leaveClass);
   
   bind('btn-chat-close', toggleChat);
+  bind('btn-talk-teacher', openAskTeacher);
   
-  bind('btn-chat-friends', openYouTubeChat);
-  bind('btn-chat-teacher', openAskTeacher);
-  bind('btn-chat-cancel', () => document.getElementById('chat-choice').classList.remove('active'));
-  
-  bind('btn-teacher-cancel', () => document.getElementById('ask-teacher-modal').classList.remove('active'));
+  bind('btn-teacher-cancel', () => {
+    document.getElementById('ask-teacher-modal').classList.remove('active');
+    showControls();
+  });
   bind('btn-teacher-send', sendWhatsAppQuestion);
 });
 

@@ -41,21 +41,48 @@ input:focus{border-color:var(--ac)}input.bad{border-color:var(--er)}
 .tplbar label{flex:0 0 auto;flex-direction:row;align-items:center;gap:6px;font-size:11px}
 .tplbar input{width:118px;min-height:36px;padding:6px 8px;flex:0 0 auto}
 .tplbar .btn{min-height:36px;padding:0 12px;font-size:12px;flex:0 0 auto}
-/* --- today section: soft blue --- */
-#pinned .card{background:linear-gradient(180deg,rgba(59,130,246,.16),rgba(59,130,246,.05));border-color:rgba(96,165,250,.32)}
-#pinned .card.today{border-color:rgba(96,165,250,.55)}
-/* --- compact class card --- */
+/* --- compact key card + collapsible drawer --- */
+.keyc{padding:8px 10px;gap:0}
+.keyc .k-main{display:flex;flex-wrap:nowrap;gap:6px;align-items:flex-end}
+.keyc label{min-width:0}
+.keyc .lbl-row{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.keyc input{min-height:36px;padding:6px 8px}
+.keyc .kc-code{flex:2.2 1 0}
+.keyc .kc-date{flex:1.25 1 0}
+.keyc .kc-time{flex:1 1 0}
+.keyc .k-act{display:flex;gap:3px;flex:none;align-items:center}
+.keyc .ib{width:34px;height:36px;min-height:36px;font-size:13px}
+.keyc .k7m{height:36px;min-height:36px;padding:0 9px;font-size:11px;border-radius:999px}
+.keyc .k7m.live{border-color:rgba(34,197,94,.55);color:var(--ok);background:rgba(34,197,94,.12)}
+.keyc .ib.on{border-color:var(--ac);color:var(--ac)}
+.keyc .k-adv{display:none;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)}
+.keyc.open .k-adv{display:grid}
+.keyc .k-adv input{min-height:34px;padding:5px 8px}
+@media(max-width:699px){
+  .keyc .k-main{flex-wrap:wrap}
+  .keyc .kc-code{flex:1 1 100%}
+  .keyc .kc-date{flex:1 1 46%}
+  .keyc .kc-time{flex:1 1 42%}
+  .keyc .k-act{margin-left:auto}
+  .keyc .k-adv{grid-template-columns:1fr}
+}
+/* --- holiday chips --- */
+.hchips{display:flex;flex-wrap:wrap;gap:6px}
+.hchip{display:inline-flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--bd);border-radius:999px;padding:4px 10px;font-size:12px}
+.hchip button{background:none;border:none;color:var(--mu);cursor:pointer;font-weight:700;padding:0 2px}
+.hchip button:hover{color:var(--er)}
+/* --- compact syllabus card --- */
 .dayc{padding:8px 10px;gap:0}
 .dayc .row{flex-wrap:nowrap;gap:6px;align-items:flex-end}
 .dayc label{min-width:0}
 .dayc input{min-height:36px;padding:6px 8px}
-.dayc .dc-date{flex:1.2 1 0}
+.dayc .dc-num{flex:none;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:0 10px;height:36px;display:flex;align-items:center;font-size:12px;font-weight:700;color:var(--ac);white-space:nowrap}
 .dayc .dc-title{flex:3 1 0}
-.dayc .dc-v{flex:1.2 1 0}
-.dayc .dc-t{flex:0.8 1 0}
+.dayc .dc-v{flex:1.3 1 0}
+.dayc .dc-t{flex:0.9 1 0}
 .dayc .dc-act{display:flex;gap:4px;flex:none}
 .dayc .ib{width:36px;height:36px;min-height:36px;font-size:13px}
-@media(max-width:699px){.dayc .row{flex-wrap:wrap}.dayc .dc-date{flex:1 1 100%}.dayc .dc-title{flex:1 1 100%}.dayc .dc-t{flex:1 1 30%}.dayc .dc-v{flex:1 1 100%}.dayc .dc-act{margin-left:auto}}
+@media(max-width:699px){.dayc .row{flex-wrap:wrap}.dayc .dc-title{flex:1 1 calc(100% - 74px)}.dayc .dc-v{flex:1 1 55%}.dayc .dc-t{flex:1 1 35%}.dayc .dc-act{margin-left:auto}}
 /* --- import dialog --- */
 #impBox{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;padding:14px}
 #impBox.show{display:flex}
@@ -68,39 +95,40 @@ input:focus{border-color:var(--ac)}input.bad{border-color:var(--er)}
 @media(max-width:620px){#impBox .g4{grid-template-columns:1fr 1fr}}
 </style></head><body>
 <header><div class="bar"><div class="logo">SR <b>Zone</b> / Admin</div><span class="dot" id="dot" title="Unpushed changes"></span><button class="btn pri" id="push">☁ Push</button></div>
-<div class="tabs"><button data-t="courses" class="on">📅 Courses</button><button data-t="keys">🔑 Keys</button><button data-t="settings">⚙ Settings</button></div></header>
+<div class="tabs"><button data-t="keys" class="on">🔑 Keys</button><button data-t="courses">📅 Courses</button><button data-t="settings">⚙ Settings</button></div></header>
 <main>
-<section class="tab" id="t-keys">
-<div class="note">To revoke a key, just delete it and push. Its access is revoked.</div>
+<section class="tab on" id="t-keys">
+<div class="note">To revoke a key, just delete it and push. Each key runs on its assigned Start Date &amp; Study Time (skipping Saturdays &amp; Holidays).</div>
+<div class="card tplbar"><div class="mu">Default schedule</div>
+<label>Start date<input type="date" id="ktplDate" style="width:140px"></label>
+<label>Study time<input type="time" id="ktplTime"></label>
+<button class="btn" id="ktplAll">Apply to all</button></div>
 <div class="row"><input id="kadd" data-enter="1" placeholder="Type a key, press Enter" enterkeyhint="done" autocapitalize="off" spellcheck="false"><button class="ib" id="krand" title="Random key">🎲</button><button class="btn pri" id="kaddb">Add</button></div>
 <div class="ttl"><span class="mu" id="kcount"></span><input id="kq" data-enter="1" placeholder="Search keys…" style="max-width:200px"></div>
 <div id="klist"></div></section>
 
-<section class="tab on" id="t-courses">
-<div class="card tplbar"><div class="mu">Default time</div>
-<label>Start<input type="time" id="tplS" enterkeyhint="next"></label><label>End<input type="time" id="tplE" enterkeyhint="next"></label><button class="btn" id="tplAll">Apply to all</button></div>
-<div class="ttl"><span>📌 Today</span><span class="mu" id="todayLbl"></span></div><div id="pinned"></div>
-<div class="ttl"><span>All classes <span class="mu" id="dcount"></span></span><span class="row" style="flex:none"><button class="btn" id="impOpen">⇪ Import</button><button class="btn pri" id="dadd">+ Add class</button></span></div><div id="dlist"></div></section>
+<section class="tab" id="t-courses">
+<div class="card tplbar"><div class="mu">Default length (mins)</div>
+<label>Minutes<input type="number" id="tplLen" min="1" max="600" style="width:90px" enterkeyhint="next"></label><button class="btn" id="tplAll">Apply to all</button></div>
+<div class="card"><div class="row"><span style="font-weight:700">🏖 Holidays <span class="mu">(Saturdays skip automatically)</span></span><span style="flex:1"></span><input type="date" id="hadd" data-enter="1" style="max-width:160px;min-height:36px;padding:6px 8px"><button class="btn" id="haddb" style="min-height:36px">+ Add</button></div>
+<div class="hchips" id="hlist"></div></div>
+<div class="ttl"><span>Syllabus <span class="mu" id="dcount"></span></span><span class="row" style="flex:none"><button class="btn" id="impOpen">⇪ Import</button><button class="btn pri" id="dadd">+ Add lesson</button></span></div><div id="dlist"></div></section>
 
 <div id="impBox"><div class="dlg">
-<div class="ttl" style="margin:0"><span>⇪ Import classes</span><button class="ib" id="impX" title="Close">✕</button></div>
+<div class="ttl" style="margin:0"><span>⇪ Import lessons</span><button class="ib" id="impX" title="Close">✕</button></div>
 <div class="mu schema">
-<b>Format:</b> one class per line → <code>Title</code> <code>TAB</code> <code>YouTube URL or 11-char ID</code><br>
-<b>Schema:</b> each line becomes <code>{ date, title, videoId, startTime, endTime }</code> in course.json<br>
-• <code>title</code> = text before the tab &nbsp;• <code>videoId</code> = extracted from the URL<br>
-• <code>date</code> = Start date, then +N days for each following line (in pasted order)<br>
-• <code>startTime</code> / <code>endTime</code> = the times below, applied to every class<br>
+<b>Format:</b> one lesson per line → <code>Title</code> <code>TAB</code> <code>YouTube URL or 11-char ID</code><br>
+<b>Schema:</b> each line becomes <code>{ title, videoId, length }</code> in <code>course.json</code> (ordered Day 1, Day 2…)<br>
+- <code>title</code> = text before the tab &nbsp;• <code>videoId</code> = extracted from the URL<br>
+- <code>length</code> = duration in minutes below, applied to every imported lesson<br>
 Lines with a missing title or invalid YouTube link are skipped.
 </div>
 <textarea id="impText" data-enter="1" placeholder="L1 Intro Quiz&#9;https://www.youtube.com/watch?v=2CnN7lVtERk&#10;L2 Adverbs&#9;https://www.youtube.com/watch?v=cSKxH-Xx9sM" spellcheck="false" wrap="off"></textarea>
-<div class="g4">
-<label>Start date<input type="date" id="impDate" data-enter="1"></label>
-<label>Start time<input type="time" id="impS" data-enter="1"></label>
-<label>End time<input type="time" id="impE" data-enter="1"></label>
-<label>Every N days<input type="number" id="impStep" data-enter="1" min="1" value="1"></label>
+<div class="g2">
+<label>Length (minutes)<input type="number" id="impLen" data-enter="1" min="1" max="600" value="90"></label>
+<label>If lessons already exist<select id="impMode"><option value="append">Add to end of syllabus</option><option value="replace">Replace entire syllabus</option></select></label>
 </div>
-<label>If classes already exist<select id="impMode"><option value="append">Add to existing classes</option><option value="replace">Replace all existing classes</option></select></label>
-<div class="row"><span class="mu" id="impInfo" style="flex:1">0 classes</span><button class="btn" id="impCancel">Cancel</button><button class="btn pri" id="impGo">Import</button></div>
+<div class="row"><span class="mu" id="impInfo" style="flex:1">0 lessons</span><button class="btn" id="impCancel">Cancel</button><button class="btn pri" id="impGo">Import</button></div>
 </div></div>
 
 <section class="tab" id="t-settings">
@@ -123,8 +151,6 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const J=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
 const SK={owner:'sr_admin_owner',repo:'sr_admin_repo',branch:'sr_admin_branch',token:'sr_admin_token',enc:'sr_admin_enc_key',chat:'sr_admin_chat'};
 const setting=k=>localStorage.getItem(SK[k])||(k==='branch'?'main':'');
-let keys=J('sr_admin_licenses',[]),days=J('sr_admin_schedule',[]),tpl=J('sr_admin_tpl',{s:'08:58',e:'10:28'}),dirty=J('sr_admin_dirty',false);
-
 // ── time helpers (all NPT, independent of device timezone) ──
 const pad=n=>String(n).padStart(2,'0');
 const nptNow=m=>new Date(Date.now()+(345+(m||0))*60000);
@@ -132,15 +158,30 @@ const fmtL=d=>`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDat
 const toISO=v=>v?v+':00+05:45':'',fromISO=s=>s?String(s).slice(0,16):'';
 const expToL=s=>/^\d{12}$/.test(s||'')?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}T${s.slice(8,10)}:${s.slice(10,12)}`:'';
 const lToExp=v=>v.replace(/[-T:]/g,'');
-const localToday=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+const localToday=()=>{const d=nptNow();return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`};
 const dow=s=>s?new Date(s+'T00:00:00Z').toLocaleDateString('en',{weekday:'short',timeZone:'UTC'}):'';
 function parseVid(s){s=s.trim();if(!s)return '';if(/^[\w-]{11}$/.test(s))return s;const m=s.match(/(?:[?&]v=|youtu\.be\/|\/(?:live|embed|shorts|v)\/)([\w-]{11})/);return m?m[1]:null}
 
+let keys=J('sr_admin_licenses',[]),
+    days=J('sr_admin_schedule',[]),
+    holidays=J('sr_admin_holidays',[]),
+    tpl=J('sr_admin_tpl',{len:90}),
+    ktpl=J('sr_admin_ktpl',{date:localToday(),time:'19:00'}),
+    dirty=J('sr_admin_dirty',false);
+
 // ── state / ui helpers ──
 function touch(){dirty=true;persist()}
-function persist(){localStorage.setItem('sr_admin_licenses',JSON.stringify(keys));localStorage.setItem('sr_admin_schedule',JSON.stringify(days));localStorage.setItem('sr_admin_tpl',JSON.stringify(tpl));localStorage.setItem('sr_admin_dirty',dirty);$('#dot').className='dot'+(dirty?' d':'')}
+function persist(){
+  localStorage.setItem('sr_admin_licenses',JSON.stringify(keys));
+  localStorage.setItem('sr_admin_schedule',JSON.stringify(days));
+  localStorage.setItem('sr_admin_holidays',JSON.stringify(holidays));
+  localStorage.setItem('sr_admin_tpl',JSON.stringify(tpl));
+  localStorage.setItem('sr_admin_ktpl',JSON.stringify(ktpl));
+  localStorage.setItem('sr_admin_dirty',dirty);
+  $('#dot').className='dot'+(dirty?' d':'');
+}
 let tt;function toast(m,t='',undo){const e=$('#toast');e.innerHTML=esc(m)+(undo?'<a id="undo">Undo</a>':'');e.className='show '+t;if(undo)$('#undo').onclick=()=>{undo();e.className=''};clearTimeout(tt);tt=setTimeout(()=>e.className='',undo?5000:3000)}
-function showTab(n){$$('.tab').forEach(x=>x.classList.toggle('on',x.id==='t-'+n));$$('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===n));if(n==='courses'){sortDays();renderDays()}}
+function showTab(n){$$('.tab').forEach(x=>x.classList.toggle('on',x.id==='t-'+n));$$('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===n));if(n==='courses')renderDays();if(n==='keys')renderKeys()}
 $$('.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.t));
 
 // Enter = Tab (desktop and mobile soft keyboards)
@@ -154,70 +195,136 @@ document.addEventListener('keydown',e=>{
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
 
 // ── KEYS ──
+const openKeys=new WeakSet();
 const rand=()=>Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b%32]).join('');
-const newKey=code=>({code,expires:lToExp(fmtL(nptNow(365*1440))),window_start:toISO(fmtL(nptNow())),window_end:toISO(fmtL(nptNow(5)))});
+const newKey=code=>({
+  code,
+  startDate:ktpl.date||localToday(),
+  studyTime:ktpl.time||'19:00',
+  expires:lToExp(fmtL(nptNow(365*1440))),
+  window_start:toISO(fmtL(nptNow())),
+  window_end:toISO(fmtL(nptNow(7)))
+});
 function renderKeys(){
+  $('#ktplDate').value=ktpl.date;$('#ktplTime').value=ktpl.time;
   const q=$('#kq').value.trim().toLowerCase(),now=lToExp(fmtL(nptNow()));
   $('#kcount').textContent=keys.length+' key'+(keys.length===1?'':'s');
   $('#klist').innerHTML=keys.map((k,i)=>[k,i]).filter(([k])=>!q||k.code.toLowerCase().includes(q)).map(([k,i])=>{
     const ex=k.expires&&k.expires<now;
-    return `<div class="card${ex?' exp':''}" data-i="${i}"><div class="row">
-<input data-f="code" value="${esc(k.code)}" placeholder="Key code" enterkeyhint="next" autocapitalize="off" spellcheck="false">${ex?'<span class="tag">expired</span>':''}
-<button class="ib" data-a="copy" title="Copy code">📋</button><button class="ib" data-a="dup" title="Duplicate key">⧉</button><button class="ib dng" data-a="del" title="Delete (revokes access)">✕</button></div>
-<div class="g3"><label>Expires<input type="datetime-local" data-f="expires" value="${expToL(k.expires)}" enterkeyhint="next"></label>
+    const isOpen=openKeys.has(k);
+    const ws=lToExp(fromISO(k.window_start)),we=lToExp(fromISO(k.window_end));
+    const winLive=ws&&we&&now>=ws&&now<=we;
+    return `<div class="card keyc${ex?' exp':''}${isOpen?' open':''}" data-i="${i}">
+<div class="k-main">
+<label class="kc-code"><span class="lbl-row">Key ${ex?'<span class="tag">expired</span>':''}</span><input data-f="code" value="${esc(k.code)}" placeholder="Key code" enterkeyhint="next" autocapitalize="off" spellcheck="false"></label>
+<label class="kc-date"><span class="lbl-row">Start date <span class="dow">${dow(k.startDate)}</span></span><input type="date" data-f="startDate" value="${esc(k.startDate||'')}" enterkeyhint="next"></label>
+<label class="kc-time"><span class="lbl-row">Study time (NPT)</span><input type="time" data-f="studyTime" value="${esc(k.studyTime||'')}" enterkeyhint="next"></label>
+<div class="k-act">
+<button class="btn k7m${winLive?' live':''}" data-a="win7" title="Activate fresh 7-minute login window from right now">+7m</button>
+<button class="ib${isOpen?' on':''}" data-a="adv" title="Expiry &amp; login window">⚙</button>
+<button class="ib" data-a="copy" title="Copy code">📋</button>
+<button class="ib" data-a="dup" title="Duplicate key">⧉</button>
+<button class="ib dng" data-a="del" title="Delete (revokes access)">✕</button>
+</div>
+</div>
+<div class="k-adv">
+<label>Expires<input type="datetime-local" data-f="expires" value="${expToL(k.expires)}" enterkeyhint="next"></label>
 <label>Window start<input type="datetime-local" data-f="window_start" value="${fromISO(k.window_start)}" enterkeyhint="next"></label>
-<label>Window end<input type="datetime-local" data-f="window_end" value="${fromISO(k.window_end)}" enterkeyhint="next"></label></div></div>`}).join('')||'<div class="mu" style="text-align:center;padding:24px">No keys yet. Type one above.</div>';
+<label>Window end<input type="datetime-local" data-f="window_end" value="${fromISO(k.window_end)}" enterkeyhint="next"></label>
+</div></div>`}).join('')||'<div class="mu" style="text-align:center;padding:24px">No keys yet. Type one above.</div>';
 }
+$('#ktplDate').oninput=e=>{ktpl.date=e.target.value;persist()};
+$('#ktplTime').oninput=e=>{ktpl.time=e.target.value;persist()};
+$('#ktplAll').onclick=()=>{if(keys.length&&confirm('Set Start Date & Study Time of every key to the default?')){keys.forEach(k=>{k.startDate=ktpl.date;k.studyTime=ktpl.time});touch();renderKeys()}};
 function addKey(){const i=$('#kadd'),c=i.value.trim();if(!c)return;keys.unshift(newKey(c));i.value='';touch();renderKeys();i.focus()}
 $('#kadd').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addKey()}});
 $('#kaddb').onclick=addKey;$('#krand').onclick=()=>{$('#kadd').value=rand();addKey()};
 $('#kq').oninput=renderKeys;
-$('#klist').addEventListener('input',e=>{const c=e.target.closest('.card'),f=e.target.dataset.f;if(!c||!f)return;const v=e.target.value;keys[c.dataset.i][f]=f==='expires'?lToExp(v):f==='code'?v.trim():toISO(v);
-  if(f==='window_start'&&v){const end=fmtL(new Date(Date.parse(v+':00Z')+5*60000));keys[c.dataset.i].window_end=toISO(end);const we=c.querySelector('[data-f=window_end]');if(we)we.value=end}
-  touch()});
+$('#klist').addEventListener('input',e=>{
+  const c=e.target.closest('.card'),f=e.target.dataset.f;if(!c||!f)return;
+  const v=e.target.value;
+  if(f==='expires')keys[c.dataset.i][f]=lToExp(v);
+  else if(f==='code')keys[c.dataset.i][f]=v.trim();
+  else if(f==='startDate'||f==='studyTime'){keys[c.dataset.i][f]=v;if(f==='startDate'){const dw=c.querySelector('.dow');if(dw)dw.textContent=dow(v)}}
+  else keys[c.dataset.i][f]=toISO(v);
+  if(f==='window_start'&&v){const end=fmtL(new Date(Date.parse(v+':00Z')+7*60000));keys[c.dataset.i].window_end=toISO(end);const we=c.querySelector('[data-f=window_end]');if(we)we.value=end}
+  touch();
+});
 $('#klist').addEventListener('click',e=>{const b=e.target.closest('[data-a]'),c=e.target.closest('.card');if(!b)return;const i=+c.dataset.i,k=keys[i];
+  if(b.dataset.a==='win7'){
+    const s=fmtL(nptNow()),end=fmtL(nptNow(7));
+    k.window_start=toISO(s);k.window_end=toISO(end);
+    touch();renderKeys();
+    toast('7m window active until '+end.slice(11)+' NPT','ok');
+  }
+  if(b.dataset.a==='adv'){
+    if(openKeys.has(k))openKeys.delete(k);else openKeys.add(k);
+    renderKeys();
+  }
   if(b.dataset.a==='copy'){navigator.clipboard?.writeText(k.code);toast('Copied '+k.code,'ok')}
-  if(b.dataset.a==='dup'){const n={...k,code:k.code+'-'+rand().slice(0,3)};keys.splice(i+1,0,n);touch();renderKeys();$$('#klist .card')[i+1]?.querySelector('input').select()}
+  if(b.dataset.a==='dup'){
+    const n={...k,code:k.code+'-'+rand().slice(0,3),window_start:toISO(fmtL(nptNow())),window_end:toISO(fmtL(nptNow(7)))};
+    keys.splice(i+1,0,n);touch();renderKeys();$$('#klist .card')[i+1]?.querySelector('input').select();
+  }
   if(b.dataset.a==='del'){keys.splice(i,1);touch();renderKeys();toast('Key deleted','',()=>{keys.splice(i,0,k);touch();renderKeys()})}});
 
-// ── COURSES ──
-const sortDays=()=>days.sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.startTime||'').localeCompare(b.startTime||''));
-function dayCard(d,i,today){return `<div class="card dayc${today?' today':''}" data-i="${i}">
-<div class="row"><label class="dc-date"><span class="dow" style="margin-right:2px">${dow(d.date)}</span><input type="date" data-f="date" value="${esc(d.date)}" enterkeyhint="next"></label>
-<label class="dc-title">Title<input data-f="title" value="${esc(d.title)}" placeholder="Video Title" enterkeyhint="next"></label>
-<label class="dc-v">YouTube ${d.videoId?'<span class="chip">✓</span>':''}<input data-f="videoId" value="${esc(d.videoId)}" placeholder="ID or URL" autocapitalize="off" spellcheck="false" enterkeyhint="next"></label>
-<label class="dc-t">Start<input type="time" data-f="startTime" value="${esc(d.startTime)}" enterkeyhint="next"></label>
-<label class="dc-t">End<input type="time" data-f="endTime" value="${esc(d.endTime)}" enterkeyhint="next"></label>
-<div class="dc-act"><button class="ib" data-a="play" title="Test on YouTube">▶</button><button class="ib" data-a="dup" title="Duplicate (+1 day)">⧉</button><button class="ib dng" data-a="del" title="Delete">✕</button></div></div></div>`}
-function renderDays(){
-  const t=localToday();$('#tplS').value=tpl.s;$('#tplE').value=tpl.e;
-  $('#todayLbl').textContent=t+' · '+dow(t);
-  const all=days.map((d,i)=>[d,i]),td=all.filter(([d])=>d.date===t);
-  $('#pinned').innerHTML=td.map(([d,i])=>dayCard(d,i,true)).join('')||`<div class="card mu">No class today. <button class="btn" id="addToday">+ Add for today</button></div>`;
-  $('#dcount').textContent='('+all.filter(([d])=>d.date!==t).length+')';
-  $('#dlist').innerHTML=all.filter(([d])=>d.date!==t).map(([d,i])=>dayCard(d,i)).join('')||'<div class="mu" style="text-align:center;padding:16px">Nothing else scheduled.</div>';
+// ── COURSES (ORDERED SYLLABUS + HOLIDAYS) ──
+function renderHolidays(){
+  holidays.sort();
+  $('#hlist').innerHTML=holidays.map((h,i)=>`<span class="hchip">${esc(h)} · <span class="dow">${dow(h)}</span><button data-hi="${i}" title="Remove">✕</button></span>`).join('')||'<span class="mu">No extra holidays added.</span>';
 }
-function addDay(date,src){const d=src?{...src,date}:{date,startTime:tpl.s,endTime:tpl.e,title:days.length?days[days.length-1].title:'',videoId:''};days.push(d);touch();sortDays();renderDays();const i=days.indexOf(d);document.querySelector(`#t-courses [data-i="${i}"] [data-f=title]`)?.focus()}
-$('#dadd').onclick=()=>{sortDays();const last=days.length?days[days.length-1].date:null;addDay(last?addDay2(last):localToday())};
-const addDay2=s=>new Date(Date.parse(s+'T00:00:00Z')+864e5).toISOString().slice(0,10);
-$('#tplS').oninput=e=>{tpl.s=e.target.value;persist()};$('#tplE').oninput=e=>{tpl.e=e.target.value;persist()};
-$('#tplAll').onclick=()=>{if(days.length&&confirm('Set start/end of every class to the default?')){days.forEach(d=>{d.startTime=tpl.s;d.endTime=tpl.e});touch();renderDays()}};
+$('#haddb').onclick=()=>{
+  const v=$('#hadd').value;
+  if(!v)return toast('Pick a holiday date first','error');
+  if(dow(v)==='Sat')return toast('Saturdays are already skipped automatically','error');
+  if(holidays.includes(v))return toast('Already in holiday list','error');
+  holidays.push(v);$('#hadd').value='';touch();renderHolidays();
+};
+$('#hlist').addEventListener('click',e=>{
+  const b=e.target.closest('[data-hi]');if(!b)return;
+  holidays.splice(+b.dataset.hi,1);touch();renderHolidays();
+});
+
+function dayCard(d,i){return `<div class="card dayc" data-i="${i}">
+<div class="row"><div class="dc-num">Day ${i+1}</div>
+<label class="dc-title">Title<input data-f="title" value="${esc(d.title)}" placeholder="Lesson Title" enterkeyhint="next"></label>
+<label class="dc-v">YouTube ${d.videoId?'<span class="chip">✓</span>':''}<input data-f="videoId" value="${esc(d.videoId)}" placeholder="ID or URL" autocapitalize="off" spellcheck="false" enterkeyhint="next"></label>
+<label class="dc-t">Length (min)<input type="number" min="1" max="600" data-f="length" value="${esc(d.length||tpl.len||90)}" enterkeyhint="next"></label>
+<div class="dc-act"><button class="ib" data-a="up" title="Move up"${i===0?' disabled':''}>↑</button><button class="ib" data-a="dn" title="Move down"${i===days.length-1?' disabled':''}>↓</button><button class="ib" data-a="play" title="Test on YouTube">▶</button><button class="ib" data-a="dup" title="Duplicate below">⧉</button><button class="ib dng" data-a="del" title="Delete">✕</button></div></div></div>`}
+
+function renderDays(){
+  $('#tplLen').value=tpl.len||90;
+  renderHolidays();
+  $('#dcount').textContent='('+days.length+' lesson'+(days.length===1?'':'s')+')';
+  $('#dlist').innerHTML=days.map((d,i)=>dayCard(d,i)).join('')||'<div class="mu" style="text-align:center;padding:16px">No lessons yet. Click "+ Add lesson" or Import.</div>';
+}
+function addDay(src,atIdx){
+  const d=src?{...src}:{title:'',videoId:'',length:tpl.len||90};
+  const idx=typeof atIdx==='number'?atIdx:days.length;
+  days.splice(idx,0,d);touch();renderDays();
+  document.querySelector(`#t-courses [data-i="${idx}"] [data-f=title]`)?.focus();
+}
+$('#dadd').onclick=()=>addDay();
+$('#tplLen').oninput=e=>{tpl.len=Math.max(1,parseInt(e.target.value)||90);persist()};
+$('#tplAll').onclick=()=>{if(days.length&&confirm('Set length of every lesson to '+(tpl.len||90)+' mins?')){days.forEach(d=>{d.length=tpl.len||90});touch();renderDays()}};
 const dayPane=$('#t-courses');
 dayPane.addEventListener('input',e=>{const c=e.target.closest('.card[data-i]'),f=e.target.dataset.f;if(!c||!f)return;const d=days[c.dataset.i];let v=e.target.value;
   if(f==='videoId'){const p=parseVid(v);if(p===null){e.target.classList.add('bad');d.videoId='';return touch()}e.target.classList.remove('bad');if(p&&p!==v){e.target.value=p;toast('ID extracted: '+p,'ok')}d.videoId=p}
+  else if(f==='length')d.length=Math.max(1,parseInt(v)||90);
   else d[f]=v;touch()});
-dayPane.addEventListener('click',e=>{if(e.target.id==='addToday')return addDay(localToday());
+dayPane.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]'),c=e.target.closest('.card[data-i]');if(!b||!c)return;const i=+c.dataset.i,d=days[i];
+  if(b.dataset.a==='up'&&i>0){[days[i-1],days[i]]=[days[i],days[i-1]];touch();renderDays()}
+  if(b.dataset.a==='dn'&&i<days.length-1){[days[i+1],days[i]]=[days[i],days[i+1]];touch();renderDays()}
   if(b.dataset.a==='play'){
     if(!d.videoId) return toast('No YouTube ID set','error');
     window.open('https://youtube.com/watch?v='+d.videoId,'_blank');
     toast('Testing video...','ok');
   }
-  if(b.dataset.a==='dup')addDay(addDay2(d.date||localToday()),d);
-  if(b.dataset.a==='del'){days.splice(i,1);touch();renderDays();toast('Class deleted','',()=>{days.push(d);sortDays();touch();renderDays()})}});
+  if(b.dataset.a==='dup')addDay(d,i+1);
+  if(b.dataset.a==='del'){days.splice(i,1);touch();renderDays();toast('Lesson deleted','',()=>{days.splice(i,0,d);touch();renderDays()})}});
 
 // ── IMPORT ──
-const addDays=(s,n)=>new Date(Date.parse(s+'T00:00:00Z')+n*864e5).toISOString().slice(0,10);
 function impParse(){
   const out=[],bad=[];
   $('#impText').value.split(/\r?\n/).forEach((ln,n)=>{
@@ -232,14 +339,11 @@ function impParse(){
 }
 function impInfo(){
   const{out,bad}=impParse();
-  $('#impInfo').textContent=out.length+' class'+(out.length===1?'':'es')+(bad.length?' · skipped line'+(bad.length>1?'s':'')+' '+bad.join(', '):'');
+  $('#impInfo').textContent=out.length+' lesson'+(out.length===1?'':'s')+(bad.length?' · skipped line'+(bad.length>1?'s':'')+' '+bad.join(', '):'');
 }
 function impClose(){$('#impBox').classList.remove('show')}
 $('#impOpen').onclick=()=>{
-  sortDays();
-  const last=days.length?days[days.length-1].date:'';
-  $('#impDate').value=last?addDays(last,1):localToday();
-  $('#impS').value=tpl.s;$('#impE').value=tpl.e;
+  $('#impLen').value=tpl.len||90;
   $('#impBox').classList.add('show');
   $('#impText').focus();impInfo();
 };
@@ -248,17 +352,15 @@ $('#impBox').addEventListener('mousedown',e=>{if(e.target.id==='impBox')impClose
 $('#impText').addEventListener('input',impInfo);
 $('#impGo').onclick=()=>{
   const{out,bad}=impParse();
-  const sd=$('#impDate').value,st=$('#impS').value,et=$('#impE').value,step=Math.max(1,parseInt($('#impStep').value)||1);
+  const len=Math.max(1,parseInt($('#impLen').value)||tpl.len||90);
   if(!out.length)return toast('Nothing valid to import','error');
-  if(!sd)return toast('Pick a start date','error');
-  if(!st||!et)return toast('Set start and end time','error');
   const replace=$('#impMode').value==='replace';
-  if(replace&&days.length&&!confirm('Delete all '+days.length+' existing classes and import '+out.length+' new ones?'))return;
+  if(replace&&days.length&&!confirm('Delete all '+days.length+' existing lessons and import '+out.length+' new ones?'))return;
   if(replace)days=[];
-  out.forEach((x,i)=>days.push({date:addDays(sd,i*step),startTime:st,endTime:et,title:x.title,videoId:x.videoId}));
-  touch();sortDays();renderDays();impClose();
+  out.forEach(x=>days.push({title:x.title,videoId:x.videoId,length:len}));
+  touch();renderDays();impClose();
   $('#impText').value='';
-  toast('Imported '+out.length+' class'+(out.length===1?'':'es')+(bad.length?' · skipped '+bad.length:''),'ok');
+  toast('Imported '+out.length+' lesson'+(out.length===1?'':'s')+(bad.length?' · skipped '+bad.length:''),'ok');
 };
 
 // ── SETTINGS ──
@@ -304,8 +406,8 @@ function unpackManifest(bytes){
 }
 function makeDecoy(real){
   const realCodes=new Set(real.keys.map(k=>k.code));
-  const fakeKeys=real.keys.map(k=>{let code;do{code=rand()}while(realCodes.has(code));return{code,expires:k.expires,window_start:k.window_start,window_end:k.window_end}});
-  if(fakeKeys.length===0)fakeKeys.push({code:rand(),expires:'202612312359',window_start:'',window_end:''});
+  const fakeKeys=real.keys.map(k=>{let code;do{code=rand()}while(realCodes.has(code));return{code,startDate:k.startDate,studyTime:k.studyTime,expires:k.expires,window_start:k.window_start,window_end:k.window_end}});
+  if(fakeKeys.length===0)fakeKeys.push({code:rand(),startDate:'2026-11-26',studyTime:'19:00',expires:'202612312359',window_start:'',window_end:''});
   return{keys:fakeKeys};
 }
 const canon=o=>JSON.stringify(o,(k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(x=>[x,v[x]])):v);
@@ -317,18 +419,43 @@ async function put(c,path,text){for(let t=0;t<2;t++){const u=`https://api.github
   const p=await fetch(u,{method:'PUT',headers:h,body:JSON.stringify({message:`chore: update ${path} from Admin Panel`,content:btoa(unescape(encodeURIComponent(text))),branch:c.b,sha})});if(p.ok)return;if(t||![409,422].includes(p.status))throw new Error((await p.json()).message||p.status)}}
 function validate(){
   const codes=new Set();
-  for(const k of keys){if(!k.code)throw new Error('A key has an empty code');if(codes.has(k.code))throw new Error('Duplicate key: '+k.code);codes.add(k.code);
+  for(const k of keys){
+    if(!k.code)throw new Error('A key has an empty code');
+    if(codes.has(k.code))throw new Error('Duplicate key: '+k.code);
+    codes.add(k.code);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(k.startDate||''))throw new Error(`Key ${k.code}: Start date required`);
+    if(!/^\d{2}:\d{2}$/.test(k.studyTime||''))throw new Error(`Key ${k.code}: Study time required`);
     if(k.window_start&&k.window_end&&k.window_end<=k.window_start)throw new Error(`Key ${k.code}: window end must be after start`);
-    if(k.expires&&!/^\d{12}$/.test(k.expires))throw new Error(`Key ${k.code}: bad expiry`)}
+    if(k.expires&&!/^\d{12}$/.test(k.expires))throw new Error(`Key ${k.code}: bad expiry`);
+  }
   if($$('#t-courses input.bad').length)throw new Error('Fix the invalid YouTube links first');
-  for(const d of days)if(!d.date)throw new Error('A class has no date');
+  days.forEach((d,i)=>{
+    if(!d.title?.trim())throw new Error(`Day ${i+1}: Title required`);
+    if(!d.videoId?.trim())throw new Error(`Day ${i+1}: YouTube ID required`);
+    if(!(parseInt(d.length)>0))throw new Error(`Day ${i+1}: Length must be at least 1 min`);
+  });
 }
 let busy=false;
 async function push(){
   if(busy)return;busy=true;const b=$('#push');b.disabled=true;b.textContent='Pushing…';
   try{
-    validate();sortDays();const c=cfg();
-    const man={keys:keys.map(k=>({code:k.code,expires:k.expires,window_start:k.window_start||'',window_end:k.window_end||''}))};
+    validate();const c=cfg();
+    const man={keys:keys.map(k=>({
+      code:k.code,
+      startDate:k.startDate,
+      studyTime:k.studyTime,
+      expires:k.expires,
+      window_start:k.window_start||'',
+      window_end:k.window_end||''
+    }))};
+    const courseData={
+      holidays:[...holidays].sort(),
+      lessons:days.map(d=>({
+        title:d.title.trim(),
+        videoId:d.videoId.trim(),
+        length:Math.max(1,parseInt(d.length)||90)
+      }))
+    };
     const res=[];
     // manifest: compare decrypted remote `b` (raw CDN, no API quota)
     let same=false;const rm=await raw(c,'course/manifest.txt');
@@ -345,8 +472,8 @@ async function push(){
       res.push('keys pushed');
     }
     const rc=await raw(c,'course/course.json');let csame=false;
-    if(rc){try{csame=canon(JSON.parse(rc))===canon(days)}catch{}}
-    if(csame)res.push('course unchanged');else{await put(c,'course/course.json',JSON.stringify(days,null,2));res.push('course pushed')}
+    if(rc){try{csame=canon(JSON.parse(rc))===canon(courseData)}catch{}}
+    if(csame)res.push('course unchanged');else{await put(c,'course/course.json',JSON.stringify(courseData,null,2));res.push('course pushed')}
     dirty=false;persist();toast('✅ '+res.join(' · '),'ok');
   }catch(e){toast('❌ '+e.message,'error')}
   b.disabled=false;b.textContent='☁ Push';busy=false;
@@ -356,7 +483,8 @@ $('#test').onclick=async()=>{try{const c=cfg(),r=await fetch(`https://api.github
 $('#pull').onclick=async()=>{try{const c=cfg();if(dirty&&!confirm('Unpushed local changes will be replaced. Continue?'))return;
   const [m,cj]=await Promise.all([raw(c,'course/manifest.txt'),raw(c,'course/course.json')]);if(!m&&!cj)throw new Error('Nothing found on GitHub (private repo? raw CDN needs a public repo)');
   if(m){const u=unpackManifest(b64ToBytes(m.trim()));const o=decryptJSON(u.bBytes,c.k,u.sb);keys=o.keys||[]}
-  if(cj)days=JSON.parse(cj);dirty=false;persist();renderKeys();renderDays();toast('Pulled from GitHub ✓','ok')}catch(e){toast('Pull failed: '+e.message,'error')}};
+  if(cj){const parsed=JSON.parse(cj);holidays=parsed.holidays||[];days=parsed.lessons||[]}
+  dirty=false;persist();renderKeys();renderDays();toast('Pulled from GitHub ✓','ok')}catch(e){toast('Pull failed: '+e.message,'error')}};
 
-renderKeys();sortDays();renderDays();persist();
+renderKeys();renderDays();persist();
 </script></body></html>

@@ -1941,9 +1941,6 @@ function maybeShowRefreshTip() {
       return;
     }
 
-    const q = player.getPlaybackQuality && player.getPlaybackQuality();
-    if (!['tiny', 'small', 'medium', 'large'].includes(q)) return;      // video is sharp, nothing to say
-
     if (!showRefreshTip()) return;                                       // count only if it was actually shown
     localStorage.setItem(TIP_DAY, day);
     localStorage.setItem(TIP_COUNT, String(n + 1));

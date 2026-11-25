@@ -225,18 +225,18 @@ body {
   font-size: 13px; color: var(--text2); z-index: 6; display: none;
 }
 
-/* Bottom auto-hiding notice shown ONLY when Desktop site mode is active */
+/* Auto-hiding notice shown ONLY when Desktop site mode is active */
 #dm-blur-tip {
   display: none;
-  position: absolute; bottom: 156px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 208px; left: 50%; transform: translateX(-50%);
   z-index: 12; pointer-events: none;
   background: rgba(26, 27, 30, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
   padding: 14px 28px;
-  align-items: center; justify-content: center; gap: 12px;
+  align-items: center; gap: 12px;
   color: var(--text); font-size: 26px; font-weight: 500;
-  max-width: 88vw; white-space: normal; text-align: center;
+  white-space: nowrap;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
 }
 #dm-blur-tip .material-symbols-outlined {
@@ -249,15 +249,9 @@ body {
 
 @media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) {
   #dm-blur-tip {
-    bottom: 156px; padding: 10px 22px; font-size: 20px; gap: 8px;
+    top: 18px; padding: 10px 22px; font-size: 20px; gap: 8px;
   }
   #dm-blur-tip .material-symbols-outlined { font-size: 24px; }
-}
-
-/* Hide in fullscreen since #floating-actions (Refresh) is also hidden there */
-#video-col:fullscreen #dm-blur-tip,
-#video-col:-webkit-full-screen #dm-blur-tip {
-  display: none !important;
 }
 
 #play-prompt {
@@ -687,7 +681,7 @@ body {
   }
   #sound-pill .material-symbols-outlined { font-size: 42px !important; }
 
-  #teacher-tile { width: 264px !important; height: 158px !important; top: 124px !important; right: 24px !important; border-radius: 22px !important; gap: 10px !important; }
+  #teacher-tile { width: 264px !important; height: 158px !important; top: 24px !important; right: 24px !important; border-radius: 22px !important; gap: 10px !important; }
   .tile-avatar { width: 70px !important; height: 70px !important; font-size: 29px !important; }
   .tile-name { font-size: 24px !important; padding: 5px 17px !important; }
 
@@ -697,20 +691,19 @@ body {
     border-radius: 18px !important;
   }
 
-/* Centered pill directly above the 3 floating buttons */
+/* Centered 2.5x single-line pill directly below the SR Teacher tile (282px bottom + 16px gap) */
   #dm-blur-tip {
-    top: auto !important;
-    bottom: 156px !important;
+    top: 208px !important;
+    bottom: auto !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    max-width: 88vw !important;
-    white-space: normal !important;
-    text-align: center;
-    padding: 14px 28px !important;
-    font-size: 26px !important;
-    gap: 12px !important;
+    max-width: 94vw !important;
+    white-space: nowrap !important;
+    padding: 16px 32px !important;
+    font-size: 36px !important;
+    gap: 14px !important;
   }
-  #dm-blur-tip .material-symbols-outlined { font-size: 30px !important; flex-shrink: 0; }
+  #dm-blur-tip .material-symbols-outlined { font-size: 38px !important; flex-shrink: 0; }
 }
 
 /* ═══ PATCH: Bigger bottom bar icons (Desktop Mode) ═══ */
@@ -734,12 +727,12 @@ body {
   .talk-teacher-btn .material-symbols-outlined { font-size: 36px !important; }
   .chat-close { font-size: 45px !important; padding: 9px 20px !important; }
   #dm-blur-tip {
-    top: auto !important;
-    bottom: 156px !important;
+    top: 18px !important;
+    bottom: auto !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    max-width: 88vw !important;
-    white-space: normal !important;
+    max-width: 90vw !important;
+    white-space: nowrap !important;
     padding: 10px 22px !important;
     font-size: 20px !important;
     gap: 8px !important;

@@ -381,7 +381,7 @@ body {
 .modal-overlay.active { opacity: 1; pointer-events: auto; }
 #ask-teacher-modal {
   align-items: flex-start;
-  padding-top: 4vh;
+  padding-top: 5vh;
 }
 .modal-box {
   background: var(--bg2); border: 1px solid var(--border);
@@ -429,7 +429,7 @@ body {
 
   /* Enlarged Ask Teacher modal for desktop-mode phones/tablets */
   #ask-teacher-modal {
-    padding-top: 2.5vh !important;
+    padding-top: 5vh !important;
   }
   .modal-box {
     width: 880px;
@@ -635,22 +635,22 @@ body {
 }
 /* ═══ PATCH: Zoomed YouTube chat iframe + Header Scaling (Desktop Mode) ═══ */
 @media (pointer: coarse) and (min-width: 769px) {
-  #chat-panel { --chat-zoom: 2.8; --chat-head: 162px; }
+  #chat-panel { --chat-zoom: 2.8; --chat-head: 144px; }
 
   .chat-head {
     height: var(--chat-head) !important;
     padding: 0 42px !important;
   }
-  .chat-head-title { font-size: 42px !important; letter-spacing: 1.5px !important; }
+  .chat-head-title { font-size: 36px !important; letter-spacing: 1.5px !important; }
   .chat-head-actions { gap: 42px !important; }
   .talk-teacher-btn {
-    font-size: 39px !important;
-    padding: 21px 39px !important;
+    font-size: 34px !important;
+    padding: 18px 34px !important;
     gap: 15px !important;
     border-width: 3px !important;
   }
   .talk-teacher-btn .material-symbols-outlined { font-size: 45px !important; }
-  .chat-close { font-size: 57px !important; padding: 12px 24px !important; }
+  .chat-close { font-size: 48px !important; padding: 12px 24px !important; }
 
   #yt-chat-frame {
     position: absolute !important;
@@ -664,8 +664,8 @@ body {
   }
 
   /* Topbar (1.45x), Sound Pill, Teacher Tile, Toasts & Non-Overlapping Blur Tip */
-  #topbar { height: 140px !important; padding: 0 44px !important; gap: 18px !important; }
-  .tb-title { font-size: 44px !important; }
+  #topbar { height: 120px !important; padding: 0 44px !important; gap: 18px !important; }
+  .tb-title { font-size: 36px !important; }
   .tb-chip { font-size: 34px !important; padding: 14px 28px !important; gap: 14px !important; }
   .live-dot { width: 16px !important; height: 16px !important; }
   #main { height: calc(100dvh - 140px) !important; }
@@ -688,19 +688,20 @@ body {
     border-radius: 18px !important;
   }
 
-  /* Left-anchored so it never overlaps the right-side SR Teacher tile */
+/* Centered 2-line pill with 260px clearance on each side for the SR Teacher tile */
   #dm-blur-tip {
     top: 24px !important;
-    left: 24px !important;
-    transform: none !important;
-    max-width: calc(100% - 276px) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-width: calc(100% - 520px) !important;
     white-space: normal !important;
+    text-align: center !important;
     line-height: 1.3 !important;
-    padding: 16px 26px !important;
-    font-size: 24px !important;
-    gap: 12px !important;
+    padding: 16px 28px !important;
+    font-size: 36px !important;
+    gap: 14px !important;
   }
-  #dm-blur-tip .material-symbols-outlined { font-size: 32px !important; flex-shrink: 0; }
+  #dm-blur-tip .material-symbols-outlined { font-size: 38px !important; flex-shrink: 0; }
 }
 
 /* ═══ PATCH: Bigger bottom bar icons (Desktop Mode) ═══ */

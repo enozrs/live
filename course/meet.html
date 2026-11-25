@@ -225,22 +225,22 @@ body {
   font-size: 13px; color: var(--text2); z-index: 6; display: none;
 }
 
-/* Top auto-hiding notice shown ONLY when Desktop site mode is active */
+/* Bottom auto-hiding notice shown ONLY when Desktop site mode is active */
 #dm-blur-tip {
   display: none;
-  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  position: absolute; bottom: 156px; left: 50%; transform: translateX(-50%);
   z-index: 12; pointer-events: none;
   background: rgba(26, 27, 30, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  padding: 14px 26px;
-  align-items: center; gap: 10px;
-  color: var(--text); font-size: 22px; font-weight: 500;
-  white-space: nowrap;
+  padding: 14px 28px;
+  align-items: center; justify-content: center; gap: 12px;
+  color: var(--text); font-size: 26px; font-weight: 500;
+  max-width: 88vw; white-space: normal; text-align: center;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
 }
 #dm-blur-tip .material-symbols-outlined {
-  color: var(--accent); font-size: 26px;
+  color: var(--accent); font-size: 30px; flex-shrink: 0;
 }
 
 @media (pointer: coarse) and (min-width: 769px) {
@@ -249,9 +249,15 @@ body {
 
 @media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) {
   #dm-blur-tip {
-    top: 12px; padding: 9px 20px; font-size: 16px; gap: 8px;
+    bottom: 156px; padding: 10px 22px; font-size: 20px; gap: 8px;
   }
-  #dm-blur-tip .material-symbols-outlined { font-size: 20px; }
+  #dm-blur-tip .material-symbols-outlined { font-size: 24px; }
+}
+
+/* Hide in fullscreen since #floating-actions (Refresh) is also hidden there */
+#video-col:fullscreen #dm-blur-tip,
+#video-col:-webkit-full-screen #dm-blur-tip {
+  display: none !important;
 }
 
 #play-prompt {
@@ -644,11 +650,11 @@ body {
     height: var(--chat-head) !important;
     padding: 0 38px !important;
   }
-  .chat-head-title { font-size: 32px !important; letter-spacing: 1.5px !important; }
+  .chat-head-title { font-size: 34px !important; letter-spacing: 1.5px !important; }
   .chat-head-actions { gap: 42px !important; }
   .talk-teacher-btn {
-    font-size: 34px !important;
-    padding: 18px 34px !important;
+    font-size: 32px !important;
+    padding: 16px 32px !important;
     gap: 15px !important;
     border-width: 3px !important;
   }
@@ -691,18 +697,20 @@ body {
     border-radius: 18px !important;
   }
 
-/* Centered 2-line pill with 260px clearance on each side for the SR Teacher tile */
-#dm-blur-tip {
-    top: 24px !important;
+/* Centered pill directly above the 3 floating buttons */
+  #dm-blur-tip {
+    top: auto !important;
+    bottom: 156px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    max-width: 92vw !important;
-    white-space: nowrap !important;
-    padding: 16px 32px !important;
-    font-size: 36px !important;
-    gap: 14px !important;
+    max-width: 88vw !important;
+    white-space: normal !important;
+    text-align: center;
+    padding: 14px 28px !important;
+    font-size: 26px !important;
+    gap: 12px !important;
   }
-  #dm-blur-tip .material-symbols-outlined { font-size: 38px !important; flex-shrink: 0; }
+  #dm-blur-tip .material-symbols-outlined { font-size: 30px !important; flex-shrink: 0; }
 }
 
 /* ═══ PATCH: Bigger bottom bar icons (Desktop Mode) ═══ */
@@ -726,11 +734,17 @@ body {
   .talk-teacher-btn .material-symbols-outlined { font-size: 36px !important; }
   .chat-close { font-size: 45px !important; padding: 9px 20px !important; }
   #dm-blur-tip {
+    top: auto !important;
+    bottom: 156px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    max-width: 90vw !important;
-    white-space: nowrap !important;
+    max-width: 88vw !important;
+    white-space: normal !important;
+    padding: 10px 22px !important;
+    font-size: 20px !important;
+    gap: 8px !important;
   }
+  #dm-blur-tip .material-symbols-outlined { font-size: 24px !important; }
 
   #bottom-bar {
     height: 128px !important;

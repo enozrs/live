@@ -227,26 +227,27 @@ body {
   font-size: 13px; color: var(--text2); z-index: 6; display: none;
 }
 
-/* Refresh tip: speech bubble pointing at the Refresh button (sizes in em, scaled from the button's font) */
+/* Refresh tip: anchored directly above #refresh-btn */
 #refresh-tip {
-  position: fixed; z-index: 50; display: none;
+  position: absolute; bottom: calc(100% + .85em); left: 0;
+  pointer-events: auto; display: none;
   background: var(--bg2); color: var(--text);
   border: 1px solid rgba(255,255,255,.18); border-radius: 1em;
-  padding: .8em 1em; font-weight: 500; line-height: 1.5;
-  max-width: min(80vw, 22em);
+  padding: .75em .95em; font-size: 13px; font-weight: 500; line-height: 1.4;
+  width: max-content; max-width: min(82vw, 22em);
   box-shadow: 0 8px 24px rgba(0,0,0,.55);
 }
-#refresh-tip.show { display: block; }
-#refresh-tip::after {            /* arrow pointing down at the button */
-  content: ""; position: absolute; top: 100%;
-  left: var(--arrow-x, 2em); margin-left: -.6em;
-  border: .6em solid transparent; border-top-color: var(--bg2);
+#refresh-tip.show { display: flex; align-items: center; gap: .65em; }
+#refresh-tip::after {
+  content: ""; position: absolute; top: 100%; left: 2.2em;
+  border: .55em solid transparent; border-top-color: var(--bg2);
 }
 #refresh-tip-close {
-  display: block; margin: .7em 0 0 auto;
-  background: rgba(255,255,255,.1); color: var(--text2);
-  border: none; border-radius: 999px; padding: .35em 1em;
-  font: inherit; font-size: .85em; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0; width: 1.65em; height: 1.65em;
+  background: rgba(255,255,255,.12); color: var(--text2);
+  border: none; border-radius: 50%;
+  font: inherit; font-size: .9em; line-height: 1; cursor: pointer;
 }
 @media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) {
   #refresh-tip { display: none !important; }
@@ -563,6 +564,7 @@ body {
     font-size: 32px !important;
     gap: 14px !important;
   }
+  #refresh-tip { font-size: 30px; }
   .float-pill .material-symbols-outlined { font-size: 42px !important; }
 
   /* Waiting / Live / Ended status screen (1.5x) */
@@ -864,6 +866,10 @@ body {
       </button>
 
       <div id="floating-actions">
+        <div id="refresh-tip">
+          <span>Video Blur भएमा Refresh गर्नुहोस्</span>
+          <button id="refresh-tip-close" aria-label="Close">✕</button>
+        </div>
         <button id="refresh-btn" class="float-pill" style="background: #007aff;">
           <span class="material-symbols-outlined">refresh</span> Refresh
         </button>
@@ -935,10 +941,6 @@ body {
   </div>
 </div>
 
-<div id="refresh-tip">
-  <span> Video Blur भएमा Refresh गर्नुहोस्</span>
-  <button id="refresh-tip-close">Close</button>
-</div>
 <div id="toast"></div>
 
 <!-- Chat choice modal removed: chat buttons open live chat directly -->
@@ -1874,83 +1876,31 @@ function userInitiatedPlay() {
   showControls();
 }
 
-// ── Controls ──────────────────────────────────────────────────
-// ── Refresh tip: speech bubble 15s after class starts ──
-// Shows at most once per class day, and on at most 3 class days in total (per device).
-const TIP_DAY = 'srzone_tip_day', TIP_COUNT = 'srzone_tip_n', TIP_MAX = 3;
-let refreshTipTimer = null, refreshTipHideTimer = null;
-let refreshTipScheduled = false, refreshTipTries = 0;
-
-const isDesktopModePhone = () =>
-  window.matchMedia('(pointer: coarse) and (min-width: 769px)').matches;
-const isLandscapePhone = () =>
-  window.matchMedia('(pointer: coarse) and (orientation: landscape) and (max-height: 650px)').matches;
-
-function scheduleRefreshTip(ms) {
-  clearTimeout(refreshTipTimer);
-  refreshTipTimer = setTimeout(maybeShowRefreshTip, ms);
-}
-
-// called on every PLAYING event, but only the first one starts the 15s clock
-function startRefreshTipTimer() {
-  if (refreshTipScheduled) return;
-  refreshTipScheduled = true;
-  scheduleRefreshTip(15000);
-}
-
-function showRefreshTip() {
-  const btn = document.getElementById('refresh-btn');
-  const tip = document.getElementById('refresh-tip');
-  if (!btn || !tip || btn.offsetParent === null) return false;
-
-  const r  = btn.getBoundingClientRect();
-  const fs = parseFloat(getComputedStyle(btn).fontSize) || 13;
-  tip.style.fontSize = fs + 'px';      // all tip sizes are in em, so Desktop Mode scaling follows the button
-  tip.classList.add('show');           // show first so it can be measured
-
-  const left = Math.min(Math.max(8, r.left), innerWidth - tip.offsetWidth - 8);
-  tip.style.left   = left + 'px';
-  tip.style.bottom = (innerHeight - r.top + fs * 0.9) + 'px';
-  tip.style.setProperty('--arrow-x', (r.left + r.width / 2 - left) + 'px');
-
-  clearTimeout(refreshTipHideTimer);
-  refreshTipHideTimer = setTimeout(hideRefreshTip, 8000);
-  return true;
-}
+// ── Refresh tip: shown 15s into playback (Desktop Mode only, max 3 sessions) ──
+const TIP_COUNT = 'srzone_tip_n', TIP_MAX = 3;
+let refreshTipDone = false, refreshTipHideTimer = null;
 
 function hideRefreshTip() {
   clearTimeout(refreshTipHideTimer);
   document.getElementById('refresh-tip')?.classList.remove('show');
 }
 
-function maybeShowRefreshTip() {
-  try {
-    if (!player || !videoStarted || !todayClass) return;
-    const day = todayClass.date;
-    const n = +localStorage.getItem(TIP_COUNT) || 0;
-    if (n >= TIP_MAX || localStorage.getItem(TIP_DAY) === day) return;   // retired, or already shown today
-    if (!isDesktopModePhone() || isLandscapePhone()) return;             // Refresh only helps in Desktop Mode
+function startRefreshTipTimer() {
+  if (refreshTipDone) return;
+  refreshTipDone = true;
 
-    const busy = document.hidden || chatOpen
-      || document.getElementById('sound-pill').style.display === 'flex'
-      || document.getElementById('play-prompt').style.display === 'flex'
-      || document.getElementById('ask-teacher-modal').classList.contains('active')
-      || document.fullscreenElement || document.webkitFullscreenElement;
-    if (busy) {                                                          // retry every 4s for up to ~1 min, uncounted
-      if (++refreshTipTries <= 15) scheduleRefreshTip(4000);
-      return;
-    }
+  const isDesktopMode = window.matchMedia('(pointer: coarse) and (min-width: 769px)').matches;
+  const n = +localStorage.getItem(TIP_COUNT) || 0;
+  if (!isDesktopMode || n >= TIP_MAX) return;
 
-    if (!showRefreshTip()) return;                                       // count only if it was actually shown
-    localStorage.setItem(TIP_DAY, day);
+  setTimeout(() => {
+    const tip = document.getElementById('refresh-tip');
+    if (!tip) return;
+    tip.classList.add('show');
     localStorage.setItem(TIP_COUNT, String(n + 1));
-  } catch (e) {}
+    refreshTipHideTimer = setTimeout(hideRefreshTip, 15000);
+  }, 12000);
 }
-
-window.addEventListener('orientationchange', hideRefreshTip);
-window.addEventListener('resize', hideRefreshTip);
-document.addEventListener('fullscreenchange', hideRefreshTip);
-document.addEventListener('webkitfullscreenchange', hideRefreshTip);
 
 function toggleMic() {
   micOn = !micOn;
@@ -2369,7 +2319,6 @@ document.addEventListener('DOMContentLoaded', () => {
   bind('mobile-fs-btn', toggleFullscreen);
   bind('mobile-chat-btn', toggleChat);
   bind('refresh-btn', () => {
-    try { localStorage.setItem(TIP_COUNT, String(TIP_MAX)); } catch (e) {}
     location.reload();
   });
   

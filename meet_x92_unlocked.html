@@ -4,17 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SR Zone — Live Class</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://www.youtube.com">
 <link rel="preconnect" href="https://i.ytimg.com">
 <link rel="dns-prefetch" href="https://www.youtube.com">
 
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=call_end,chat,check_circle,content_copy,event_busy,event_upcoming,fullscreen,fullscreen_exit,hd,login,mic,mic_off,pan_tool,play_arrow,refresh,rocket_launch,schedule,send,support_agent,videocam,videocam_off,volume_up,workspace_premium&display=block" rel="stylesheet" />
 
 <!--
   V5 Changes:
-   Multiple Class Slots handled now. 
-  Chat will be destroyed on fullscreen to save resources 
+   Multiple Class Slots handled now. - personal paced classes by default.
+  Chat will be destroyed on fullscreen or 30s of idleness to save resources 
+  material icons only needed will be fetched, saving 300kb+ of useless network fetch
   Skeleton Chat Loading for better UX
   Chat modal 2 options is a ux friction, so reduced it to single step now. 
   YouTube chat in mobile devices does not let users send the message for 10 seconds or so ( or without hiding and showing the live chat iframe ) to send message. Cause is UI Lag, Bug fixed ! 
@@ -22,6 +25,7 @@ Nepali language guide for desktop site mode.
 
   Made sound play button persistent so in ios safari, blocked autoplay also gets to play. 
   Viewport larger does not work at all (tested), only desktop mode does, so used that instead for higher quality.
+  ### DONT DELETE 1440p canvas in terms of resource cleanup, its critical to ensure pristine text quality. 
   Desktop mode ma sabai ui elements including yt chat is scaled to compensate for UX.
   When user switches app and returns, the video is paused and never resumed - FIXED ! 
   YouTube video quality low on mobile devices - Fixed. Time is fetched via Server now on ! 
@@ -1095,18 +1099,14 @@ window.addEventListener('load', () => {
   try {
     const session = _N_jsonParse.call(JSON, localStorage.getItem('srzone_v2'));
     if (session && session.code) {
-      
-      // 1. Local expiry check
       const nowStr = getCurrentDateStr();
-      if (nowStr > session.expires) {
+      if (nowStr > session.expires || !session.startDate || !session.studyTime) {
         localStorage.removeItem('srzone_v2');
-        return; 
+        return;
       }
 
-      // 2. Launch immediately using cache
       launchApp();
 
-      // 3. The 12-Hour Remote Check
       const verificationInterval = 12 * 60 * 60 * 1000; // 12 hours
       if (Date.now() - (session.lastVerified || 0) >= verificationInterval) {
         verifyLicenseRemotely(session.code);
@@ -1160,10 +1160,17 @@ async function checkCode() {
       return;
     }
 
+    if (!validLicense.startDate || !validLicense.studyTime) {
+      showGateError("Class schedule not assigned to this key. Contact support.");
+      return;
+    }
+
     // ✅ ALL CHECKS PASSED - Save to Local Cache
     const sessionData = {
       code: input,
       expires: validLicense.expires,
+      startDate: validLicense.startDate,
+      studyTime: validLicense.studyTime,
       lastVerified: Date.now()
     };
     
@@ -1444,7 +1451,7 @@ async function verifyLicenseRemotely(savedCode) {
     const manifest = await _gm();
     if (_w) return; // decoy was served earlier → keep cached access, do not revoke
     let isValid = false;
-    let expiryDate = null;
+    let matchedLic = null;
     const currentDate = getCurrentDateStr();
 
     /* FIX 7 — indexed loop, no Array.prototype[Symbol.iterator] */
@@ -1452,20 +1459,28 @@ async function verifyLicenseRemotely(savedCode) {
     for (let i = 0; i < ks.length; i++) {
       const lic = ks[i];
       if (lic.code === savedCode) {
-        expiryDate = lic.expires;
-        if (currentDate <= expiryDate) {
+        matchedLic = lic;
+        if (currentDate <= lic.expires) {
           isValid = true;
         }
         break;
       }
     }
 
-    if (isValid) {
+    if (isValid && matchedLic) {
       const session = _N_jsonParse.call(JSON, localStorage.getItem('srzone_v2'));
       if (session) {
-        session.expires = expiryDate;
+        const scheduleChanged =
+          session.startDate !== matchedLic.startDate ||
+          session.studyTime !== matchedLic.studyTime;
+        session.expires = matchedLic.expires;
+        session.startDate = matchedLic.startDate;
+        session.studyTime = matchedLic.studyTime;
         session.lastVerified = Date.now();
         localStorage.setItem('srzone_v2', JSON.stringify(session));
+        if (scheduleChanged && !videoStarted) {
+          fetchSchedule().then(checkState);
+        }
       }
     } else {
       handleRevocation("Your premium access has expired or been revoked.");
@@ -1509,19 +1524,52 @@ function handleRevocation(msg) {
   showGateError(msg);
 }
 
-// ── Schedule Engine & Synced Clock ────────────────────────────
+// ── Schedule Engine & Synced Clock (Unified NPT Engine) ───────
 let todayClass = null;
 let serverTimeOffset = 0; // serverMs - localMs
 let classStartTime = null;
 let classEndTime = null;
+let scheduleStatus = "loading"; // "not_started" | "holiday" | "active" | "completed" | "no_schedule"
+let scheduleSubText = "";
 
 function syncedNow() {
   return new Date(Date.now() + serverTimeOffset);
 }
 
+function getNptParts(dateObj) {
+  const npt = new Date(dateObj.getTime() + 345 * 60000); // UTC+5:45
+  const y = npt.getUTCFullYear();
+  const m = npt.getUTCMonth() + 1;
+  const d = npt.getUTCDate();
+  return {
+    y, m, d,
+    ymd: `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+    dow: npt.getUTCDay()
+  };
+}
+
+function parseYmdUtc(ymd) {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
+function formatYmdUtc(utcMs) {
+  const dt = new Date(utcMs);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+}
+
+function nptDateTime(y, m, d, hh, mm) {
+  return new Date(Date.UTC(y, m - 1, d, hh, mm, 0, 0) - 345 * 60000);
+}
+
 async function fetchSchedule() {
   let schedule = null;
-  
+  todayClass = null;
+  classStartTime = null;
+  classEndTime = null;
+  scheduleStatus = "no_schedule";
+  scheduleSubText = "No schedule assigned to your account.";
+
   try {
     const t0 = Date.now();
     const res = await fetch("https://live.thesrzone.com/course/course.json?_=" + t0, { cache: 'no-store' });
@@ -1541,37 +1589,67 @@ async function fetchSchedule() {
     console.warn("Network failed, trying offline cache for schedule", err);
   }
 
-  // Fallback to cache if fetch failed
   if (!schedule) {
     const cached = localStorage.getItem('srzone_schedule');
     if (cached) schedule = _N_jsonParse.call(JSON, cached);
   }
 
-  if (schedule) {
-    const now = syncedNow();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    const todayStr = `${y}-${m}-${d}`;
-    
-    todayClass = schedule.find(item => item.date === todayStr);
-    
-    if (todayClass) {
-      document.getElementById('tb-title').textContent = todayClass.title;
+  let session = null;
+  try {
+    session = _N_jsonParse.call(JSON, localStorage.getItem('srzone_v2'));
+  } catch (e) {}
 
-      const [startH, startM] = todayClass.startTime.split(':').map(Number);
-      const [endH, endM] = todayClass.endTime.split(':').map(Number);
+  if (!schedule || !Array.isArray(schedule.lessons) || !session) return;
 
-      classStartTime = new Date(now);
-      classStartTime.setHours(startH, startM, 0, 0);
+  const lessons = schedule.lessons;
+  const holidaySet = new Set(schedule.holidays || []);
+  const now = syncedNow();
+  const today = getNptParts(now);
+  const [studyH, studyM] = session.studyTime.split(':').map(Number);
 
-      classEndTime = new Date(now);
-      classEndTime.setHours(endH, endM, 0, 0);
-      if (classEndTime <= classStartTime) {
-        classEndTime.setDate(classEndTime.getDate() + 1);
-      }
+  // 1. Before student's assigned start date
+  if (today.ymd < session.startDate) {
+    const [sy, sm, sd] = session.startDate.split('-').map(Number);
+    const firstClassTime = nptDateTime(sy, sm, sd, studyH, studyM);
+    scheduleStatus = "not_started";
+    scheduleSubText = `Your course begins on ${session.startDate} at ${fmtTime(firstClassTime)}.`;
+    return;
+  }
+
+  // 2. Saturday or listed holiday
+  if (today.dow === 6) {
+    scheduleStatus = "holiday";
+    scheduleSubText = "Saturday is a weekly holiday. Your next class continues tomorrow!";
+    return;
+  }
+  if (holidaySet.has(today.ymd)) {
+    scheduleStatus = "holiday";
+    scheduleSubText = "Today is a scheduled holiday. Your next class resumes on the next study day!";
+    return;
+  }
+
+  // 3. Count non-Saturday, non-holiday study days elapsed since startDate
+  let lessonIndex = 0;
+  const todayUtc = parseYmdUtc(today.ymd);
+  for (let cursor = parseYmdUtc(session.startDate); cursor < todayUtc; cursor += 86400000) {
+    const dayOfWeek = new Date(cursor).getUTCDay();
+    if (dayOfWeek !== 6 && !holidaySet.has(formatYmdUtc(cursor))) {
+      lessonIndex++;
     }
   }
+
+  if (lessonIndex >= lessons.length) {
+    scheduleStatus = "completed";
+    scheduleSubText = "You have completed all scheduled classes in this course. 🎉";
+    return;
+  }
+
+  todayClass = lessons[lessonIndex];
+  scheduleStatus = "active";
+  document.getElementById('tb-title').textContent = todayClass.title;
+
+  classStartTime = nptDateTime(today.y, today.m, today.d, studyH, studyM);
+  classEndTime = new Date(classStartTime.getTime() + (todayClass.length || 60) * 60000);
 }
 
 // ── App launch ────────────────────────────────────────────────
@@ -1606,16 +1684,33 @@ function checkState() {
     return;
   }
 
-  // 1. If no class scheduled for today
-  if (!todayClass || !classStartTime || !classEndTime) {
-    showStatusScreen('event_busy', "No Class Today", 
-      "There are no scheduled sessions for today. See you next time!", false, 0);
+  // 1. Pre-start, Holiday, Completed, or Unassigned
+  if (scheduleStatus !== "active" || !todayClass || !classStartTime || !classEndTime) {
+    const titles = {
+      not_started: "Your Course Starts Soon",
+      holiday:     "No Class Today",
+      completed:   "Course Completed",
+      no_schedule: "Schedule Unavailable"
+    };
+    const icons = {
+      not_started: "event_upcoming",
+      holiday:     "event_busy",
+      completed:   "workspace_premium",
+      no_schedule: "event_busy"
+    };
+    showStatusScreen(
+      icons[scheduleStatus] || "event_busy",
+      titles[scheduleStatus] || "No Class Today",
+      scheduleSubText,
+      false,
+      0
+    );
     document.getElementById('sync-btn').style.display = 'none';
     document.getElementById('student-count-status').style.display = 'none';
     return;
   }
 
-  // 2. The Time Machine
+  // 2. Daily Study Window
   if (now < classStartTime) {
     const msLeft = classStartTime - now;
     showStatusScreen('schedule', "Class hasn't started yet",
@@ -1632,8 +1727,7 @@ function checkState() {
 
   } else if (now >= classStartTime && now < classEndTime) {
     showStatusScreen('rocket_launch', "Class is Live!", "The session has started.", false, 0);
-    document.getElementById('sync-btn').style.display = 'flex'; 
-    /* label + icon now live in the HTML; don't overwrite every tick */
+    document.getElementById('sync-btn').style.display = 'flex';
     startStudentCountUpdater();
 
   } else {
@@ -1953,7 +2047,11 @@ function showHandNotif(name) {
   notif.style.display = 'block';
 }
 
+let chatDestroyTimer = null;
+
 function destroyChat() {
+  clearTimeout(chatDestroyTimer);
+  chatDestroyTimer = null;
   const frame  = document.getElementById('yt-chat-frame');
   const loader = document.getElementById('chat-loader');
   if (frame) {
@@ -1972,10 +2070,12 @@ function toggleChat() {
   const loader = document.getElementById('chat-loader');
 
   if (chatOpen) {
+    clearTimeout(chatDestroyTimer);
+    chatDestroyTimer = null;
     panel.classList.add('open');
     btn.className = 'ctrl-circle cc-chat-on';
 
-    // Lazy-load on first open (or after Fullscreen destroyed it); instant on subsequent opens
+    // Lazy-load on first open (or after Fullscreen / 30s idle destroyed it); instant within 30s
     if (!chatLoaded) {
       if (loader) loader.style.display = 'flex';
       const frame = document.createElement('iframe');
@@ -1999,10 +2099,15 @@ function toggleChat() {
       clearTimeout(controlsTimeout);
     }
   } else {
-    // Keep iframe warm in background so reopening is instant and saves mobile data
+    // Keep iframe warm for 30s for accidental closes, then destroy to free RAM/CPU
     panel.classList.remove('open');
     btn.className = 'ctrl-circle';
     panel.style.height = '';
+
+    clearTimeout(chatDestroyTimer);
+    chatDestroyTimer = setTimeout(() => {
+      if (!chatOpen && chatLoaded) destroyChat();
+    }, 30000);
 
     if (isMobile()) {
       showControls();
@@ -2108,7 +2213,32 @@ function handleFsChange() {
 }
 
 // ── WhatsApp Teacher Support ─────────────────────────────────
+let capturedAskContext = null;
+
+function formatVideoTime(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  const pad = n => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
 function openAskTeacher() {
+  // Snapshot the class & exact video timestamp the moment "Ask Teacher" is tapped
+  let currentSec = 0;
+  if (player && playerReady && typeof player.getCurrentTime === 'function') {
+    currentSec = player.getCurrentTime();
+  } else if (classStartTime) {
+    currentSec = (syncedNow() - classStartTime) / 1000;
+  }
+
+  capturedAskContext = {
+    title: todayClass?.title || document.getElementById('tb-title')?.textContent || 'Live Class',
+    videoId: todayClass?.videoId || '',
+    timeStr: formatVideoTime(currentSec)
+  };
+
   // On mobile, close & destroy the chat drawer first so the modal sits cleanly onscreen
   if (chatOpen && isMobile()) toggleChat();
   document.getElementById('bottom-bar').style.display = 'none';
@@ -2124,17 +2254,24 @@ function sendWhatsAppQuestion() {
     return;
   }
 
-  // ⚠️ REPLACE WITH YOUR WHATSAPP NUMBER (country code, no + or spaces)
   const myPhoneNumber = "9779744259921"; 
-  
-  const message = `Hi Teacher, I have a question from class:\n\n"${question}"`;
+
+  const ctx = capturedAskContext || {
+    title: todayClass?.title || 'Live Class',
+    timeStr: '00:00'
+  };
+
+  const message =
+    `${ctx.title} ${ctx.timeStr} \n` +
+    `${question}`;
+    
   const encodedMessage = encodeURIComponent(message);
-  
   window.open(`https://wa.me/${myPhoneNumber}?text=${encodedMessage}`, '_blank');
   
   // Clean up
   document.getElementById('ask-teacher-modal').classList.remove('active');
   document.getElementById('teacher-question').value = ''; // clear for next time
+  capturedAskContext = null;
   showControls();
 }
 
@@ -2237,7 +2374,12 @@ document.addEventListener('contextmenu', e => {
 
 // ── Utils ─────────────────────────────────────────────────────
 function fmtTime(d) {
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const npt = new Date(d.getTime() + 345 * 60000);
+  let h = npt.getUTCHours();
+  const m = String(npt.getUTCMinutes()).padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
 }
 function msToClock(ms) {
   const s = Math.floor(ms / 1000);

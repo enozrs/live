@@ -1,401 +1,290 @@
-[
-  {
-    "date": "2026-11-17",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L1 Intro Quiz",
-    "videoId": "2CnN7lVtERk"
-  },
-  {
-    "date": "2026-11-18",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L2 Adverbs",
-    "videoId": "cSKxH-Xx9sM"
-  },
-  {
-    "date": "2026-11-19",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L3 Modal Verbs",
-    "videoId": "wzLHRaZZbtg"
-  },
-  {
-    "date": "2026-11-20",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L4 Concord",
-    "videoId": "6yFOJIeZEAE"
-  },
-  {
-    "date": "2026-11-21",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L5 Relative Clause",
-    "videoId": "wPkzinetjh0"
-  },
-  {
-    "date": "2026-11-22",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L6 Quiz Only",
-    "videoId": "azcqfG09lZs"
-  },
-  {
-    "date": "2026-11-23",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L7 Relative Clause and Prepositions",
-    "videoId": "nhnl7CLJnTU"
-  },
-  {
-    "date": "2026-11-24",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L8 Gerund and Conjunctions",
-    "videoId": "DF9uNd2i_4k"
-  },
-  {
-    "date": "2026-11-25",
-    "startTime": "00:00",
-    "endTime": "21:00",
-    "title": "L9 Tense",
-    "videoId": "CgFzqTh8tow"
-  },
-  {
-    "date": "2026-11-26",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L10 Voice Part 1",
-    "videoId": "pPPl-tykpP0"
-  },
-  {
-    "date": "2026-11-27",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L10 Voice Part 2",
-    "videoId": "ttYBFOfEf9g"
-  },
-  {
-    "date": "2026-11-28",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L10 Voice Part 3",
-    "videoId": "5hHxP0Kb4tI"
-  },
-  {
-    "date": "2026-11-29",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L11 Unseen Passage",
-    "videoId": "JMpleggcAwk"
-  },
-  {
-    "date": "2026-11-30",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L12 Quiz + Soft Storm",
-    "videoId": "egEr2yvotU8"
-  },
-  {
-    "date": "2026-12-01",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L13 vocabulary part 1",
-    "videoId": "AxiGUjPKeGA"
-  },
-  {
-    "date": "2026-12-02",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L14 Vocabulary Part 2 Dictionary",
-    "videoId": "g80BfrVUnIM"
-  },
-  {
-    "date": "2026-12-03",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L15 Vocabulary Part 3",
-    "videoId": "hoin7w0a2iQ"
-  },
-  {
-    "date": "2026-12-04",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L16 Quiz",
-    "videoId": "Nbl-_FOe8h8"
-  },
-  {
-    "date": "2026-12-05",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L17 Freewriting 7 Marks Wala",
-    "videoId": "w_O39Yb5WsY"
-  },
-  {
-    "date": "2026-12-06",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L18 Press Release",
-    "videoId": "U7iZ6jZ12Ms"
-  },
-  {
-    "date": "2026-12-07",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L19 Press Release",
-    "videoId": "pve4lutGU9k"
-  },
-  {
-    "date": "2026-12-08",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L20 News",
-    "videoId": "NxzPlGp929g"
-  },
-  {
-    "date": "2026-12-09",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L21 Freewriting Essay Funny Template Pt1",
-    "videoId": "-WQ5qvxf7P0"
-  },
-  {
-    "date": "2026-12-10",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L21 Essay Part 2",
-    "videoId": "U8vmSFad-Q4"
-  },
-  {
-    "date": "2026-12-11",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L22 Quiz",
-    "videoId": "Jkqr1zYzO6E"
-  },
-  {
-    "date": "2026-12-12",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L23 Reported Speech",
-    "videoId": "cXYXKxT_eYg"
-  },
-  {
-    "date": "2026-12-13",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L24 Quiz Only",
-    "videoId": "bs13fMiwKbk"
-  },
-  {
-    "date": "2026-12-14",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L25 Quiz",
-    "videoId": "JnCMboF9nFA"
-  },
-  {
-    "date": "2026-12-15",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L26 Quiz",
-    "videoId": "EzHPKJQZAZU"
-  },
-  {
-    "date": "2026-12-16",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L27 Stories Pt1",
-    "videoId": "trOS3xRnDIY"
-  },
-  {
-    "date": "2026-12-17",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L28 Stories Pt2 & A Day",
-    "videoId": "nKKwiQfhSF8"
-  },
-  {
-    "date": "2026-12-18",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L29 ALL Poems Except Soft Storm",
-    "videoId": "lAdDgZRaxos"
-  },
-  {
-    "date": "2026-12-19",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L30 Book Essays Summary One Shot",
-    "videoId": "BXdE4AmSZRA"
-  },
-  {
-    "date": "2026-12-20",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L31 Quiz",
-    "videoId": "YiGgDdbxepI"
-  },
-  {
-    "date": "2026-12-21",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L32 Quiz",
-    "videoId": "xvu4uJdksBE"
-  },
-  {
-    "date": "2026-12-22",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L33 A matter of husbands",
-    "videoId": "jQQyBQs2WGM"
-  },
-  {
-    "date": "2026-12-23",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L34 Facing Death + The Bull",
-    "videoId": "O7LL-hWOQ6g"
-  },
-  {
-    "date": "2026-12-24",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L35 Imp Questions from Book",
-    "videoId": "tyHLft21xm4"
-  },
-  {
-    "date": "2026-12-25",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L36 Story Unit 1 10 Set + Model Questions",
-    "videoId": "3Ny9CJTyumY"
-  },
-  {
-    "date": "2026-12-26",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L37 Book Essay 10 Set",
-    "videoId": "JaMpknaHs-s"
-  },
-  {
-    "date": "2026-12-27",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L38 Freewriting 7 Marks Reveision Again In Case Forgot",
-    "videoId": "1WzR-aKYxiA"
-  },
-  {
-    "date": "2026-12-28",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L39 Freewriting Again Revision To Ensure Not Forgotten",
-    "videoId": "7D5KOqmC_Gs"
-  },
-  {
-    "date": "2026-12-29",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L40 Half Closed Eyes",
-    "videoId": "IZoxW1bxxWs"
-  },
-  {
-    "date": "2026-12-30",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L41 Poems 2 3 4 Summary QA",
-    "videoId": "zgPU_qf21ZA"
-  },
-  {
-    "date": "2026-12-31",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L42 Soft Storm",
-    "videoId": "5VYEFoV8FU4"
-  },
-  {
-    "date": "2027-01-01",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L43 Stories Unit 2 3 4 5 6 7 and Poems 1 2 3 - 10 Set",
-    "videoId": "yDfIDeCY69A"
-  },
-  {
-    "date": "2027-01-02",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "L44 Quiz Exam",
-    "videoId": "gM11TBShZl4"
-  },
-  {
-    "date": "2027-01-03",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "LN1 - Intro & Grammar Recap",
-    "videoId": "rYw0fQUv178"
-  },
-  {
-    "date": "2027-01-04",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "LN2 - Neighbours Story",
-    "videoId": "dzrYDlClipU"
-  },
-  {
-    "date": "2027-01-05",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "LN3 - A Respectable Woman",
-    "videoId": "bXe0bDrjZhA"
-  },
-  {
-    "date": "2027-01-06",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "LN4 - A Devoted Son",
-    "videoId": "PspgEnH4GfI"
-  },
-  {
-    "date": "2027-01-07",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "LN5 A Devoted Son - PYQ",
-    "videoId": "B8BbzuDf_q8"
-  },
-  {
-    "date": "2027-01-08",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "LN6 - My Old Home + Treasure in Forest",
-    "videoId": "fjsmOn94Uw8"
-  },
-  {
-    "date": "2027-01-09",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "LN7 - Treasure in Forest PYQ",
-    "videoId": "FnIntk74xsQ"
-  },
-  {
-    "date": "2027-01-10",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "LN8 - Half Closed Eyes of Buddha PYQ",
-    "videoId": "vp0P6HNaJhA"
-  },
-  {
-    "date": "2027-01-11",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "LN9 - Freewriting PDF Guide",
-    "videoId": "pUPTjKVtqjQ"
-  },
-  {
-    "date": "2027-01-12",
-    "startTime": "19:00",
-    "endTime": "21:00",
-    "title": "maharivision intro for new batch",
-    "videoId": "unOLvrKT7Vc"
-  }
-]
+{
+  "holidays": [],
+  "lessons": [
+    {
+      "title": "L1 Intro Quiz",
+      "videoId": "2CnN7lVtERk",
+      "length": 110
+    },
+    {
+      "title": "L2 Adverbs",
+      "videoId": "cSKxH-Xx9sM",
+      "length": 110
+    },
+    {
+      "title": "L3 Modal Verbs",
+      "videoId": "wzLHRaZZbtg",
+      "length": 110
+    },
+    {
+      "title": "L4 Concord",
+      "videoId": "6yFOJIeZEAE",
+      "length": 110
+    },
+    {
+      "title": "L5 Relative Clause",
+      "videoId": "wPkzinetjh0",
+      "length": 110
+    },
+    {
+      "title": "L6 Quiz Only",
+      "videoId": "azcqfG09lZs",
+      "length": 110
+    },
+    {
+      "title": "L7 Relative Clause and Prepositions",
+      "videoId": "nhnl7CLJnTU",
+      "length": 110
+    },
+    {
+      "title": "L8 Gerund and Conjunctions",
+      "videoId": "DF9uNd2i_4k",
+      "length": 110
+    },
+    {
+      "title": "L9 Tense",
+      "videoId": "CgFzqTh8tow",
+      "length": 110
+    },
+    {
+      "title": "L10 Voice Part 1",
+      "videoId": "pPPl-tykpP0",
+      "length": 110
+    },
+    {
+      "title": "L10 Voice Part 2",
+      "videoId": "ttYBFOfEf9g",
+      "length": 110
+    },
+    {
+      "title": "L10 Voice Part 3",
+      "videoId": "5hHxP0Kb4tI",
+      "length": 110
+    },
+    {
+      "title": "L11 Unseen Passage",
+      "videoId": "JMpleggcAwk",
+      "length": 110
+    },
+    {
+      "title": "L12 Quiz + Soft Storm",
+      "videoId": "egEr2yvotU8",
+      "length": 110
+    },
+    {
+      "title": "L13 vocabulary part 1",
+      "videoId": "AxiGUjPKeGA",
+      "length": 110
+    },
+    {
+      "title": "L14 Vocabulary Part 2 Dictionary",
+      "videoId": "g80BfrVUnIM",
+      "length": 110
+    },
+    {
+      "title": "L15 Vocabulary Part 3",
+      "videoId": "hoin7w0a2iQ",
+      "length": 110
+    },
+    {
+      "title": "L16 Quiz",
+      "videoId": "Nbl-_FOe8h8",
+      "length": 110
+    },
+    {
+      "title": "L17 Freewriting 7 Marks Wala",
+      "videoId": "w_O39Yb5WsY",
+      "length": 110
+    },
+    {
+      "title": "L18 Press Release",
+      "videoId": "U7iZ6jZ12Ms",
+      "length": 110
+    },
+    {
+      "title": "L19 Press Release",
+      "videoId": "pve4lutGU9k",
+      "length": 110
+    },
+    {
+      "title": "L20 News",
+      "videoId": "NxzPlGp929g",
+      "length": 110
+    },
+    {
+      "title": "L21 Freewriting Essay Funny Template Pt1",
+      "videoId": "-WQ5qvxf7P0",
+      "length": 110
+    },
+    {
+      "title": "L21 Essay Part 2",
+      "videoId": "U8vmSFad-Q4",
+      "length": 110
+    },
+    {
+      "title": "L22 Quiz",
+      "videoId": "Jkqr1zYzO6E",
+      "length": 110
+    },
+    {
+      "title": "L23 Reported Speech",
+      "videoId": "cXYXKxT_eYg",
+      "length": 110
+    },
+    {
+      "title": "L24 Quiz Only",
+      "videoId": "bs13fMiwKbk",
+      "length": 110
+    },
+    {
+      "title": "L25 Quiz",
+      "videoId": "JnCMboF9nFA",
+      "length": 110
+    },
+    {
+      "title": "L26 Quiz",
+      "videoId": "EzHPKJQZAZU",
+      "length": 110
+    },
+    {
+      "title": "L27 Stories Pt1",
+      "videoId": "trOS3xRnDIY",
+      "length": 110
+    },
+    {
+      "title": "L28 Stories Pt2 & A Day",
+      "videoId": "nKKwiQfhSF8",
+      "length": 110
+    },
+    {
+      "title": "L29 ALL Poems Except Soft Storm",
+      "videoId": "lAdDgZRaxos",
+      "length": 110
+    },
+    {
+      "title": "L30 Book Essays Summary One Shot",
+      "videoId": "BXdE4AmSZRA",
+      "length": 110
+    },
+    {
+      "title": "L31 Quiz",
+      "videoId": "YiGgDdbxepI",
+      "length": 110
+    },
+    {
+      "title": "L32 Quiz",
+      "videoId": "xvu4uJdksBE",
+      "length": 110
+    },
+    {
+      "title": "L33 A matter of husbands",
+      "videoId": "jQQyBQs2WGM",
+      "length": 110
+    },
+    {
+      "title": "L34 Facing Death + The Bull",
+      "videoId": "O7LL-hWOQ6g",
+      "length": 110
+    },
+    {
+      "title": "L35 Imp Questions from Book",
+      "videoId": "tyHLft21xm4",
+      "length": 110
+    },
+    {
+      "title": "L36 Story Unit 1 10 Set + Model Questions",
+      "videoId": "3Ny9CJTyumY",
+      "length": 110
+    },
+    {
+      "title": "L37 Book Essay 10 Set",
+      "videoId": "JaMpknaHs-s",
+      "length": 110
+    },
+    {
+      "title": "L38 Freewriting 7 Marks Reveision Again In Case Forgot",
+      "videoId": "1WzR-aKYxiA",
+      "length": 110
+    },
+    {
+      "title": "L39 Freewriting Again Revision To Ensure Not Forgotten",
+      "videoId": "7D5KOqmC_Gs",
+      "length": 110
+    },
+    {
+      "title": "L40 Half Closed Eyes",
+      "videoId": "IZoxW1bxxWs",
+      "length": 110
+    },
+    {
+      "title": "L41 Poems 2 3 4 Summary QA",
+      "videoId": "zgPU_qf21ZA",
+      "length": 110
+    },
+    {
+      "title": "L42 Soft Storm",
+      "videoId": "5VYEFoV8FU4",
+      "length": 110
+    },
+    {
+      "title": "L43 Stories Unit 2 3 4 5 6 7 and Poems 1 2 3 - 10 Set",
+      "videoId": "yDfIDeCY69A",
+      "length": 110
+    },
+    {
+      "title": "L44 Quiz Exam",
+      "videoId": "gM11TBShZl4",
+      "length": 110
+    },
+    {
+      "title": "LN1 - Intro & Grammar Recap",
+      "videoId": "rYw0fQUv178",
+      "length": 110
+    },
+    {
+      "title": "LN2 - Neighbours Story",
+      "videoId": "dzrYDlClipU",
+      "length": 110
+    },
+    {
+      "title": "LN3 - A Respectable Woman",
+      "videoId": "bXe0bDrjZhA",
+      "length": 110
+    },
+    {
+      "title": "LN4 - A Devoted Son",
+      "videoId": "PspgEnH4GfI",
+      "length": 110
+    },
+    {
+      "title": "LN5 A Devoted Son - PYQ",
+      "videoId": "B8BbzuDf_q8",
+      "length": 110
+    },
+    {
+      "title": "LN6 - My Old Home + Treasure in Forest",
+      "videoId": "fjsmOn94Uw8",
+      "length": 110
+    },
+    {
+      "title": "LN7 - Treasure in Forest PYQ",
+      "videoId": "FnIntk74xsQ",
+      "length": 110
+    },
+    {
+      "title": "LN8 - Half Closed Eyes of Buddha PYQ",
+      "videoId": "vp0P6HNaJhA",
+      "length": 110
+    },
+    {
+      "title": "LN9 - Freewriting PDF Guide",
+      "videoId": "pUPTjKVtqjQ",
+      "length": 110
+    },
+    {
+      "title": "maharivision intro for new batch",
+      "videoId": "unOLvrKT7Vc",
+      "length": 110
+    }
+  ]
+}

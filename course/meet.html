@@ -14,15 +14,17 @@
 <!--
   V5 Changes:
    Multiple Class Slots handled now. 
+  Chat will be destroyed on fullscreen to save resources 
+  Skeleton Chat Loading for better UX
+  Chat modal 2 options is a ux friction, so reduced it to single step now. 
+  YouTube chat in mobile devices does not let users send the message for 10 seconds or so ( or without hiding and showing the live chat iframe ) to send message. Cause is UI Lag, Bug fixed ! 
+Nepali language guide for desktop site mode. 
 
   Made sound play button persistent so in ios safari, blocked autoplay also gets to play. 
   Viewport larger does not work at all (tested), only desktop mode does, so used that instead for higher quality.
   Desktop mode ma sabai ui elements including yt chat is scaled to compensate for UX.
   When user switches app and returns, the video is paused and never resumed - FIXED ! 
   YouTube video quality low on mobile devices - Fixed. Time is fetched via Server now on ! 
-  Chat will be destroyed on fullscreen to save resources - Skeleton Loading for better UX
-  YouTube chat in mobile devices does not let users send the message for 10 seconds or so ( or without hiding and showing the live chat iframe ) to send message. Cause is UI Lag, Bug fixed ! 
-  Multiple Slots handles now. 
   
   THIS DOES NOT WORK = Renders #yt-player at (1440p from old 1920×1080) scaled via GPU transform so YouTube unlocks 1080p even in portrait mode. 
 Code is only retained to see if anything of value comes up in future regarding stall detection. 
@@ -225,33 +227,29 @@ body {
   font-size: 13px; color: var(--text2); z-index: 6; display: none;
 }
 
-/* Auto-hiding notice shown ONLY when Desktop site mode is active */
-#dm-blur-tip {
-  display: none;
-  position: absolute; top: 208px; left: 50%; transform: translateX(-50%);
-  z-index: 12; pointer-events: none;
-  background: rgba(26, 27, 30, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
-  padding: 14px 28px;
-  align-items: center; gap: 12px;
-  color: var(--text); font-size: 26px; font-weight: 500;
-  white-space: nowrap;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+/* Blur-tip spotlight: static dim layer, only the ring animates (transform/opacity) */
+#blur-dim {
+  position: fixed; inset: 0; z-index: 9000; display: none;
+  background: rgba(0,0,0,.65); pointer-events: none;
 }
-#dm-blur-tip .material-symbols-outlined {
-  color: var(--accent); font-size: 30px; flex-shrink: 0;
+#blur-dim.show { display: block; }
+#blur-ring {
+  position: fixed; z-index: 9001; display: none; pointer-events: none;
+  border: 3px solid var(--accent); border-radius: 999px;
+  animation: ringPulse 1.4s ease-in-out infinite;
+  will-change: transform, opacity;
 }
-
-@media (pointer: coarse) and (min-width: 769px) {
-  #dm-blur-tip.show { display: flex; }
+#blur-ring.show { display: block; }
+@keyframes ringPulse { 50% { transform: scale(1.08); opacity: .6; } }
+#blur-spot-label {
+  position: fixed; z-index: 9001; display: none; pointer-events: none;
+  background: var(--bg2); border: 1px solid rgba(255,255,255,.16);
+  border-radius: 14px; padding: .7em 1em; color: var(--text); font-weight: 500;
+  max-width: 80vw; box-shadow: 0 8px 24px rgba(0,0,0,.55);
 }
-
+#blur-spot-label.show { display: block; }
 @media (pointer: coarse) and (orientation: landscape) and (max-height: 650px) {
-  #dm-blur-tip {
-    top: 18px; padding: 10px 22px; font-size: 20px; gap: 8px;
-  }
-  #dm-blur-tip .material-symbols-outlined { font-size: 24px; }
+  #blur-dim, #blur-ring, #blur-spot-label { display: none !important; }
 }
 
 #play-prompt {
@@ -384,7 +382,7 @@ body {
 .modal-overlay.active { opacity: 1; pointer-events: auto; }
 #ask-teacher-modal {
   align-items: flex-start;
-  padding-top: 8vh;
+  padding-top: 15vh;
 }
 .modal-box {
   background: var(--bg2); border: 1px solid var(--border);
@@ -432,7 +430,7 @@ body {
 
   /* Enlarged Ask Teacher modal for desktop-mode phones/tablets */
   #ask-teacher-modal {
-    padding-top: 8vh !important;
+    padding-top: 15vh !important;
   }
   .modal-box {
     width: 880px;
@@ -691,19 +689,7 @@ body {
     border-radius: 18px !important;
   }
 
-/* Centered 2.5x single-line pill directly below the SR Teacher tile (282px bottom + 16px gap) */
-  #dm-blur-tip {
-    top: 208px !important;
-    bottom: auto !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    max-width: 94vw !important;
-    white-space: nowrap !important;
-    padding: 16px 32px !important;
-    font-size: 36px !important;
-    gap: 14px !important;
-  }
-  #dm-blur-tip .material-symbols-outlined { font-size: 38px !important; flex-shrink: 0; }
+
 }
 
 /* ═══ PATCH: Bigger bottom bar icons (Desktop Mode) ═══ */
@@ -726,18 +712,7 @@ body {
   .talk-teacher-btn { font-size: 30px !important; padding: 15px 30px !important; gap: 12px !important; }
   .talk-teacher-btn .material-symbols-outlined { font-size: 36px !important; }
   .chat-close { font-size: 45px !important; padding: 9px 20px !important; }
-  #dm-blur-tip {
-    top: 18px !important;
-    bottom: auto !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    max-width: 90vw !important;
-    white-space: nowrap !important;
-    padding: 10px 22px !important;
-    font-size: 20px !important;
-    gap: 8px !important;
-  }
-  #dm-blur-tip .material-symbols-outlined { font-size: 24px !important; }
+
 
   #bottom-bar {
     height: 128px !important;
@@ -795,7 +770,7 @@ body {
 
     <button id="dmg-bypass-btn" style="
       margin-top: 4px; background: none; border: none;
-      color: var(--text2); font-size: 12px; text-decoration: underline;
+      color: var(--text2); font-size: 14px; text-decoration: underline;
       cursor: pointer; opacity: 0.75; line-height: 1.4;
     ">
       म Low Quality मै क्लास हेर्छु →
@@ -908,10 +883,7 @@ body {
 
       <div id="hand-notif"></div>
 
-      <div id="dm-blur-tip">
-        <span class="material-symbols-outlined">refresh</span>
-        <span>Blur or Low Quality भएमा Refresh गर्नुहोस्</span>
-      </div>
+
     </div>
 
     <div id="bottom-bar">
@@ -963,6 +935,9 @@ body {
   </div>
 </div>
 
+<div id="blur-dim"></div>
+<div id="blur-ring"></div>
+<div id="blur-spot-label"></div>
 <div id="toast"></div>
 
 <!-- Chat choice modal removed: chat buttons open live chat directly -->
@@ -1060,7 +1035,7 @@ function showControls() {
   if (isMobile() && chatOpen) return;
   controlsVisible = true;
   document.getElementById('bottom-bar').style.display = 'flex';
-  document.getElementById('dm-blur-tip')?.classList.add('show');
+  
   document.getElementById('tap-zone').style.display = 'none';
   clearTimeout(controlsTimeout);
   controlsTimeout = setTimeout(hideControls, 5000);
@@ -1070,7 +1045,7 @@ function hideControls() {
   if (chatOpen && !isMobile()) return;
   controlsVisible = false;
   document.getElementById('bottom-bar').style.display = 'none';
-  document.getElementById('dm-blur-tip')?.classList.remove('show');
+  
   
   // Bring back the tap-zone so mobile users can tap to show controls again
   if (isMobile()) {
@@ -1753,6 +1728,7 @@ function startQualityGuard() {
       qualityGuardActive = false;
       return;
     }
+    if (spotlightActive) { lastFrame = now; requestAnimationFrame(checkFrame); return; }
     if (!document.hidden && player && typeof player.getPlayerState === 'function' && player.getPlayerState() === 1) {
       const delta = now - lastFrame;
       if (delta > 120 && delta < 1000) jankFrames++; // < 11 FPS main-thread/decode stall
@@ -1833,6 +1809,7 @@ function onStateChange(e) {
     fitPlayerViewport();
     hasPlayedOnce = true;
     startQualityGuard();
+    scheduleBlurTip();
   }
   if (e.data === YT.PlayerState.BUFFERING && hasPlayedOnce && !qualityDowngraded && (Date.now() - lastSeekTime > 4000)) {
     const now = Date.now();
@@ -1897,6 +1874,93 @@ function userInitiatedPlay() {
 }
 
 // ── Controls ──────────────────────────────────────────────────
+// ── Blur-tip spotlight: max 3 times lifetime, once per session ──
+const TIP_MAX = 3, TIP_SESSION = 'srzone_blurtip_done', TIP_COUNT = 'srzone_blurtip_n';
+let spotlightActive = false, spotTimer = null, blurTipTimer = null;
+
+const isLandscapePhone = () =>
+  window.matchMedia('(pointer: coarse) and (orientation: landscape) and (max-height: 650px)').matches;
+
+function scheduleBlurTip() {
+  clearTimeout(blurTipTimer);
+  blurTipTimer = setTimeout(maybeShowBlurTip, 8000);
+}
+
+function onSpotPointerDown(e) {
+  // tapping Refresh while the hint is up means they've learned it: retire for good
+  if (e.target.closest && e.target.closest('#refresh-btn')) {
+    try { localStorage.setItem(TIP_COUNT, String(TIP_MAX)); } catch (err) {}
+  }
+  hideBlurSpot();
+}
+
+function showBlurSpot() {
+  const btn   = document.getElementById('refresh-btn');
+  const dim   = document.getElementById('blur-dim');
+  const ring  = document.getElementById('blur-ring');
+  const label = document.getElementById('blur-spot-label');
+  if (!btn || !dim || !ring || !label || btn.offsetParent === null) return false;
+
+  const r = btn.getBoundingClientRect();
+  const pad = 6;
+  const x = r.left - pad, y = r.top - pad, w = r.width + pad * 2, h = r.height + pad * 2;
+
+  dim.style.clipPath =
+    `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ` +
+    `${x}px ${y}px, ${x}px ${y + h}px, ${x + w}px ${y + h}px, ${x + w}px ${y}px, ${x}px ${y}px)`;
+  Object.assign(ring.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+
+  const fs = parseFloat(getComputedStyle(btn).fontSize) || 13;
+  label.textContent = 'Blur or Low Quality भएमा Refresh गर्नुहोस्';
+  label.style.fontSize = (fs * 1.05) + 'px';
+  dim.classList.add('show'); ring.classList.add('show'); label.classList.add('show');
+
+  // measure after it is visible, then place it just above the button
+  label.style.top  = Math.max(8, y - label.offsetHeight - fs) + 'px';
+  label.style.left = Math.min(Math.max(8, r.left), innerWidth - label.offsetWidth - 8) + 'px';
+
+  spotlightActive = true;
+  spotTimer = setTimeout(hideBlurSpot, 7000);
+  document.addEventListener('pointerdown', onSpotPointerDown, { capture: true }); // not blocked
+  return true;
+}
+
+function hideBlurSpot() {
+  clearTimeout(spotTimer);
+  spotlightActive = false;
+  document.removeEventListener('pointerdown', onSpotPointerDown, { capture: true });
+  ['blur-dim', 'blur-ring', 'blur-spot-label']
+    .forEach(id => document.getElementById(id)?.classList.remove('show'));
+}
+
+function maybeShowBlurTip() {
+  try {
+    if (!player || !videoStarted || spotlightActive) return;
+    if (sessionStorage.getItem(TIP_SESSION) || isLandscapePhone()) return;
+    const n = +localStorage.getItem(TIP_COUNT) || 0;
+    if (n >= TIP_MAX) return;
+
+    const busy = chatOpen
+      || document.getElementById('sound-pill').style.display === 'flex'
+      || document.getElementById('play-prompt').style.display === 'flex'
+      || document.getElementById('ask-teacher-modal').classList.contains('active')
+      || document.fullscreenElement || document.webkitFullscreenElement;
+    if (busy) return;
+
+    const q = player.getPlaybackQuality && player.getPlaybackQuality();
+    if (!['tiny', 'small', 'medium', 'large'].includes(q)) return;
+
+    if (!showBlurSpot()) return;               // only count it if it was actually shown
+    sessionStorage.setItem(TIP_SESSION, '1');
+    localStorage.setItem(TIP_COUNT, String(n + 1));
+  } catch (e) {}
+}
+
+window.addEventListener('orientationchange', hideBlurSpot);
+window.addEventListener('resize', hideBlurSpot);
+document.addEventListener('fullscreenchange', hideBlurSpot);
+document.addEventListener('webkitfullscreenchange', hideBlurSpot);
+
 function toggleMic() {
   micOn = !micOn;
   const btn = document.getElementById('mic-btn');
@@ -1989,7 +2053,7 @@ function toggleChat() {
 
     if (isMobile()) {
       document.getElementById('bottom-bar').style.display = 'none';
-      document.getElementById('dm-blur-tip')?.classList.remove('show');
+      
     } else {
       clearTimeout(controlsTimeout);
     }
@@ -2107,7 +2171,7 @@ function openAskTeacher() {
   // On mobile, close & destroy the chat drawer first so the modal sits cleanly onscreen
   if (chatOpen && isMobile()) toggleChat();
   document.getElementById('bottom-bar').style.display = 'none';
-  document.getElementById('dm-blur-tip')?.classList.remove('show');
+  
   document.getElementById('ask-teacher-modal').classList.add('active');
   setTimeout(() => document.getElementById('teacher-question').focus(), 100);
 }
@@ -2313,7 +2377,10 @@ document.addEventListener('DOMContentLoaded', () => {
   bind('sound-pill', enableSound);
   bind('mobile-fs-btn', toggleFullscreen);
   bind('mobile-chat-btn', toggleChat);
-  bind('refresh-btn', () => location.reload());
+  bind('refresh-btn', () => {
+    try { sessionStorage.setItem(TIP_SESSION, '1'); } catch (e) {}
+    location.reload();
+  });
   
   bind('mic-btn', toggleMic);
   bind('cam-btn', toggleCam);
